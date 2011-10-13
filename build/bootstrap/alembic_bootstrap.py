@@ -886,6 +886,9 @@ def runCMake( opts, srcdir, ranBootstrap = False ):
         else:
             cmake_extra_args += " -U QUIET"
 	    
+        if opts.cmakeflags:
+            cmake_extra_args += ' %s ' % opts.cmakeflags
+
         if opts.prefix:
             cmake_extra_args += ' -D CMAKE_INSTALL_PREFIX="%s"' % opts.prefix
 
@@ -973,6 +976,16 @@ def makeParser( mk_cmake_basename ):
                           "Use '--help' for list of options" )
 
     configOptions = OptionGroup( parser, "Config" )
+			      
+    configOptions.add_option( "--prefix", dest="prefix", type="string",
+                              default=None, help="install Location",
+                              metavar="CMAKE_INSTALL_PREFIX" )    
+			      
+    configOptions.add_option( "--cmake_flags", dest="cmakeflags", type="string",
+                              default=None, help="custom cmake flags",
+                              metavar="CMAKE_FLAGS" )    
+			      
+			      
     configOptions.add_option( "--with-maya", dest="maya", type="string",
                               default=None, help="Maya location",
                               metavar="MAYA_ROOT" )
@@ -983,10 +996,6 @@ def makeParser( mk_cmake_basename ):
     configOptions.add_option( "--with-arnold", dest="arnold", type="string",
                               default=None, help="ARNOLD location",
                               metavar="ARNOLD_ROOT" )
-			      
-    configOptions.add_option( "--prefix", dest="prefix", type="string",
-                              default=None, help="install Location",
-                              metavar="CMAKE_INSTALL_PREFIX" )    
 
     configOptions.add_option( "--hdf5_include_dir", dest="hdf5_include_dir",
                               type="string", default=None,

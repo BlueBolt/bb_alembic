@@ -45,7 +45,7 @@ ParamListBuilder::~ParamListBuilder()
     for ( std::vector<RtString>::iterator I = m_retainedStrings.begin();
             I != m_retainedStrings.end(); ++I )
     {
-        free( (*I) );
+        free( const_cast<char*>(*I) );
     }
     
     m_retainedStrings.clear();
