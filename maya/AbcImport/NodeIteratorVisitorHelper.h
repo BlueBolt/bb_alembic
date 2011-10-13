@@ -37,14 +37,6 @@
 #ifndef ABCIMPORT_NODE_ITERATOR_HELPER_H_
 #define ABCIMPORT_NODE_ITERATOR_HELPER_H_
 
-#include <maya/MObject.h>
-#include <maya/MPlug.h>
-#include <maya/MDataHandle.h>
-#include <maya/MArrayDataHandle.h>
-
-#include <vector>
-#include <string>
-
 #include <Alembic/Abc/IArrayProperty.h>
 #include <Alembic/Abc/IScalarProperty.h>
 #include <Alembic/Abc/IObject.h>
@@ -57,6 +49,15 @@
 #include <Alembic/AbcGeom/ISubD.h>
 #include <Alembic/AbcGeom/IXform.h>
 
+#include <maya/MObject.h>
+#include <maya/MPlug.h>
+#include <maya/MDataHandle.h>
+#include <maya/MArrayDataHandle.h>
+#include <maya/MString.h>
+
+#include <vector>
+#include <string>
+
 // mArray or mScalar will be valid, mObj will be valid for those situations
 // where the property can't be validly read, unless the object stays in scope.
 struct Prop
@@ -67,13 +68,14 @@ struct Prop
 
 bool addProp(Alembic::Abc::IArrayProperty & iProp, MObject & iParent);
 
-void addProps(Alembic::Abc::ICompoundProperty & iParent, MObject & iObject);
+void addProps(Alembic::Abc::ICompoundProperty & iParent, MObject & iObject,
+    bool iUnmarkedFaceVaryingColors);
 
 void readProp(double iFrame, Alembic::Abc::IArrayProperty & iProp,
     MDataHandle & iHandle);
 
 void getAnimatedProps(Alembic::Abc::ICompoundProperty & iParent,
-    std::vector<Prop> & oPropList);
+    std::vector<Prop> & oPropList, bool iUnmarkedFaceVaryingColors);
 
 // This class is used for connecting to sampled transform operations and
 // properties in order  to keep the list of names of sampled channels
@@ -109,6 +111,22 @@ private:
     std::vector<std::string> sampleNameList;
 };  // SampledPair
 
+class PolyMeshAndColors
+{
+public:
+    Alembic::AbcGeom::IPolyMesh mMesh;
+    std::vector< Alembic::AbcGeom::IC3fGeomParam > mC3s;
+    std::vector< Alembic::AbcGeom::IC4fGeomParam > mC4s;
+};
+
+class SubDAndColors
+{
+public:
+    Alembic::AbcGeom::ISubD mMesh;
+    std::vector< Alembic::AbcGeom::IC3fGeomParam > mC3s;
+    std::vector< Alembic::AbcGeom::IC4fGeomParam > mC4s;
+};
+
 // A data class for cleaner code when copying a group of info between functions
 class WriterData
 {
@@ -132,9 +150,9 @@ public:
     std::vector<Alembic::AbcGeom::ICurves>    mCurvesList;
     std::vector<Alembic::AbcGeom::IXform>     mLocList;
     std::vector<Alembic::AbcGeom::INuPatch>   mNurbsList;
-    std::vector<Alembic::AbcGeom::IPolyMesh>  mPolyMeshList;
+    std::vector< PolyMeshAndColors >          mPolyMeshList;
     std::vector<Alembic::AbcGeom::IPoints>    mPointsList;
-    std::vector<Alembic::AbcGeom::ISubD>      mSubDList;
+    std::vector< SubDAndColors >              mSubDList;
     std::vector<Alembic::AbcGeom::IXform>     mXformList;
 
     // objects that aren't animated but have animated visibility need to be
@@ -160,7 +178,8 @@ public:
         bool    iConnect = false,
         MString iConnectRootNodes = MString("/"),
         bool    iCreateIfNotFound = false,
-        bool    iRemoveIfNoUpdate = false);
+        bool    iRemoveIfNoUpdate = false,
+        bool    iRecreateColorSets = false);
     ArgData(const ArgData & rhs);
     ArgData & operator=(const ArgData & rhs);
 
@@ -170,6 +189,8 @@ public:
     bool        mDebugOn;
 
     MObject     mReparentObj;
+
+    bool        mRecreateColorSets;
 
     // optional information for the "connect" flag
     bool        mConnect;
@@ -186,5 +207,12 @@ MString createScene(ArgData & iArgData);
 // Called in createScene only if there are sampled data in the scene.
 // This function sets up the connections to AlembicNode
 MString connectAttr(ArgData & iArgData);
+
+// check the properties in iParent and grab the ones that are colors
+// returns whether or not any of these color properties are animated
+bool getColorAttrs( Alembic::Abc::ICompoundProperty & iParent,
+    std::vector< Alembic::AbcGeom::IC3fGeomParam > & ioC3s,
+    std::vector< Alembic::AbcGeom::IC4fGeomParam > & ioC4s,
+    bool iUnmarkedFaceVaryingColors);
 
 #endif  // ABCIMPORT_NODE_ITERATOR_HELPER_H_

@@ -42,6 +42,9 @@
 #include <set>
 #include <string>
 
+#include <Alembic/AbcGeom/All.h>
+#include "NodeIteratorVisitorHelper.h"
+
 #include <maya/MGlobal.h>
 #include <maya/MPlug.h>
 #include <maya/MDagPath.h>
@@ -49,8 +52,6 @@
 #include <maya/MString.h>
 #include <maya/MFnDependencyNode.h>
 
-#include <Alembic/AbcGeom/All.h>
-#include "NodeIteratorVisitorHelper.h"
 
 // replace one MObject with another, while keeping all the old hierarchy intact
 // The objects have to be a Dag object
@@ -99,6 +100,9 @@ double getWeightAndIndex(double iFrame,
     Alembic::AbcCoreAbstract::index_t & oIndex,
     Alembic::AbcCoreAbstract::index_t & oCeilIndex);
 
+bool isColorSet(const Alembic::AbcCoreAbstract::MetaData & iMetaData,
+    bool iUnmarkedFaceVaryingColors);
+
 template<typename T>
 void clamp(T & min, T & max, T & cur)
 {
@@ -112,9 +116,8 @@ void clamp(T & min, T & max, T & cur)
 template<typename T>
 T simpleLerp(double alpha, T val1, T val2)
 {
-    double ret = ( ( 1.0 - alpha ) * static_cast<double>( val1 ) ) +
-        ( alpha * static_cast<double>( val2 ) );
-    return static_cast<T>( ret );
+    double dv = static_cast<double>( val1 );
+    return static_cast<T>( dv + alpha * (static_cast<double>(val2) - dv) );
 }
 
 template<typename T>
@@ -128,7 +131,8 @@ void vectorLerp(double alpha, std::vector<T> & vec,
     vec.reserve(size);
     for (unsigned int i = 0; i < size; i++)
     {
-        T val = (1 - alpha) * vec1[i] + alpha * vec2[i];
+        T v1 = vec1[i];
+        T val = v1 + alpha * (vec2[i] - vec1[i]);
         vec.push_back(val);
     }
 }

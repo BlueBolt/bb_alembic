@@ -137,23 +137,42 @@ void ProcessPolyMesh( IPolyMesh &polymesh, ProcArgs &args )
 
         RtInt npolys = (RtInt) sample.getFaceCounts()->size();
 
-        ParamListBuilder ParamListBuilder;
+        ParamListBuilder paramListBuilder;
 
-        ParamListBuilder.add( "P", (RtPointer)sample.getPositions()->get() );
+        paramListBuilder.add( "P", (RtPointer)sample.getPositions()->get() );
 
         IV2fGeomParam uvParam = ps.getUVsParam();
         if ( uvParam.valid() )
         {
             ICompoundProperty parent = uvParam.getParent();
             
-            AddGeomParamToParamListBuilder<IV2fGeomParam>(
-                parent,
-                uvParam.getHeader(),
-                sampleSelector,
-                "float",
-                ParamListBuilder,
-                2,
-                "st");
+            
+            if ( !args.flipv )
+            {
+                AddGeomParamToParamListBuilder<IV2fGeomParam>(
+                    parent,
+                    uvParam.getHeader(),
+                    sampleSelector,
+                    "float",
+                    paramListBuilder,
+                    2,
+                    "st");
+            }
+            else if ( std::vector<float> * values =
+                    AddGeomParamToParamListBuilderAsFloat<IV2fGeomParam, float>(
+                        parent,
+                        uvParam.getHeader(),
+                        sampleSelector,
+                        "float",
+                        paramListBuilder,
+                        2,
+                        "st") )
+            {
+                for ( size_t i = 1, e = values->size(); i < e; i += 2 )
+                {
+                    (*values)[i] = 1.0 - (*values)[i];
+                }
+            }
         }
         IN3fGeomParam nParam = ps.getNormalsParam();
         if ( nParam.valid() )
@@ -165,7 +184,7 @@ void ProcessPolyMesh( IPolyMesh &polymesh, ProcArgs &args )
                 nParam.getHeader(),
                 sampleSelector,
                 "normal",
-                ParamListBuilder);
+                paramListBuilder);
 
         }
 
@@ -173,15 +192,15 @@ void ProcessPolyMesh( IPolyMesh &polymesh, ProcArgs &args )
 
         ICompoundProperty arbGeomParams = ps.getArbGeomParams();
         AddArbitraryGeomParams( arbGeomParams,
-                    sampleSelector, ParamListBuilder );
+                    sampleSelector, paramListBuilder );
 
         RiPointsPolygonsV(
             npolys,
             (RtInt*) sample.getFaceCounts()->get(),
             (RtInt*) sample.getFaceIndices()->get(),
-            ParamListBuilder.n(),
-            ParamListBuilder.nms(),
-            ParamListBuilder.vals() );
+            paramListBuilder.n(),
+            paramListBuilder.nms(),
+            paramListBuilder.vals() );
     }
 
     if (multiSample) RiMotionEnd();
@@ -214,28 +233,47 @@ void ProcessSubD( ISubD &subd, ProcArgs &args, const std::string & facesetName )
 
         RtInt npolys = (RtInt) sample.getFaceCounts()->size();
 
-        ParamListBuilder ParamListBuilder;
+        ParamListBuilder paramListBuilder;
 
-        ParamListBuilder.add( "P", (RtPointer)sample.getPositions()->get() );
+        paramListBuilder.add( "P", (RtPointer)sample.getPositions()->get() );
 
         IV2fGeomParam uvParam = ss.getUVsParam();
         if ( uvParam.valid() )
         {
             ICompoundProperty parent = uvParam.getParent();
             
-            AddGeomParamToParamListBuilder<IV2fGeomParam>(
-                parent,
-                uvParam.getHeader(),
-                sampleSelector,
-                "float",
-                ParamListBuilder,
-                2,
-                "st");
+            if ( !args.flipv )
+            {
+                AddGeomParamToParamListBuilder<IV2fGeomParam>(
+                    parent,
+                    uvParam.getHeader(),
+                    sampleSelector,
+                    "float",
+                    paramListBuilder,
+                    2,
+                    "st");
+            }
+            else if ( std::vector<float> * values =
+                    AddGeomParamToParamListBuilderAsFloat<IV2fGeomParam, float>(
+                        parent,
+                        uvParam.getHeader(),
+                        sampleSelector,
+                        "float",
+                        paramListBuilder,
+                        2,
+                        "st") )
+            {
+                for ( size_t i = 1, e = values->size(); i < e; i += 2 )
+                {
+                    (*values)[i] = 1.0 - (*values)[i];
+                }
+            }
+            
         }
 
         ICompoundProperty arbGeomParams = ss.getArbGeomParams();
         AddArbitraryGeomParams( arbGeomParams,
-                    sampleSelector, ParamListBuilder );
+                    sampleSelector, paramListBuilder );
 
         std::string subdScheme = sample.getSubdivisionScheme();
 
@@ -287,9 +325,9 @@ void ProcessSubD( ISubD &subd, ProcArgs &args, const std::string & facesetName )
                 tags.intargs(),
                 tags.floatargs(),
                 tags.stringargs(),
-                ParamListBuilder.n(),
-                ParamListBuilder.nms(),
-                ParamListBuilder.vals()
+                paramListBuilder.n(),
+                paramListBuilder.nms(),
+                paramListBuilder.vals()
                                           );
         }
         else
@@ -304,9 +342,9 @@ void ProcessSubD( ISubD &subd, ProcArgs &args, const std::string & facesetName )
                 tags.nargs( false ),
                 tags.intargs(),
                 tags.floatargs(),
-                ParamListBuilder.n(),
-                ParamListBuilder.nms(),
-                ParamListBuilder.vals()
+                paramListBuilder.n(),
+                paramListBuilder.nms(),
+                paramListBuilder.vals()
                               );
         }
     }
@@ -357,7 +395,7 @@ void ProcessNuPatch( INuPatch &patch, ProcArgs &args )
         INuPatchSchema::Sample sample = ps.getValue( sampleSelector );
         
         
-        ParamListBuilder ParamListBuilder;
+        ParamListBuilder paramListBuilder;
         
         //build this here so that it's still in scope when RiNuPatchV is
         //called.
@@ -384,20 +422,20 @@ void ProcessNuPatch( INuPatch &patch, ProcArgs &args )
                     pwValues.push_back( wStart[i] );
                 }
                 
-                ParamListBuilder.add( "Pw", (RtPointer) &pwValues[0] );
+                paramListBuilder.add( "Pw", (RtPointer) &pwValues[0] );
             }
         }
         
         if ( pwValues.empty() )
         {
             //no Pw so go straight with P
-            ParamListBuilder.add( "P",
+            paramListBuilder.add( "P",
                     (RtPointer)sample.getPositions()->get() );
         }
         
         ICompoundProperty arbGeomParams = ps.getArbGeomParams();
         AddArbitraryGeomParams( arbGeomParams,
-                    sampleSelector, ParamListBuilder );
+                    sampleSelector, paramListBuilder );
         
         //For now, use the last knot value for umin and umax as it's
         //not described in the alembic data 
@@ -413,9 +451,9 @@ void ProcessNuPatch( INuPatch &patch, ProcArgs &args )
                 (RtFloat *) sample.getVKnot()->get(),
                 0.0, //vmin
                 sample.getVKnot()->get()[sample.getVKnot()->size()-1], //vmax
-                ParamListBuilder.n(),
-                ParamListBuilder.nms(),
-                ParamListBuilder.vals() );
+                paramListBuilder.n(),
+                paramListBuilder.nms(),
+                paramListBuilder.vals() );
     }
     
     if ( multiSample ) { RiMotionEnd(); }
@@ -457,17 +495,17 @@ void ProcessPoints( IPoints &points, ProcArgs &args )
         IPointsSchema::Sample sample = ps.getValue( sampleSelector );
         
         
-        ParamListBuilder ParamListBuilder;
-        ParamListBuilder.add( "P", (RtPointer)sample.getPositions()->get() );
+        ParamListBuilder paramListBuilder;
+        paramListBuilder.add( "P", (RtPointer)sample.getPositions()->get() );
         
         ICompoundProperty arbGeomParams = ps.getArbGeomParams();
         AddArbitraryGeomParams( arbGeomParams,
-                    sampleSelector, ParamListBuilder );
+                    sampleSelector, paramListBuilder );
         
         RiPointsV(sample.getPositions()->size(),
-                ParamListBuilder.n(),
-                ParamListBuilder.nms(),
-                ParamListBuilder.vals() );
+                paramListBuilder.n(),
+                paramListBuilder.nms(),
+                paramListBuilder.vals() );
     }
     
     if ( multiSample ) { RiMotionEnd(); }
@@ -542,8 +580,8 @@ void ProcessCurves( ICurves &curves, ProcArgs &args )
             if ( multiSample ) { WriteMotionBegin( args, sampleTimes ); }
         }
         
-        ParamListBuilder ParamListBuilder;
-        ParamListBuilder.add( "P", (RtPointer)sample.getPositions()->get() );
+        ParamListBuilder paramListBuilder;
+        paramListBuilder.add( "P", (RtPointer)sample.getPositions()->get() );
         
         IFloatGeomParam widthParam = cs.getWidthsParam();
         if ( widthParam.valid() )
@@ -569,7 +607,7 @@ void ProcessCurves( ICurves &curves, ProcArgs &args )
                 widthParam.getHeader(),
                 sampleSelector,
                 "float",
-                ParamListBuilder,
+                paramListBuilder,
                 1,
                 widthName);
         }
@@ -584,7 +622,7 @@ void ProcessCurves( ICurves &curves, ProcArgs &args )
                 nParam.getHeader(),
                 sampleSelector,
                 "normal",
-                ParamListBuilder);
+                paramListBuilder);
         }
         
         IV2fGeomParam uvParam = cs.getUVsParam();
@@ -597,14 +635,14 @@ void ProcessCurves( ICurves &curves, ProcArgs &args )
                 uvParam.getHeader(),
                 sampleSelector,
                 "float",
-                ParamListBuilder,
+                paramListBuilder,
                 2,
                 "st");
         }
 
         ICompoundProperty arbGeomParams = cs.getArbGeomParams();
         AddArbitraryGeomParams( arbGeomParams,
-                    sampleSelector, ParamListBuilder );
+                    sampleSelector, paramListBuilder );
         
         RtToken curveType;
         switch ( sample.getType() )
@@ -631,9 +669,9 @@ void ProcessCurves( ICurves &curves, ProcArgs &args )
                 sample.getNumCurves(),
                 (RtInt*) sample.getCurvesNumVertices()->get(),
                 wrap,
-                ParamListBuilder.n(),
-                ParamListBuilder.nms(),
-                ParamListBuilder.vals() );
+                paramListBuilder.n(),
+                paramListBuilder.nms(),
+                paramListBuilder.vals() );
 
     }
     

@@ -1,7 +1,7 @@
 ##-*****************************************************************************
 ##
 ## Copyright (c) 2009-2011,
-##  Sony Pictures Imageworks Inc. and
+##  Sony Pictures Imageworks, Inc. and
 ##  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 ##
 ## All rights reserved.
@@ -16,7 +16,7 @@
 ## in the documentation and/or other materials provided with the
 ## distribution.
 ## *       Neither the name of Sony Pictures Imageworks, nor
-## Industrial Light & Magic, nor the names of their contributors may be used
+## Industrial Light & Magic nor the names of their contributors may be used
 ## to endorse or promote products derived from this software without specific
 ## prior written permission.
 ##
@@ -34,59 +34,26 @@
 ##
 ##-*****************************************************************************
 
-PROJECT( ABC_IMPORT_MAYA_MODULE )
+from maya import cmds as MayaCmds
+import os
+import unittest
+import util
 
-SET( H_FILES
-  AbcImport.h
-  AlembicNode.h
-  CameraHelper.h
-  CreateSceneHelper.h
-  LocatorHelper.h
-  MeshHelper.h
-  NodeIteratorVisitorHelper.h
-  NurbsCurveHelper.h
-  NurbsSurfaceHelper.h
-  PointHelper.h
-  util.h
-  XformHelper.h
-)
+class renderableOnlyTest(unittest.TestCase):
+    def setUp(self):
+        MayaCmds.file(new=True, force=True)
+        self.__files = []
 
-SET( CXX_FILES
-  AbcImport.cpp
-  AlembicNode.cpp
-  CameraHelper.cpp
-  CreateSceneHelper.cpp
-  main.cpp
-  LocatorHelper.cpp
-  MeshHelper.cpp
-  NurbsCurveHelper.cpp
-  NurbsSurfaceHelper.cpp
-  NodeIteratorVisitorHelper.cpp
-  PointHelper.cpp
-  util.cpp
-  XformHelper.cpp
-)
+    def tearDown(self):
+        for f in self.__files:
+            os.remove(f)
 
-SET( SOURCE_FILES ${CXX_FILES} ${H_FILES} )
-
-SET( CORE_LIBS
-  AlembicAbcGeom
-  AlembicAbc
-  AlembicAbcCoreHDF5
-  AlembicAbcCoreAbstract
-  AlembicUtil )
-
-INCLUDE_DIRECTORIES( ${ALEMBIC_HDF5_INCLUDE_PATH} )
-INCLUDE_DIRECTORIES( ".." )
-
-ADD_MAYA_CXX_PLUGIN( AbcImport ${SOURCE_FILES} )
-TARGET_LINK_LIBRARIES( AbcImport
-  ${MAYA_LIBRARIES}
-  ${CORE_LIBS}
-  ${ALEMBIC_HDF5_LIBS}
-  ${ALEMBIC_ILMBASE_LIBS}
-  ${CMAKE_THREAD_LIBS_INIT}
-  ${ZLIB_LIBRARIES} ${EXTERNAL_MATH_LIBS} )
-
-INSTALL( TARGETS AbcImport
-         DESTINATION maya/plug-ins )
+    def testRenderableOnly(self):
+        MayaCmds.polyPlane(name='potato')
+        MayaCmds.polyPlane(name='hidden')
+        MayaCmds.setAttr("hidden.visibility", 0)
+        self.__files.append(util.expandFileName('renderableOnlyTest.abc'))
+        MayaCmds.AbcExport(j='-ro -file ' + self.__files[-1])
+        MayaCmds.AbcImport(self.__files[-1], m='open')
+        self.failUnless(MayaCmds.objExists('potato'))
+        self.failIf(MayaCmds.objExists('hidden'))

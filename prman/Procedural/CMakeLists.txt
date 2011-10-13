@@ -74,8 +74,6 @@ TARGET_LINK_LIBRARIES( AlembicRiProcedural
 )
 
 
-INSTALL( TARGETS AlembicRiProcedural
-         DESTINATION prman )
 
 
 ENDIF()

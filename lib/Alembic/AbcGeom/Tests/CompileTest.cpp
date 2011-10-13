@@ -34,34 +34,58 @@
 //
 //-*****************************************************************************
 
-#include <Alembic/Abc/OTypedScalarProperty.h>
+#include <Alembic/AbcCoreHDF5/All.h>
+#include <Alembic/AbcGeom/All.h>
 
-namespace Alembic {
-namespace Abc {
-namespace ALEMBIC_VERSION_NS {
+using namespace Alembic::Abc;
+using namespace Alembic::AbcGeom;
 
-namespace {
+// A bunch of minimal compile tests to make sure the templates compile
 
-//-*****************************************************************************
-// This is here as a minimal compile test against which the TypedScalar stuff
-// has to compile. It's to avoid not knowing that stuff in the templates
-// is very broken until much later.
-void __test( OObject &iObject )
+
+void testOGeomParam( Abc::OCompoundProperty &iParent )
 {
-    OBoolProperty boolProp( OCompoundProperty( iObject, kTop ),
-                            "boolProp" );
-    OInt32Property intProp( OCompoundProperty( iObject, kTop ),
-                          "intProp" );
-    OInt32Property intProp2( intProp.getPtr(), kWrapExisting );
+    OV2fGeomParam uvs( iParent, "uv", false, kVertexScope, 1 );
 
-    intProp.set( 5 );
-    intProp2.set( 6 );
+    std::vector<V2f> vec;
 
-    boolProp.set( false );
+    vec.push_back( V2f( 1.0f, 2.0f ) );
+
+    V2fArraySample val( vec );
+
+    OV2fGeomParam::Sample samp( val, kUnknownScope );
+
+    uvs.set( samp );
 }
 
+void testIGeomParam( Abc::ICompoundProperty &iParent )
+{
+    IV2fGeomParam uvs( iParent, "uv" );
+
+    const AbcA::DataType &dt = uvs.getDataType();
+    dt.getExtent();
 }
 
-} // End namespace ALEMBIC_VERSION_NS
-} // End namespace Abc
-} // End namespace Alembic
+int main( int argc, char *argv[] )
+{
+
+    std::string archiveName = "compile_test.abc";
+    {
+        OArchive archive( Alembic::AbcCoreHDF5::WriteArchive(),
+                          archiveName, ErrorHandler::kNoisyNoopPolicy );
+        OObject archiveTop = archive.getTop();
+        OObject child( archiveTop, "otherChild" );
+        OCompoundProperty topProp = child.getProperties();
+        testOGeomParam( topProp );
+    }
+    {
+        IArchive archive( Alembic::AbcCoreHDF5::ReadArchive(), archiveName,
+            ErrorHandler::kNoisyNoopPolicy );
+        IObject archiveTop = archive.getTop();
+        IObject child( archiveTop, "otherChild" );
+        ICompoundProperty topProp = child.getProperties();
+        testIGeomParam( topProp );
+    }
+
+    return 0;
+}

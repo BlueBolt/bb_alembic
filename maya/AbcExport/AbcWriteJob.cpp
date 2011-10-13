@@ -346,7 +346,7 @@ bool AbcWriteJob::checkCurveGrp()
     itDag.reset(mCurDag, MItDag::kBreadthFirst, MFn::kNurbsCurve);
 
     bool init = false;
-    int degree;
+    int degree = 0;
     MFnNurbsCurve::Form form = MFnNurbsCurve::kInvalid;
     for (; !itDag.isDone(); itDag.next())
     {
@@ -392,7 +392,7 @@ void AbcWriteJob::setup(double iFrame, MayaTransformWriterPtr iParent)
     }
 
     // skip nodes that aren't renderable (and their children)
-    if (mArgs.excludeInvisible && util::isRenderable(ob))
+    if (mArgs.excludeInvisible && !util::isRenderable(ob))
     {
         return;
     }
@@ -997,7 +997,7 @@ void AbcWriteJob::postCallback(double iFrame)
     if (mTransTimeIndex != 0)
     {
         MString propName;
-        propName += mTransTimeIndex;
+        propName += static_cast<int>(mTransTimeIndex);
         propName += ".samples";
         Alembic::Abc::OUInt32Property samp(mRoot.getTop().getProperties(),
             propName.asChar());
@@ -1007,7 +1007,7 @@ void AbcWriteJob::postCallback(double iFrame)
     if (mShapeTimeIndex != 0 && mShapeTimeIndex != mTransTimeIndex)
     {
         MString propName;
-        propName += mShapeTimeIndex;
+        propName += static_cast<int>(mShapeTimeIndex);
         propName += ".samples";
         Alembic::Abc::OUInt32Property samp(mRoot.getTop().getProperties(),
             propName.asChar());

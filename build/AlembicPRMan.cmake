@@ -81,7 +81,7 @@ FIND_PATH( ALEMBIC_PRMAN_INCLUDE_PATH ri.h
            NO_CMAKE_SYSTEM_PATH
            DOC "The directory where ri.h resides" )
 
-FIND_LIBRARY( ALEMBIC_PRMAN_LIBPRMAN 3delight
+FIND_LIBRARY( ALEMBIC_PRMAN_LIBPRMAN prman
               PATHS
               "${ALEMBIC_PRMAN_ROOT}/lib/"
               NO_DEFAULT_PATH

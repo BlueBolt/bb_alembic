@@ -37,6 +37,15 @@
 #ifndef ABCIMPORT_CREATE_SCENE_H_
 #define ABCIMPORT_CREATE_SCENE_H_
 
+#include <Alembic/AbcGeom/ICamera.h>
+#include <Alembic/AbcGeom/ICurves.h>
+#include <Alembic/AbcGeom/IPoints.h>
+#include <Alembic/AbcGeom/IPolyMesh.h>
+#include <Alembic/AbcGeom/ISubD.h>
+#include <Alembic/AbcGeom/IXform.h>
+
+#include "NodeIteratorVisitorHelper.h"
+
 #include <maya/MObject.h>
 #include <maya/MString.h>
 #include <maya/MDagPath.h>
@@ -47,15 +56,6 @@
 #include <set>
 #include <map>
 #include <vector>
-
-#include <Alembic/AbcGeom/ICamera.h>
-#include <Alembic/AbcGeom/ICurves.h>
-#include <Alembic/AbcGeom/IPoints.h>
-#include <Alembic/AbcGeom/IPolyMesh.h>
-#include <Alembic/AbcGeom/ISubD.h>
-#include <Alembic/AbcGeom/IXform.h>
-
-#include "NodeIteratorVisitorHelper.h"
 
 struct ltMObj
 {
@@ -80,6 +80,7 @@ public:
     };
 
     CreateSceneVisitor(double iFrame = 0,
+        bool iUnmarkedFaceVaryingColors = false,
         const MObject & iParent = MObject::kNullObj,
         Action iAction = CREATE, MString iRootNodes = MString());
 
@@ -123,6 +124,12 @@ private:
     // -createIfNotFound and -removeIfNoUpdate
     std::set<std::string> mRootNodes;
     bool mAnyRoots;
+
+    // used with one of the flags (tbd)
+    // determines if C3fGeomParam and C4fGeomParam for MFnMeshes
+    // without the appropriate metadata hint should be treated as a color
+    // set (if true) or as an attribute on the node (if false)
+    bool mUnmarkedFaceVaryingColors;
 
     MDagPath mConnectDagNode;
 

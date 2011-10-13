@@ -232,7 +232,8 @@ bool getDagPathByChildName(MDagPath & ioDagPath, const std::string & iChildName)
             return true;
         }
 
-        unsigned int endLength = name.length() - iChildName.length();
+        unsigned int endLength = (unsigned int)(name.length() - 
+            iChildName.length());
         if ((name.length() > iChildName.length() + 1) && 
             (name[endLength - 1] == '|' || name[endLength - 1] == ':') &&
             (name.substr(endLength) == iChildName))
@@ -360,4 +361,15 @@ double getWeightAndIndex(double iFrame,
 
     return (iFrame - floorIndex.second) /
         (ceilIndex.second - floorIndex.second);
+}
+
+bool isColorSet(const Alembic::AbcCoreAbstract::MetaData & iMetaData,
+    bool iUnmarkedFaceVaryingColors)
+{
+    return (Alembic::AbcGeom::IC3fGeomParam::matches(iMetaData) ||
+            Alembic::AbcGeom::IC4fGeomParam::matches(iMetaData)) && 
+            Alembic::AbcGeom::GetGeometryScope(iMetaData) ==
+                Alembic::AbcGeom::kFacevaryingScope &&
+            (iUnmarkedFaceVaryingColors ||
+            iMetaData.get("mayaColorSet") != "");
 }
