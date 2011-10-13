@@ -121,7 +121,7 @@ endif ()
 
 SET( ORIGINAL_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} )
 SET( CMAKE_INSTALL_PREFIX
-     ${ORIGINAL_INSTALL_PREFIX}/alembic-${VERSION} )
+     ${ORIGINAL_INSTALL_PREFIX}/${VERSION} )
 
 # Tell me what my install location would be
 MESSAGE(STATUS "The install dir is ${CMAKE_INSTALL_PREFIX}" )
