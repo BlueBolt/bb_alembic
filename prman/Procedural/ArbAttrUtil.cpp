@@ -49,6 +49,13 @@ ParamListBuilder::~ParamListBuilder()
     }
     
     m_retainedStrings.clear();
+    for ( std::vector<RtToken>::iterator I = m_outputDeclarations.begin();
+            I != m_outputDeclarations.end(); ++I )
+    {
+        free( const_cast<char*>(*I) );
+    }
+    
+    m_outputDeclarations.clear();
 }
 
 
@@ -56,10 +63,9 @@ ParamListBuilder::~ParamListBuilder()
 void ParamListBuilder::add( const std::string & declaration, RtPointer value,
                             ArraySamplePtr sampleToRetain )
 {
-    m_declarations.push_back( declaration );
 
     m_outputDeclarations.push_back(
-        const_cast<char *>( m_declarations.back().c_str() ) );
+        strdup( const_cast<char *>( declaration.c_str() ) ) ); 
 
     m_values.push_back( value );
 
