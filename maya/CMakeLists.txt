@@ -38,6 +38,8 @@ IF( ${MAYA_FOUND} )
 
 ADD_SUBDIRECTORY( AbcExport )
 ADD_SUBDIRECTORY( AbcImport )
+ADD_SUBDIRECTORY( delightAlembicArchive )
+ADD_SUBDIRECTORY( alembicArchiveNode )
 
 ENDIF()
 
