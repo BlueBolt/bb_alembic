@@ -1,3 +1,6 @@
 [submodule "alembicArchiveNode"]
 	path = maya/alembicArchiveNode
 	url = /git/maya_alembicArchiveNode.git
+[submodule "maya/alembicArchiveNode"]
+	path = maya/alembicArchiveNode
+	url = /git/maya_alembicArchiveNode.git
