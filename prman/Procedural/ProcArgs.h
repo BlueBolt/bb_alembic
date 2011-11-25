@@ -57,6 +57,7 @@ struct ProcArgs
     , shutterClose( rhs.shutterClose )
     , excludeXform( false )
     , flipv ( false )
+    , polyAsSubD ( false )
     {}
     
     void usage();
@@ -71,6 +72,7 @@ struct ProcArgs
 
     bool excludeXform;
     bool flipv;
+    bool polyAsSubD;
 };
 
 #endif
