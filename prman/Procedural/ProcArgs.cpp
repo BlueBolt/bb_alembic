@@ -49,6 +49,8 @@ ProcArgs::ProcArgs( RtString paramStr )
   , shutterOpen(0)
   , shutterClose(0)
   , excludeXform(false)
+  , flipv(false)
+  , subd(false)
 {
     typedef boost::char_separator<char> Separator;
     typedef boost::tokenizer<Separator> Tokenizer;
@@ -128,6 +130,10 @@ ProcArgs::ProcArgs( RtString paramStr )
         else if ( token == "-flipv" )
         {
             flipv = true;
+        }
+        else if ( token == "-subd" )
+        {
+            subd = true;
         }
         
     }
@@ -217,6 +223,15 @@ void ProcArgs::usage()
                  "corner origin by default. If your shaders are not already "
                  "compensating for this, enabling -flipv applies (1-v) to "
                  "texture coordinates of polymesh and subdmesh primitives.";
+    std::cerr << std::endl;
+    std::cerr << std::endl;
+
+
+    std::cerr << "-subd" << std::endl;
+    std::cerr << std::endl;
+
+    std::cerr << "Use this switch to render polygon geometry as subdivision"
+    			 "surfaces";
     std::cerr << std::endl;
     std::cerr << std::endl;
         

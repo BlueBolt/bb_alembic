@@ -136,10 +136,15 @@ void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
             blockHelper.reset( new AttributeBlockHelper( ohead ) );
         }
         
-        IPolyMesh polymesh( parent, ohead.getName() );
-        ProcessPolyMesh( polymesh, args );
+        // NEW subd flag
+        // if set then process polymesh as subd
 
-        nextParentObject = polymesh;
+
+		IPolyMesh polymesh( parent, ohead.getName() );
+		ProcessPolyMesh( polymesh, args );
+
+		nextParentObject = polymesh;
+
     }
     else if ( INuPatch::matches( ohead ) )
     {
@@ -224,6 +229,7 @@ ConvertParameters( RtString paramstr )
     try
     {
         return (RtPointer) new ProcArgs(paramstr);
+        std::cout << "\"" << paramstr << "\""<< std::endl;
     }
     catch (const std::exception & e)
     {

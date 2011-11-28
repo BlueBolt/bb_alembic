@@ -115,7 +115,11 @@ void ProcessXform( IXform &xform, ProcArgs &args )
 //-*****************************************************************************
 void ProcessPolyMesh( IPolyMesh &polymesh, ProcArgs &args )
 {
-    IPolyMeshSchema &ps = polymesh.getSchema();
+
+
+
+
+	IPolyMeshSchema &ps = polymesh.getSchema();
 
     TimeSamplingPtr ts = ps.getTimeSampling();
 
@@ -127,81 +131,125 @@ void ProcessPolyMesh( IPolyMesh &polymesh, ProcArgs &args )
     if ( multiSample ) { WriteMotionBegin( args, sampleTimes ); }
 
 
-    for ( SampleTimeSet::iterator iter = sampleTimes.begin();
-          iter != sampleTimes.end(); ++ iter )
-    {
+	for ( SampleTimeSet::iterator iter = sampleTimes.begin();
+		  iter != sampleTimes.end(); ++ iter )
+	{
 
-        ISampleSelector sampleSelector( *iter );
+			ISampleSelector sampleSelector( *iter );
 
-        IPolyMeshSchema::Sample sample = ps.getValue( sampleSelector );
+			IPolyMeshSchema::Sample sample = ps.getValue( sampleSelector );
 
-        RtInt npolys = (RtInt) sample.getFaceCounts()->size();
+			RtInt npolys = (RtInt) sample.getFaceCounts()->size();
 
-        ParamListBuilder paramListBuilder;
+			ParamListBuilder paramListBuilder;
 
-        paramListBuilder.add( "P", (RtPointer)sample.getPositions()->get() );
+			paramListBuilder.add( "P", (RtPointer)sample.getPositions()->get() );
 
-        IV2fGeomParam uvParam = ps.getUVsParam();
-        if ( uvParam.valid() )
-        {
-            ICompoundProperty parent = uvParam.getParent();
-            
-            
-            if ( !args.flipv )
-            {
-                AddGeomParamToParamListBuilder<IV2fGeomParam>(
-                    parent,
-                    uvParam.getHeader(),
-                    sampleSelector,
-                    "float",
-                    paramListBuilder,
-                    2,
-                    "st");
-            }
-            else if ( std::vector<float> * values =
-                    AddGeomParamToParamListBuilderAsFloat<IV2fGeomParam, float>(
-                        parent,
-                        uvParam.getHeader(),
-                        sampleSelector,
-                        "float",
-                        paramListBuilder,
-                        2,
-                        "st") )
-            {
-                for ( size_t i = 1, e = values->size(); i < e; i += 2 )
-                {
-                    (*values)[i] = 1.0 - (*values)[i];
-                }
-            }
-        }
-        IN3fGeomParam nParam = ps.getNormalsParam();
-        if ( nParam.valid() )
-        {
-            ICompoundProperty parent = nParam.getParent();
-            
-            AddGeomParamToParamListBuilder<IN3fGeomParam>(
-                parent,
-                nParam.getHeader(),
-                sampleSelector,
-                "normal",
-                paramListBuilder);
-
-        }
+			IV2fGeomParam uvParam = ps.getUVsParam();
+			if ( uvParam.valid() )
+			{
+				ICompoundProperty parent = uvParam.getParent();
 
 
+				if ( !args.flipv )
+				{
+					AddGeomParamToParamListBuilder<IV2fGeomParam>(
+						parent,
+						uvParam.getHeader(),
+						sampleSelector,
+						"float",
+						paramListBuilder,
+						2,
+						"st");
+				}
+				else if ( std::vector<float> * values =
+						AddGeomParamToParamListBuilderAsFloat<IV2fGeomParam, float>(
+							parent,
+							uvParam.getHeader(),
+							sampleSelector,
+							"float",
+							paramListBuilder,
+							2,
+							"st") )
+				{
+					for ( size_t i = 1, e = values->size(); i < e; i += 2 )
+					{
+						(*values)[i] = 1.0 - (*values)[i];
+					}
+				}
+			}
 
-        ICompoundProperty arbGeomParams = ps.getArbGeomParams();
-        AddArbitraryGeomParams( arbGeomParams,
-                    sampleSelector, paramListBuilder );
+			ICompoundProperty arbGeomParams = ps.getArbGeomParams();
+			AddArbitraryGeomParams( arbGeomParams,
+						sampleSelector, paramListBuilder );
 
-        RiPointsPolygonsV(
-            npolys,
-            (RtInt*) sample.getFaceCounts()->get(),
-            (RtInt*) sample.getFaceIndices()->get(),
-            paramListBuilder.n(),
-            paramListBuilder.nms(),
-            paramListBuilder.vals() );
-    }
+			if (!args.subd){
+
+				IN3fGeomParam nParam = ps.getNormalsParam();
+				if ( nParam.valid() )
+				{
+					ICompoundProperty parent = nParam.getParent();
+
+					AddGeomParamToParamListBuilder<IN3fGeomParam>(
+						parent,
+						nParam.getHeader(),
+						sampleSelector,
+						"normal",
+						paramListBuilder);
+
+				}
+
+			RiPointsPolygonsV(
+				npolys,
+				(RtInt*) sample.getFaceCounts()->get(),
+				(RtInt*) sample.getFaceIndices()->get(),
+				paramListBuilder.n(),
+				paramListBuilder.nms(),
+				paramListBuilder.vals() );
+
+			} else {
+
+				//["interpolateboundary"] [0 0] [] []
+
+
+		        SubDTagBuilder tags;
+
+		        tags.add( "facevaryinginterpolateboundary" );
+		        tags.addIntArg( (RtInt) 0 );
+
+
+		        tags.add( "interpolateboundary" );
+		        tags.addIntArg( RtInt(0) );
+
+		        tags.add( "facevaryingpropagatecorners" );
+		        tags.addIntArg( RtInt(0) );
+
+		        //ProcessFacevaryingInterpolateBoundry( tags, sample );
+		        //ProcessInterpolateBoundry( tags, sample );
+		       /* ProcessFacevaryingPropagateCorners( tags, sample );
+		        ProcessHoles( tags, sample );
+		        ProcessCreases( tags, sample );
+		        ProcessCorners( tags, sample );
+		        */
+
+	            RiSubdivisionMeshV(
+	                "catmull-clark",
+	                npolys,
+	                (RtInt*) sample.getFaceCounts()->get(),
+	                (RtInt*) sample.getFaceIndices()->get(),
+	                tags.nt(),
+	                tags.tags(),
+	                tags.nargs( false ),
+	                tags.intargs(),
+	                tags.floatargs(),
+	                paramListBuilder.n(),
+	                paramListBuilder.nms(),
+	                paramListBuilder.vals());
+
+
+			}
+	}
+
 
     if (multiSample) RiMotionEnd();
 
