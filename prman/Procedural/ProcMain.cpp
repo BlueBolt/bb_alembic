@@ -33,6 +33,10 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 //-*****************************************************************************
+//
+// -subd flag added by Ashley Retallack @ BlueBolt ltd
+//
+//-*****************************************************************************
 #include <iostream>
 #include <set>
 #include <ri.h>
@@ -136,10 +140,6 @@ void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
             blockHelper.reset( new AttributeBlockHelper( ohead ) );
         }
         
-        // NEW subd flag
-        // if set then process polymesh as subd
-
-
 		IPolyMesh polymesh( parent, ohead.getName() );
 		ProcessPolyMesh( polymesh, args );
 

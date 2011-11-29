@@ -33,6 +33,10 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 //-*****************************************************************************
+//
+// -subd flag added by Ashley Retallack @ BlueBolt ltd
+//
+//-*****************************************************************************
 #include "ProcArgs.h"
 
 #include <boost/tokenizer.hpp>

@@ -33,6 +33,10 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 //-*****************************************************************************
+//
+// -subd flag added by Ashley Retallack @ BlueBolt ltd
+//
+//-*****************************************************************************
 #include <ri.h>
 #include "WriteGeo.h"
 #include "SampleUtil.h"
@@ -209,28 +213,16 @@ void ProcessPolyMesh( IPolyMesh &polymesh, ProcArgs &args )
 
 			} else {
 
-				//["interpolateboundary"] [0 0] [] []
-
-
 		        SubDTagBuilder tags;
 
 		        tags.add( "facevaryinginterpolateboundary" );
 		        tags.addIntArg( (RtInt) 0 );
-
 
 		        tags.add( "interpolateboundary" );
 		        tags.addIntArg( RtInt(0) );
 
 		        tags.add( "facevaryingpropagatecorners" );
 		        tags.addIntArg( RtInt(0) );
-
-		        //ProcessFacevaryingInterpolateBoundry( tags, sample );
-		        //ProcessInterpolateBoundry( tags, sample );
-		       /* ProcessFacevaryingPropagateCorners( tags, sample );
-		        ProcessHoles( tags, sample );
-		        ProcessCreases( tags, sample );
-		        ProcessCorners( tags, sample );
-		        */
 
 	            RiSubdivisionMeshV(
 	                "catmull-clark",
