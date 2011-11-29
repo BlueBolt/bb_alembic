@@ -33,6 +33,10 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 //-*****************************************************************************
+//
+// -subd flag added by Ashley Retallack @ BlueBolt ltd
+//
+//-*****************************************************************************
 
 #ifndef _Alembic_Prman_ProcArgs_h_
 #define _Alembic_Prman_ProcArgs_h_
