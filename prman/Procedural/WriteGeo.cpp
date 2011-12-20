@@ -216,10 +216,10 @@ void ProcessPolyMesh( IPolyMesh &polymesh, ProcArgs &args )
 		        SubDTagBuilder tags;
 
 		        tags.add( "facevaryinginterpolateboundary" );
-		        tags.addIntArg( (RtInt) 0 );
+		        tags.addIntArg( (RtInt) 1 );
 
 		        tags.add( "interpolateboundary" );
-		        tags.addIntArg( RtInt(0) );
+		        tags.addIntArg( RtInt(1) );
 
 		        tags.add( "facevaryingpropagatecorners" );
 		        tags.addIntArg( RtInt(0) );
