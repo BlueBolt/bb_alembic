@@ -1,0 +1,116 @@
+global proc shelf_Alembic () {
+    global string $gBuffStr;
+    global string $gBuffStr0;
+    global string $gBuffStr1;
+
+    //Create AlembicNode
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Create Alembic archive node" 
+        -enableBackground 0
+        -align "center" 
+        -label "abcArch" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "abcArchive.png" 
+        -image1 "abcArchive.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "string $basicFilter = \"Alembic Files (*.abc)\";\n\n$file = `fileDialog2 -fm 1 -ff $basicFilter -cap \"Find Alembic File to load\"`;\n$parent = `group -em -name \"alembicArchive1\"`;\n$alembicNode=`createNode -p $parent alembicArchiveNode`;\nconnectAttr time1.outTime ($alembicNode+\".time\");\nsetAttr -type \"string\" ($alembicNode+\".abcFile\") $file;" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+    ;
+
+    //Import Geo into Maya
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Import Alembic archive into Maya" 
+        -enableBackground 0
+        -align "center" 
+        -label "abcIMP" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "abcImport.png" 
+        -image1 "abcImport.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "performAlembicImport 0" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+    ;
+    
+    //Export Selected Geo from Maya
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Export Selected Objects from Maya as Alembic archive" 
+        -enableBackground 0
+        -align "center" 
+        -label "abcEXPSel" 
+        -imageOverlayLabel "Sel" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 1 1 1
+        -overlayLabelBackColor 0 0 0 0
+        -image "abcExport.png" 
+        -image1 "abcExport.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "performAlembicExport 1 0" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+    ;
+    
+    //Export All Geo from Maya
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Export All Objects from Maya as Alembic archive" 
+        -enableBackground 0
+        -align "center" 
+        -label "abcEXPAll" 
+        -imageOverlayLabel "All" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 1 1 1
+        -overlayLabelBackColor 0 0 0 0 
+        -image "abcExport.png" 
+        -image1 "abcExport.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "performAlembicExport 0 1" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+    ;
+
+} 
