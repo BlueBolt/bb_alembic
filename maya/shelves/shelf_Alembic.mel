@@ -25,7 +25,7 @@ global proc shelf_Alembic () {
         -style "iconOnly" 
         -marginWidth 1
         -marginHeight 1
-        -command "string $basicFilter = \"Alembic Files (*.abc)\";\n\n$file = `fileDialog2 -fm 1 -ff $basicFilter -cap \"Find Alembic File to load\"`;\n$parent = `group -em -name \"alembicArchive1\"`;\n$alembicNode=`createNode -p $parent alembicArchiveNode`;\nconnectAttr time1.outTime ($alembicNode+\".time\");\nsetAttr -type \"string\" ($alembicNode+\".abcFile\") $file;" 
+        -command "string $basicFilter = \"Alembic Files (*.abc)\";$file = `fileDialog2 -fm 1 -ff $basicFilter -cap \"Find Alembic File to load\"`;if (size($file)) {$parent = `group -em -name \"alembicArchive1\"`;\n$alembicNode=`createNode -p $parent alembicArchiveNode`;\nconnectAttr time1.outTime ($alembicNode+\".time\");setAttr -type \"string\" ($alembicNode+\".abcFile\") $file;}" 
         -sourceType "mel" 
         -commandRepeatable 1
     ;
