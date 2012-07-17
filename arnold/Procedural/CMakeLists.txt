@@ -70,6 +70,8 @@ TARGET_LINK_LIBRARIES( AlembicArnoldProcedural
   ${ZLIB_LIBRARIES}
 )
 
+INSTALL( TARGETS AlembicArnoldProcedural
+         DESTINATION arnold )
 
 
 

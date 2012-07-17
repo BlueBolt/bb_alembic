@@ -246,7 +246,7 @@ void AddArbitraryGeomParam( ICompoundProperty & parent,
         
         AiNodeSetArray( primNode, param.getName().c_str(),
                 AiArrayConvert( valueSample->size(), 1, arnoldAPIType,
-                        (void *) valueSample->get(), TRUE ) );
+                        (void *) valueSample->get() ) );
     }
     
     
@@ -309,7 +309,7 @@ void AddArbitraryStringGeomParam( ICompoundProperty & parent,
         
         AiNodeSetArray( primNode, param.getName().c_str(),
                 AiArrayConvert( valueSample->size(), 1, AI_TYPE_STRING,
-                        (void *) &strPtrs[0], TRUE ) );
+                        (void *) &strPtrs[0] ) );
         
     
     }

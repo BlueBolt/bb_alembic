@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -40,6 +40,7 @@
 
 #include <maya/MFnPlugin.h>
 #include <maya/MFileObject.h>
+#include <maya/MItDependencyNodes.h>
 
 namespace AbcA = Alembic::AbcCoreAbstract;
 
@@ -315,7 +316,7 @@ MStatus AbcExport::doIt(const MArgList & args)
                 jobArgs.noNormals = true;
             }
 
-            else if (arg == "-ro" || arg == "-renderableOnly")
+            else if (arg == "-ro" || arg == "-renderableonly")
             {
                 jobArgs.excludeInvisible = true;
             }
@@ -541,9 +542,13 @@ MStatus AbcExport::doIt(const MArgList & args)
             // resolve the relative path
             MFileObject absoluteFile;
             absoluteFile.setRawFullName(fileName.c_str());
+#if MAYA_API_VERSION < 201300
             if (absoluteFile.resolvedFullName() !=
                 absoluteFile.expandedFullName())
             {
+#else
+            if (!MFileObject::isAbsolutePath(fileName.c_str())) {
+#endif
                 // this is a relative path
                 MString absoluteFileName = directoryName + "/" +
                     fileName.c_str();
@@ -553,6 +558,16 @@ MStatus AbcExport::doIt(const MArgList & args)
             else
             {
                 fileName = absoluteFile.resolvedFullName().asChar();
+            }
+
+            // check the path must exist before writing
+            MFileObject absoluteFilePath;
+            absoluteFilePath.setRawFullName(absoluteFile.path());
+            if (!absoluteFilePath.exists()) {
+                MString error;
+                error.format("Path ^1s does not exist!", absoluteFilePath.resolvedFullName());
+                MGlobal::displayError(error);
+                return MS::kFailure;
             }
         }
 

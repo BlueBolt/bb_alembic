@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -303,7 +303,8 @@ bool util::isAnimated(MObject & object, bool checkParent)
                 node.hasFn(MFn::kPolyTweak) ||
                 node.hasFn(MFn::kSubdTweak) ||
                 node.hasFn(MFn::kCluster) ||
-                node.hasFn(MFn::kFluid))
+                node.hasFn(MFn::kFluid) || 
+                node.hasFn(MFn::kPolyBoolOp))
         {
             return true;
         }

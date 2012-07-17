@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -123,11 +123,19 @@ void disconnectProps(MFnDependencyNode & iNode,
         }
 
         // disconnect connections to animated props
-        MPlug dstPlug = iNode.findPlug(propName.c_str());
+        MPlug dstPlug;
+        if (propName == Alembic::AbcGeom::kVisibilityPropertyName)
+        {
+            dstPlug = iNode.findPlug("visibility");
+        }
+        else
+        {
+            dstPlug = iNode.findPlug(propName.c_str());
+        }
 
         // make sure the long name matches
-        if (dstPlug.partialName(false, false, false, false, false, true) ==
-            propName.c_str())
+        if (propName == Alembic::AbcGeom::kVisibilityPropertyName ||
+            dstPlug.partialName(false, false, false, false, false, true) == propName.c_str())
         {
             disconnectAllPlugsTo(dstPlug);
         }
@@ -359,8 +367,17 @@ double getWeightAndIndex(double iFrame,
 
     oCeilIndex = ceilIndex.first;
 
-    return (iFrame - floorIndex.second) /
+    double alpha = (iFrame - floorIndex.second) /
         (ceilIndex.second - floorIndex.second);
+
+    // we so closely match the ceiling so we'll just use it
+    if (fabs(1.0 - alpha) < 0.0001)
+    {
+        oIndex = oCeilIndex;
+        return 0.0;
+    }
+
+    return alpha;
 }
 
 bool isColorSet(const Alembic::AbcCoreAbstract::MetaData & iMetaData,

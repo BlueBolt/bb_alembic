@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -82,6 +82,11 @@ using namespace Alembic::AbcGeom;
     }
 #endif
 
+/// The sop_IAlembicWalker needs to be in a public namespace for forward
+/// declarations.
+class sop_IAlembicWalker;
+
+/// SOP to read Alembic geometry
 class SOP_AlembicIn : public SOP_Node
 {
 public:
@@ -91,6 +96,10 @@ public:
             OP_Operator *entry);
     static PRM_Template myTemplateList[];
     typedef std::vector<std::string> PathList;
+
+    /// Clear a file out of the read-cache.  If the filename is null, the
+    /// entire cache is cleared.
+    static void	clearCacheFile(const char *filename=NULL);
     
 protected:
     //--------------------------------------------------------------------------
@@ -106,7 +115,6 @@ private:
     GA_ROAttributeRef attachDetailStringData(const std::string &attrName,
             const std::string &value);
     
-    
     struct Args
     {
         double abcTime;
@@ -116,41 +124,34 @@ private:
         bool isConstant;            // Attributes are constant
         bool isTopologyConstant;    // Flag whether topology is constant
         bool reusePrimitives;       // Reuse existing primitives
-        
-        bool rebuiltNurbs;
-        
-        
-        // normally set to 0 but useful for interpolation of
-        // varying GeomParams across NuPatch
-        int activePatchRows;
-        int activePatchCols;
+	bool rebuiltNurbs;
+
+	// normally set to 0 but useful for interpolation of
+	// varying GeomParams across NuPatch
+	int activePatchRows;
+	int activePatchCols;
         
         // Attribute name map
         const std::map<std::string,std::string> *nameMap;
-        
+
         UT_Interrupt *boss;
     };
-    
+
     struct ArgsRowColumnReset
     {
-        Args & m_args;
-        
-        ArgsRowColumnReset(Args & args, int rows, int cols)
-        : m_args(args)
-        {
-            m_args.activePatchRows = rows;
-            m_args.activePatchCols = cols;
-        }
-        
-        ~ArgsRowColumnReset()
-        {
-            m_args.activePatchRows = m_args.activePatchCols = 0;
-        }
+	Args &m_args;
+
+	ArgsRowColumnReset(Args &args, int rows, int cols)
+	: m_args(args)
+	{
+	    m_args.activePatchRows = rows;
+	    m_args.activePatchCols = cols;
+	}
+	~ArgsRowColumnReset()
+	{
+	    m_args.activePatchRows = m_args.activePatchCols = 0;
+	}
     };
-    
-    
-    
-    
     
     class InterruptedException : public std::runtime_error
     {
@@ -160,7 +161,8 @@ private:
     };
     
     
-    void walkObject( Args & args, IObject parent, const ObjectHeader &ohead,
+    void walkObject( Args & args, sop_IAlembicWalker &pathBuf,
+	    IObject parent, const ObjectHeader &ohead,
             PathList::const_iterator I, PathList::const_iterator E,
                     M44d parentXform, bool parentXformIsConstant);
     
@@ -172,23 +174,43 @@ private:
     
     void buildSubD( Args & args, ISubD & subd, M44d parentXform, bool parentXformIsConstant);
     void buildPolyMesh( Args & args, IPolyMesh & polymesh, M44d parentXform, bool parentXformIsConstant);
-    void buildNuPatch( Args & args, INuPatch & nupatch, M44d parentXform, bool parentXformIsConstant);
+    void buildNuPatch( Args & args, INuPatch & nupatch, M44d parentXform, bool paretnXformIsConstant);
+    void buildCurves( Args & args, ICurves & curves, M44d parentXform, bool parentXformIsConstant);
+    void buildPoints( Args & args, IPoints & curves, M44d parentXform, bool parentXformIsConstant);
     
     GA_PrimitiveGroup * buildMesh(const std::string & groupName,
             P3fArraySamplePtr positions,
             Int32ArraySamplePtr counts,
             Int32ArraySamplePtr indicies,
             size_t startPointIdx);
+
+    GA_PrimitiveGroup * buildCurves(const std::string & groupName,
+            P3fArraySamplePtr positions,
+            Int32ArraySamplePtr counts,
+            size_t startPointIdx);
+
+    GA_PrimitiveGroup * buildPoints(const std::string & groupName,
+	    P3fArraySamplePtr positions,
+	    UInt64ArraySamplePtr ids,
+	    V3fArraySamplePtr velocities,
+	    size_t startPointIdx);
     
     GA_PrimitiveGroup * reuseMesh(const std::string &groupName,
             P3fArraySamplePtr positions, size_t startPointIdx);
     
+    bool addOrFindWidthAttribute(GEO_AttributeOwner owner,
+            GA_RWAttributeRef & attrIdx);
+
     bool addOrFindTextureAttribute(GEO_AttributeOwner owner,
             GA_RWAttributeRef & attrIdx);
     
     bool addOrFindNormalAttribute(GEO_AttributeOwner owner,
             GA_RWAttributeRef & attrIdx);
     
+    void addWidths(Args &args, IFloatGeomParam param,
+            size_t startPointIdx, size_t endPointIdx,
+            size_t startPrimIdx, size_t endPrimIdx);
+
     void addUVs(Args & args, IV2fGeomParam param,
             size_t startPointIdx, size_t endPointIdx,
             size_t startPrimIdx, size_t endPrimIdx);
@@ -220,7 +242,7 @@ private:
     
     template <typename geomParamSampleT, typename podT>
     void applyArbitraryGeomParamSample(
-            Args & args,
+	    Args & args,
             geomParamSampleT & paramSample,
             const GA_RWAttributeRef & attrIdx,
             size_t totalExtent,
@@ -233,6 +255,9 @@ private:
     bool myTopologyConstant;
     bool myEntireSceneIsConstant;
     std::map<std::string, size_t> myPrimitiveCountCache;
+    int myConstantPointCount;	// Point count for constant topology
+    int myConstantPrimitiveCount; // Primitive count for constant topology
+    int myConstantUniqueId; // Detail unique id for constant topology
 };
 
 #endif

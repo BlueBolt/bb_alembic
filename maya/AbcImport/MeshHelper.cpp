@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -38,6 +38,7 @@
 #include "MeshHelper.h"
 #include "NodeIteratorVisitorHelper.h"
 
+#include <maya/MTypes.h>
 #include <maya/MString.h>
 #include <maya/MFloatPoint.h>
 #include <maya/MFloatPointArray.h>
@@ -211,6 +212,7 @@ namespace
             return;
 
         if (iNormals.getScope() != Alembic::AbcGeom::kVertexScope &&
+            iNormals.getScope() != Alembic::AbcGeom::kVaryingScope &&
             iNormals.getScope() != Alembic::AbcGeom::kFacevaryingScope)
         {
             printWarning(ioMesh.fullPathName() +
@@ -273,7 +275,8 @@ namespace
             }
         }
 
-        if (iNormals.getScope() == Alembic::AbcGeom::kVertexScope &&
+        if ((iNormals.getScope() == Alembic::AbcGeom::kVertexScope || 
+            iNormals.getScope() == Alembic::AbcGeom::kVaryingScope) &&
             sampSize == ( std::size_t ) ioMesh.numVertices())
         {
             MIntArray vertexList;
@@ -401,7 +404,9 @@ namespace
             {
                 meshIO.setCurrentColorSetName(iSetName);
             }
+#if MAYA_API_VERSION > 201200
             meshIO.setDisplayColors(true);
+#endif
         }
 
     }
@@ -414,7 +419,7 @@ namespace
         // per vertex per-polygon color
         int numFaces = ioMesh.numPolygons();
         int nIndex = 0;
-        MIntArray assignmentList(iSampIndices->size());
+        MIntArray assignmentList((unsigned int)iSampIndices->size());
         for (int faceIndex = 0; faceIndex < numFaces; faceIndex++)
         {
             int numVertices = ioMesh.polygonVertexCount(faceIndex);
@@ -466,9 +471,10 @@ namespace
 
         MColorArray colorList;
 
-        //Interpolate between 2 samples (as long as the indices are contant)
-        if (alpha != 0 && index != ceilIndex &&
-            iC3f.getIndexProperty().isConstant())
+        //Interpolate between 2 samples (as long as the indices are constant)
+        //(non index is considered constant)
+        if ( alpha != 0 && index != ceilIndex &&
+            (!iC3f.getIndexProperty() || iC3f.getIndexProperty().isConstant()) )
         {
             Alembic::AbcGeom::IC3fGeomParam::Sample ceilSamp;
             iC3f.getIndexed(ceilSamp,
@@ -508,7 +514,7 @@ namespace
 
         MStatus status = MStatus::kSuccess;
         MString colorSetName(iC3f.getName().c_str());
-        Alembic::Abc::v1::UInt32ArraySamplePtr indices = samp.getIndices();
+        Alembic::Abc::UInt32ArraySamplePtr indices = samp.getIndices();
         setColor(ioMesh, colorList, indices, colorSetName, MFnMesh::kRGB);
     }
 
@@ -535,8 +541,8 @@ namespace
         MColorArray colorList;
 
         //Interpolate between 2 samples
-        if (alpha != 0 && index != ceilIndex &&
-            iC4f.getIndexProperty().isConstant())
+        if ( alpha != 0 && index != ceilIndex &&
+            (!iC4f.getIndexProperty() || iC4f.getIndexProperty().isConstant()) )
         {
             Alembic::AbcGeom::IC4fGeomParam::Sample ceilSamp;
             iC4f.getIndexed(ceilSamp,
@@ -579,8 +585,22 @@ namespace
 
         MStatus status = MStatus::kSuccess;
         MString colorSetName(iC4f.getName().c_str());
-        Alembic::Abc::v1::UInt32ArraySamplePtr indices = samp.getIndices();
+        Alembic::Abc::UInt32ArraySamplePtr indices = samp.getIndices();
         setColor(ioMesh, colorList, indices, colorSetName, MFnMesh::kRGBA);
+    }
+
+    bool inStrArray( const MStringArray & iArray, const MString & iStr )
+    {
+        unsigned int arrLength = iArray.length();
+
+        for (unsigned int i = 0; i < arrLength; ++i)
+        {
+            if (iArray[i] == iStr)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     void setColors(double iFrame, MFnMesh & ioMesh,
@@ -598,12 +618,20 @@ namespace
         std::vector< Alembic::AbcGeom::IC3fGeomParam >::iterator c3sEnd =
             iC3s.end();
 
+        MStringArray allSetNames;
+        ioMesh.getColorSetNames(allSetNames);
+
         for (c3s = iC3s.begin(); c3s != c3sEnd; ++c3s)
         {
             if (c3s->getNumSamples() > 0 && (iSetStatic || !c3s->isConstant()))
             {
                 MString setName(c3s->getName().c_str());
-                createColorSet(ioMesh, setName, c3s->getMetaData());
+                if (!inStrArray(allSetNames, setName))
+                {
+                    createColorSet(ioMesh, setName, c3s->getMetaData());
+                    allSetNames.append(setName);
+                }
+
                 setColor3f(iFrame, ioMesh, *c3s);
             }
         }
@@ -617,7 +645,12 @@ namespace
             if (c4s->getNumSamples() > 0 && (iSetStatic || !c4s->isConstant()))
             {
                 MString setName(c4s->getName().c_str());
-                createColorSet(ioMesh, setName, c4s->getMetaData());
+                if (!inStrArray(allSetNames, setName))
+                {
+                    createColorSet(ioMesh, setName, c4s->getMetaData());
+                    allSetNames.append(setName);
+                }
+
                 setColor4f(iFrame, ioMesh, *c4s);
             }
         }

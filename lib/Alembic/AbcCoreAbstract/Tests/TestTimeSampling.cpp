@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -50,7 +50,7 @@
 #include <boost/preprocessor/stringize.hpp>
 
 //-*****************************************************************************
-namespace AbcA = Alembic::AbcCoreAbstract::v1;
+namespace AbcA = Alembic::AbcCoreAbstract::v2;
 using AbcA::chrono_t;
 using AbcA::index_t;
 

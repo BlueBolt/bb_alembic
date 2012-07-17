@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -266,6 +266,11 @@ protected:
 // Nice to use typedef for users of this class.
 //-*****************************************************************************
 typedef Abc::OSchemaObject<OFaceSetSchema> OFaceSet;
+
+Abc::Box3d computeBoundsFromPositionsByFaces (const Int32ArraySample & faces,
+    const Int32ArraySample & meshFaceCounts,
+    const Int32ArraySample & vertexIndices,
+    const P3fArraySample & meshP);
 
 } // End namespace ALEMBIC_VERSION_NS
 

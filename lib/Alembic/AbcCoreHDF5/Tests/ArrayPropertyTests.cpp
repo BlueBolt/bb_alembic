@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -48,7 +48,7 @@
 //-*****************************************************************************
 namespace A5 = Alembic::AbcCoreHDF5;
 
-namespace ABC = Alembic::AbcCoreAbstract::v1;
+namespace ABC = Alembic::AbcCoreAbstract::v2;
 
 using namespace Alembic::Util;
 
@@ -644,6 +644,20 @@ void testReadWriteArrays()
                     TESTING_ASSERT(data[1] == true);
                     TESTING_ASSERT(data[2] == false);
 
+                    // read as something else
+                    Alembic::Util::int32_t data2[3];
+                    ap->getAs(0, data2, Alembic::Util::kInt32POD);
+                    TESTING_ASSERT(data2[0] == 0);
+                    TESTING_ASSERT(data2[1] == 1);
+                    TESTING_ASSERT(data2[2] == 0);
+
+                    // read it as it is
+                    Alembic::Util::bool_t data3[3];
+                    ap->getAs(0, data3, Alembic::Util::kBooleanPOD);
+                    TESTING_ASSERT(data3[0] == false);
+                    TESTING_ASSERT(data3[1] == true);
+                    TESTING_ASSERT(data3[2] == false);
+
                     TESTING_ASSERT(ap->getKey(0, key));
                     TESTING_ASSERT(key.numBytes == 3);
                     TESTING_ASSERT(key.origPOD == Alembic::Util::kBooleanPOD);
@@ -668,6 +682,23 @@ void testReadWriteArrays()
                     TESTING_ASSERT(data[2] == 37);
                     TESTING_ASSERT(data[3] == 192);
                     TESTING_ASSERT(val->getDimensions().numPoints() == 4);
+
+                    // read as something else
+                    Alembic::Util::int32_t data2[4];
+                    ap->getAs(0, data2, kInt32POD);
+                    TESTING_ASSERT(data2[0] == 200);
+                    TESTING_ASSERT(data2[1] == 45);
+                    TESTING_ASSERT(data2[2] == 37);
+                    TESTING_ASSERT(data2[3] == 192);
+
+                    // read it as it is
+                    Alembic::Util::uint8_t data3[4];
+                    ap->getAs(0, data3, kUint8POD);
+                    TESTING_ASSERT(data3[0] == 200);
+                    TESTING_ASSERT(data3[1] == 45);
+                    TESTING_ASSERT(data3[2] == 37);
+                    TESTING_ASSERT(data3[3] == 192);
+
                     TESTING_ASSERT(ap->getKey(0, key));
                     TESTING_ASSERT(key.numBytes == 4);
                     TESTING_ASSERT(key.origPOD == Alembic::Util::kUint8POD);
@@ -709,6 +740,18 @@ void testReadWriteArrays()
                         (Alembic::Util::int8_t *)(val->getData());
                     TESTING_ASSERT(data[0] == -20);
                     TESTING_ASSERT(data[1] == 45);
+
+                    // read as something else
+                    Alembic::Util::int32_t data2[2];
+                    ap->getAs(0, data2, kInt32POD);
+                    TESTING_ASSERT(data2[0] == -20);
+                    TESTING_ASSERT(data2[1] == 45);
+
+                    // read it as it is
+                    Alembic::Util::int8_t data3[2];
+                    ap->getAs(0, data3, kInt8POD);
+                    TESTING_ASSERT(data3[0] == -20);
+                    TESTING_ASSERT(data3[1] == 45);
                 }
                 break;
 
@@ -729,6 +772,20 @@ void testReadWriteArrays()
                     TESTING_ASSERT(data[0] == 60000);
                     TESTING_ASSERT(data[1] == 2);
                     TESTING_ASSERT(data[2] == 3987);
+
+                    // read as something else
+                    Alembic::Util::int32_t data2[3];
+                    ap->getAs(0, data2, kInt32POD);
+                    TESTING_ASSERT(data2[0] == 60000);
+                    TESTING_ASSERT(data2[1] == 2);
+                    TESTING_ASSERT(data2[2] == 3987);
+
+                    // read it as it is
+                    Alembic::Util::uint16_t data3[3];
+                    ap->getAs(0, data3, kUint16POD);
+                    TESTING_ASSERT(data3[0] == 60000);
+                    TESTING_ASSERT(data3[1] == 2);
+                    TESTING_ASSERT(data2[2] == 3987);
                 }
                 break;
 
@@ -748,6 +805,18 @@ void testReadWriteArrays()
                         (Alembic::Util::int16_t *)(val->getData());
                     TESTING_ASSERT(data[0] == -20000);
                     TESTING_ASSERT(data[1] == 77);
+
+                    // read as something else
+                    Alembic::Util::int32_t data2[2];
+                    ap->getAs(0, data2, kInt32POD);
+                    TESTING_ASSERT(data2[0] == -20000);
+                    TESTING_ASSERT(data2[1] == 77);
+
+                    // read it as it is
+                    Alembic::Util::int16_t data3[2];
+                    ap->getAs(0, data3, kInt16POD);
+                    TESTING_ASSERT(data3[0] == -20000);
+                    TESTING_ASSERT(data3[1] == 77);
                 }
                 break;
 
@@ -766,6 +835,16 @@ void testReadWriteArrays()
                     Alembic::Util::uint32_t * data =
                         (Alembic::Util::uint32_t *)(val->getData());
                     TESTING_ASSERT(data[0] == 1000000);
+
+                    // read as something else
+                    Alembic::Util::int16_t data2;
+                    ap->getAs(0, &data2, kInt16POD);
+                    TESTING_ASSERT(data2 == 32767); // maxed out
+
+                    // read it as it is
+                    Alembic::Util::int32_t data3;
+                    ap->getAs(0, &data3, kUint32POD);
+                    TESTING_ASSERT(data3 == 1000000);
                 }
                 break;
 
@@ -787,6 +866,33 @@ void testReadWriteArrays()
                     TESTING_ASSERT(data[1] == 42);
                     TESTING_ASSERT(data[2] == -20000);
                     TESTING_ASSERT(data[3] == 123456);
+
+                    // read as something else
+                    Alembic::Util::int16_t data2[4];
+                    ap->getAs(0, data2, kInt16POD);
+                    TESTING_ASSERT(data2[0] == -32768); // maxed out negative
+                    TESTING_ASSERT(data2[1] == 42);
+                    TESTING_ASSERT(data2[2] == -20000);
+                    TESTING_ASSERT(data2[3] == 32767);  // maxed out positive
+
+                    // read it as it is
+                    Alembic::Util::int32_t data3[4];
+                    ap->getAs(0, data3, kInt32POD);
+                    TESTING_ASSERT(data3[0] == -1000000);
+                    TESTING_ASSERT(data3[1] == 42);
+                    TESTING_ASSERT(data3[2] == -20000);
+                    TESTING_ASSERT(data3[3] == 123456);
+
+                    // can't read as strings, and it shouldn't touch the buffer
+                    TESTING_ASSERT_THROW(ap->getAs(0, data3, kStringPOD),
+                        Alembic::Util::Exception);
+
+                    TESTING_ASSERT_THROW(ap->getAs(0, data3, kWstringPOD),
+                        Alembic::Util::Exception);
+                    TESTING_ASSERT(data3[0] == -1000000);
+                    TESTING_ASSERT(data3[1] == 42);
+                    TESTING_ASSERT(data3[2] == -20000);
+                    TESTING_ASSERT(data3[3] == 123456);
                 }
                 break;
 
@@ -807,6 +913,20 @@ void testReadWriteArrays()
                     TESTING_ASSERT(data[0] == 5000000000LL);
                     TESTING_ASSERT(data[1] == 1234567891011LL);
                     TESTING_ASSERT(data[2] == 12);
+
+                    // read as something else
+                    Alembic::Util::int16_t data2[3];
+                    ap->getAs(0, data2, kInt16POD);
+                    TESTING_ASSERT(data2[0] == 32767); // maxed out positive
+                    TESTING_ASSERT(data2[1] == 32767); // maxed out positive
+                    TESTING_ASSERT(data2[2] == 12);
+
+                    // read it as it is
+                    Alembic::Util::uint64_t data3[3];
+                    ap->getAs(0, data3, kUint64POD);
+                    TESTING_ASSERT(data3[0] == 5000000000LL);
+                    TESTING_ASSERT(data3[1] == 1234567891011LL);
+                    TESTING_ASSERT(data3[2] == 12);
                 }
                 break;
 
@@ -826,6 +946,18 @@ void testReadWriteArrays()
                         (Alembic::Util::int64_t *)(val->getData());
                     TESTING_ASSERT(data[0] == -5000000000LL);
                     TESTING_ASSERT(data[1] == 9876543210LL);
+
+                    // read as something else
+                    Alembic::Util::int16_t data2[2];
+                    ap->getAs(0, data2, kInt16POD);
+                    TESTING_ASSERT(data2[0] == -32768); // maxed out negative
+                    TESTING_ASSERT(data2[1] == 32767); // maxed out positive
+
+                    // read it as it is
+                    Alembic::Util::int64_t data3[2];
+                    ap->getAs(0, data3, kInt64POD);
+                    TESTING_ASSERT(data3[0] == -5000000000LL);
+                    TESTING_ASSERT(data3[1] == 9876543210LL);
                 }
                 break;
 
@@ -845,6 +977,17 @@ void testReadWriteArrays()
                         (Alembic::Util::float16_t *)(val->getData());
                     TESTING_ASSERT(data[0] == 16.0);
                     TESTING_ASSERT(data[1] == -3.0);
+
+                    // can't currently read it as another data type
+                    Alembic::Util::float32_t data2[2];
+                    TESTING_ASSERT_THROW(ap->getAs(0, data2, kFloat32POD),
+                                         Alembic::Util::Exception);
+                    // read it as it is
+                    Alembic::Util::float16_t data3[2];
+                    ap->getAs(0, data3, kFloat16POD);
+                    TESTING_ASSERT(data3[0] == 16.0);
+                    TESTING_ASSERT(data3[1] == -3.0);
+
                 }
                 break;
 
@@ -855,24 +998,27 @@ void testReadWriteArrays()
                     TESTING_ASSERT(!ap->isScalarLike());
                     ABC::ArraySamplePtr val;
                     ap->getSample(0, val);
+                    ABC::ArraySampleKey key;
 
                     if (ap->getName() == "float32_ext1")
                     {
-                        TESTING_ASSERT(val->getDimensions().numPoints() == 4);
                         Dimensions dims0;
                         ap->getDimensions(0, dims0);
                         TESTING_ASSERT(dims0.rank() == 1);
                         TESTING_ASSERT(dims0.numPoints() == 4);
+                        ap->getKey(0, key);
+                        TESTING_ASSERT(key.numBytes == 16);
                     }
 
                     if (ap->getName() == "float32")
                     {
                         TESTING_ASSERT( ap->getDataType().getExtent() == 2);
-                        TESTING_ASSERT(val->getDimensions().numPoints() == 2);
                         Dimensions dims0;
                         ap->getDimensions(0, dims0);
                         TESTING_ASSERT(dims0.rank() == 1);
                         TESTING_ASSERT(dims0.numPoints() == 2);
+                        ap->getKey(0, key);
+                        TESTING_ASSERT(key.numBytes == 16);
                     }
 
                     TESTING_ASSERT(val->getDimensions().rank() == 1);
@@ -882,6 +1028,41 @@ void testReadWriteArrays()
                     TESTING_ASSERT(data[1] == -13.25);
                     TESTING_ASSERT(data[2] == 35.5);
                     TESTING_ASSERT(data[3] == 128.125);
+
+                    // read as something else
+                    Alembic::Util::float64_t data2[4];
+                    ap->getAs(0, data2, kFloat64POD);
+                    TESTING_ASSERT(data2[0] == 128.0);
+                    TESTING_ASSERT(data2[1] == -13.25);
+                    TESTING_ASSERT(data2[2] == 35.5);
+                    TESTING_ASSERT(data2[3] == 128.125);
+
+                    // read it as it is
+                    Alembic::Util::float32_t data3[4];
+                    ap->getAs(0, data3, kFloat32POD);
+                    TESTING_ASSERT(data3[0] == 128.0);
+                    TESTING_ASSERT(data3[1] == -13.25);
+                    TESTING_ASSERT(data3[2] == 35.5);
+                    TESTING_ASSERT(data3[3] == 128.125);
+
+                    // read it as an int32_t
+                    Alembic::Util::int32_t data4[4];
+                    ap->getAs(0, data4, kInt32POD);
+                    TESTING_ASSERT(data4[0] == 128);
+                    TESTING_ASSERT(data4[1] == -13);
+                    TESTING_ASSERT(data4[2] == 35);
+                    TESTING_ASSERT(data4[3] == 128);
+
+                    // can't read as strings, and it shouldn't touch the buffer
+                    TESTING_ASSERT_THROW(ap->getAs(0, data4, kStringPOD),
+                        Alembic::Util::Exception);
+
+                    TESTING_ASSERT_THROW(ap->getAs(0, data4, kWstringPOD),
+                        Alembic::Util::Exception);
+                    TESTING_ASSERT(data4[0] == 128);
+                    TESTING_ASSERT(data4[1] == -13);
+                    TESTING_ASSERT(data4[2] == 35);
+                    TESTING_ASSERT(data4[3] == 128);
                 }
                 break;
 
@@ -894,6 +1075,7 @@ void testReadWriteArrays()
                     ABC::ArraySamplePtr val;
                     ap->getSample(0, val);
                     TESTING_ASSERT(val->getDimensions().rank() == 1);
+                    ABC::ArraySampleKey key;
 
                     if (ap->getName() == "float64")
                     {
@@ -901,7 +1083,8 @@ void testReadWriteArrays()
                         ap->getDimensions(0, dims0);
                         TESTING_ASSERT(dims0.rank() == 1);
                         TESTING_ASSERT(dims0.numPoints() == 30);
-                        TESTING_ASSERT(val->getDimensions().numPoints() == 30);
+                        ap->getKey(0, key);
+                        TESTING_ASSERT(key.numBytes == 240);
                     }
 
                     if (ap->getName() == "float64_ext3")
@@ -911,13 +1094,29 @@ void testReadWriteArrays()
                         TESTING_ASSERT(dims0.rank() == 1);
                         TESTING_ASSERT(dims0.numPoints() == 10);
                         TESTING_ASSERT( ap->getDataType().getExtent() == 3);
-                        TESTING_ASSERT(val->getDimensions().numPoints() == 10);
+                        ap->getKey(0, key);
+                        TESTING_ASSERT(key.numBytes == 240);
                     }
 
                     Alembic::Util::float64_t * data =
                         (Alembic::Util::float64_t *)(val->getData());
+
+                    Alembic::Util::float32_t data2[30];
+                    ap->getAs(0, data2, kFloat32POD);
+
+                    Alembic::Util::float64_t data3[30];
+                    ap->getAs(0, data3, kFloat64POD);
+
+                    Alembic::Util::uint32_t data4[30];
+                    ap->getAs(0, data4, kUint32POD);
+
                     for (size_t i = 0; i < val->size(); ++i)
+                    {
                         TESTING_ASSERT(data[i] == i* 100);
+                        TESTING_ASSERT(data2[i] == i* 100);
+                        TESTING_ASSERT(data3[i] == i* 100);
+                        TESTING_ASSERT(data4[i] == i* 100);
+                    }
                 }
                 break;
 
@@ -939,32 +1138,56 @@ void testReadWriteArrays()
                     TESTING_ASSERT(data[1] == "");
                     TESTING_ASSERT(data[2] == "for");
                     TESTING_ASSERT(data[3] == "cake!");
+
+                    Alembic::Util::string data2[4];
+                    ap->getAs(0, data2, kStringPOD);
+                    TESTING_ASSERT(data2[0] == "Now it's time");
+                    TESTING_ASSERT(data2[1] == "");
+                    TESTING_ASSERT(data2[2] == "for");
+                    TESTING_ASSERT(data2[3] == "cake!");
+
+                    // can't read strings as anything else
+                    Alembic::Util::int32_t data3[4];
+                    TESTING_ASSERT_THROW(ap->getAs(0, data3, kInt32POD),
+                        Alembic::Util::Exception);
                 }
                 break;
 
-            case Alembic::Util::kWstringPOD:
-            {
-                TESTING_ASSERT(ap->getName() == "wstr");
-                ABC::ArraySamplePtr val;
-                ap->getSample(0, val);
-                TESTING_ASSERT(!ap->isScalarLike());
-                TESTING_ASSERT(val->getDimensions().numPoints() == 4);
-                TESTING_ASSERT(val->getDimensions().rank() == 1);
-                Dimensions dims0;
-                ap->getDimensions(0, dims0);
-                TESTING_ASSERT(dims0.rank() == 1);
-                TESTING_ASSERT(dims0.numPoints() == 4);
-                Alembic::Util::wstring * data =
-                    (Alembic::Util::wstring *)(val->getData());
-                TESTING_ASSERT(data[0] == L"We do what we must ");
-                TESTING_ASSERT(data[1] == L"because we can.");
-                TESTING_ASSERT(data[2] == L"");
-                TESTING_ASSERT(data[3] ==  L"\uf8e4 \uf8e2 \uf8d3");
-            }
-            break;
+                case Alembic::Util::kWstringPOD:
+                {
+                    TESTING_ASSERT(ap->getName() == "wstr");
+                    ABC::ArraySamplePtr val;
+                    ap->getSample(0, val);
+                    TESTING_ASSERT(!ap->isScalarLike());
+                    TESTING_ASSERT(val->getDimensions().numPoints() == 4);
+                    TESTING_ASSERT(val->getDimensions().rank() == 1);
+                    Dimensions dims0;
+                    ap->getDimensions(0, dims0);
+                    TESTING_ASSERT(dims0.rank() == 1);
+                    TESTING_ASSERT(dims0.numPoints() == 4);
+                    Alembic::Util::wstring * data =
+                        (Alembic::Util::wstring *)(val->getData());
+                    TESTING_ASSERT(data[0] == L"We do what we must ");
+                    TESTING_ASSERT(data[1] == L"because we can.");
+                    TESTING_ASSERT(data[2] == L"");
+                    TESTING_ASSERT(data[3] ==  L"\uf8e4 \uf8e2 \uf8d3");
 
-            default:
-                TESTING_ASSERT(false);
+                    Alembic::Util::wstring data2[4];
+                    ap->getAs(0, data2, kWstringPOD);
+                    TESTING_ASSERT(data[0] == L"We do what we must ");
+                    TESTING_ASSERT(data[1] == L"because we can.");
+                    TESTING_ASSERT(data[2] == L"");
+                    TESTING_ASSERT(data[3] ==  L"\uf8e4 \uf8e2 \uf8d3");
+
+                    // can't read strings as anything else
+                    Alembic::Util::int32_t data3[4];
+                    TESTING_ASSERT_THROW(ap->getAs(0, data3, kInt32POD),
+                        Alembic::Util::Exception);
+                }
+                break;
+
+                default:
+                    TESTING_ASSERT(false);
                 break;
             }
         }
@@ -1329,11 +1552,210 @@ void testExtentArrayStrings()
     }
 }
 
+//-*****************************************************************************
+void testArrayStringsRepeats()
+{
+    std::string archiveName = "strArrayRepeats.abc";
+    std::vector < Alembic::Util::string > vals(6);
+    vals[0] = "if you want";
+    vals[1] = "a revolution";
+    vals[2] = "the only";
+    vals[3] = "solution";
+    vals[4] = "...";
+    vals[5] = "evolve";
+
+    std::vector < Alembic::Util::string > vals2(4);
+    vals2[0] = "bom bom";
+    vals2[1] = "bom";
+    vals2[2] = "bom bom";
+    vals2[3] = "bom";
+
+    std::vector < Alembic::Util::string > valsEmpty(4);
+
+    ABC::DataType dtype(Alembic::Util::kStringPOD);
+
+    {
+        A5::WriteArchive w;
+        ABC::ArchiveWriterPtr a = w(archiveName, ABC::MetaData());
+        ABC::ObjectWriterPtr archive = a->getTop();
+
+        ABC::CompoundPropertyWriterPtr parent = archive->getProperties();
+
+        ABC::ArrayPropertyWriterPtr awp =
+            parent->createArrayProperty("str", ABC::MetaData(), dtype, 0);
+
+        // 0
+        awp->setSample(ABC::ArraySample(&(valsEmpty.front()), dtype,
+            Alembic::Util::Dimensions(valsEmpty.size())));
+
+        // 1
+        awp->setSample(ABC::ArraySample(&(valsEmpty.front()), dtype,
+            Alembic::Util::Dimensions(valsEmpty.size())));
+
+        // 2
+        awp->setSample(ABC::ArraySample(&(valsEmpty.front()), dtype,
+            Alembic::Util::Dimensions(valsEmpty.size())));
+
+        // 3
+        awp->setSample(
+            ABC::ArraySample(&(vals.front()), dtype,
+                        Alembic::Util::Dimensions(vals.size())));
+
+        // 4
+        awp->setSample(
+            ABC::ArraySample(&(vals.front()), dtype,
+                        Alembic::Util::Dimensions(vals.size())));
+
+        // 5
+        awp->setSample(
+            ABC::ArraySample(&(vals.front()), dtype,
+                        Alembic::Util::Dimensions(vals.size())));
+
+        // 6
+        awp->setSample(
+            ABC::ArraySample(&(vals2.front()), dtype,
+                        Alembic::Util::Dimensions(vals2.size())));
+
+        // 7
+        awp->setSample(
+            ABC::ArraySample(&(vals2.front()), dtype,
+                        Alembic::Util::Dimensions(vals2.size())));
+
+        // 8
+        awp->setSample(ABC::ArraySample(&(valsEmpty.front()), dtype,
+            Alembic::Util::Dimensions(valsEmpty.size())));
+
+        // 9
+        awp->setSample(ABC::ArraySample(&(valsEmpty.front()), dtype,
+            Alembic::Util::Dimensions(valsEmpty.size())));
+
+        dtype.setExtent(2);
+        ABC::ArrayPropertyWriterPtr awp2 =
+            parent->createArrayProperty("str2", ABC::MetaData(), dtype, 0);
+
+        // 0
+        awp2->setSample(
+            ABC::ArraySample(&(vals.front()), dtype,
+                        Alembic::Util::Dimensions(vals.size() / 2)));
+
+        // 1
+        awp2->setSample(
+            ABC::ArraySample(&(vals.front()), dtype,
+                        Alembic::Util::Dimensions(vals.size() / 2)));
+
+        // 2
+        awp2->setSample(
+            ABC::ArraySample(&(vals.front()), dtype,
+                        Alembic::Util::Dimensions(vals.size() / 2)));
+
+        // 3
+        awp2->setSample(
+            ABC::ArraySample(NULL, dtype, Alembic::Util::Dimensions(0)));
+
+        // 4
+        awp2->setSample(
+            ABC::ArraySample(&(vals2.front()), dtype,
+                        Alembic::Util::Dimensions(vals2.size() / 2)));
+
+        // 5
+        awp2->setSample(
+            ABC::ArraySample(&(vals2.front()), dtype,
+                        Alembic::Util::Dimensions(vals2.size() / 2)));
+
+    }
+
+    {
+        A5::ReadArchive r;
+        ABC::ArchiveReaderPtr a = r( archiveName,
+                                     ABC::ReadArraySampleCachePtr() );
+        ABC::ObjectReaderPtr archive = a->getTop();
+        ABC::CompoundPropertyReaderPtr parent = archive->getProperties();
+        TESTING_ASSERT(parent->getNumProperties() == 2);
+
+        ABC::ArrayPropertyReaderPtr ap = parent->getArrayProperty("str");
+        TESTING_ASSERT(ap->getNumSamples() == 10);
+
+        ABC::ArrayPropertyReaderPtr ap2 = parent->getArrayProperty("str2");
+        TESTING_ASSERT(ap2->getNumSamples() == 6);
+
+        ABC::ArraySamplePtr val;
+        for (int i = 0; i < 10; ++i)
+        {
+            ap->getSample(i, val);
+            Alembic::Util::string * data =
+                (Alembic::Util::string *)(val->getData());
+            if (i < 3 || i > 7)
+            {
+                TESTING_ASSERT(val->getDimensions().numPoints() == 4);
+                TESTING_ASSERT(val->getDimensions().rank() == 1);
+                TESTING_ASSERT(data[0] == "");
+                TESTING_ASSERT(data[1] == "");
+                TESTING_ASSERT(data[2] == "");
+                TESTING_ASSERT(data[3] == "");
+            }
+
+            if (i == 3 || i == 4  || i == 5)
+            {
+                TESTING_ASSERT(val->getDimensions().numPoints() == 6);
+                TESTING_ASSERT(val->getDimensions().rank() == 1);
+                for (unsigned int j = 0; j < vals.size(); ++j)
+                {
+                    TESTING_ASSERT(data[j] == vals[j]);
+                }
+            }
+
+            if (i == 6 || i == 7)
+            {
+                TESTING_ASSERT(val->getDimensions().numPoints() == 4);
+                TESTING_ASSERT(val->getDimensions().rank() == 1);
+                for (unsigned int j = 0; j < vals2.size(); ++j)
+                {
+                    TESTING_ASSERT(data[j] == vals2[j]);
+                }
+            }
+        }
+
+        for (int i = 0; i < 6; ++i)
+        {
+            ap2->getSample(i, val);
+            Alembic::Util::string * data =
+                (Alembic::Util::string *)(val->getData());
+
+            if (i < 3)
+            {
+                TESTING_ASSERT(val->getDimensions().numPoints() == 3);
+                TESTING_ASSERT(val->getDimensions().rank() == 1);
+                for (unsigned int j = 0; j < vals.size(); ++j)
+                {
+                    TESTING_ASSERT(data[j] == vals[j]);
+                }
+            }
+
+            if (i == 3)
+            {
+                TESTING_ASSERT(val->getDimensions().numPoints() == 0);
+                TESTING_ASSERT(val->getDimensions().rank() == 1);
+            }
+
+            if (i > 3)
+            {
+                TESTING_ASSERT(val->getDimensions().numPoints() == 2);
+                TESTING_ASSERT(val->getDimensions().rank() == 1);
+                for (unsigned int j = 0; j < vals2.size(); ++j)
+                {
+                    TESTING_ASSERT(data[j] == vals2[j]);
+                }
+            }
+        }
+    }
+}
+
 int main ( int argc, char *argv[] )
 {
     testEmptyArray();
     testDuplicateArray();
     testReadWriteArrays();
     testExtentArrayStrings();
+    testArrayStringsRepeats();
     return 0;
 }

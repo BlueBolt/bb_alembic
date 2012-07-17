@@ -101,7 +101,7 @@ void ApplyTransformation( struct AtNode * node,
     
     AiNodeSetArray(node, "matrix",
                 AiArrayConvert(1, xformSamples->size(),
-                        AI_TYPE_MATRIX, &mlist[0], TRUE));
+                        AI_TYPE_MATRIX, &mlist[0]));
     
     
     if ( sampleTimes.size() > 1 )
@@ -112,13 +112,13 @@ void ApplyTransformation( struct AtNode * node,
         {
             AiNodeSetArray(node, "transform_time_samples",
                             AiArrayConvert(sampleTimes.size(), 1,
-                                    AI_TYPE_FLOAT, &sampleTimes[0], TRUE));
+                                    AI_TYPE_FLOAT, &sampleTimes[0]));
         }
         else if ( nodeHasParameter( node, "time_samples" ) )
         {
             AiNodeSetArray(node, "time_samples",
                             AiArrayConvert(sampleTimes.size(), 1,
-                                    AI_TYPE_FLOAT, &sampleTimes[0], TRUE));
+                                    AI_TYPE_FLOAT, &sampleTimes[0]));
         }
         else
         {
@@ -390,16 +390,15 @@ AtNode * ProcessPolyMeshBase(
     
     AiNodeSetArray(meshNode, "vidxs", 
             AiArrayConvert(vidxs.size(), 1, AI_TYPE_UINT,
-                    (void*)&vidxs[0], TRUE));
+                    (void*)&vidxs[0]));
     
     AiNodeSetArray(meshNode, "nsides",
             AiArrayConvert(nsides.size(), 1, AI_TYPE_BYTE,
-                    &(nsides[0]), TRUE));
+                    &(nsides[0])));
     
     AiNodeSetArray(meshNode, "vlist",
             AiArrayConvert( vlist.size() / sampleTimes.size(), 
-                    sampleTimes.size(), AI_TYPE_FLOAT, (void*)(&(vlist[0])),
-                            TRUE));
+                    sampleTimes.size(), AI_TYPE_FLOAT, (void*)(&(vlist[0]))));
     
     if ( !uvlist.empty() )
     {
@@ -411,20 +410,19 @@ AtNode * ProcessPolyMeshBase(
         
         AiNodeSetArray(meshNode, "uvlist",
             AiArrayConvert( uvlist.size() / sampleTimes.size(), 
-                    sampleTimes.size(), AI_TYPE_FLOAT, (void*)(&(uvlist[0])),
-                            TRUE));
+                    sampleTimes.size(), AI_TYPE_FLOAT, (void*)(&(uvlist[0]))));
         
         if ( !uvidxs.empty() )
         {
             AiNodeSetArray(meshNode, "uvidxs",
                     AiArrayConvert(uvidxs.size(), 1, AI_TYPE_UINT,
-                            &(uvidxs[0]), TRUE));
+                            &(uvidxs[0])));
         }
         else
         {
             AiNodeSetArray(meshNode, "uvidxs",
                     AiArrayConvert(vidxs.size(), 1, AI_TYPE_UINT,
-                            &(vidxs[0]), TRUE));
+                            &(vidxs[0])));
         }
     }
     
@@ -443,7 +441,7 @@ AtNode * ProcessPolyMeshBase(
         
         AiNodeSetArray( meshNode, "deform_time_samples",
                 AiArrayConvert(relativeSampleTimes.size(), 1,
-                        AI_TYPE_FLOAT, &relativeSampleTimes[0], TRUE));
+                        AI_TYPE_FLOAT, &relativeSampleTimes[0]));
     }
     
     // faceset visibility array
@@ -478,7 +476,7 @@ AtNode * ProcessPolyMeshBase(
             {
                 AiNodeSetArray( meshNode, "face_visibility",
                         AiArrayConvert( faceVisArray.size(), 1, AI_TYPE_BOOLEAN,
-                                (void *) &faceVisArray[0], TRUE ) );
+                                (void *) &faceVisArray[0] ) );
             }
         }
     }
@@ -547,20 +545,19 @@ void ProcessPolyMesh( IPolyMesh &polymesh, ProcArgs &args,
     {
         AiNodeSetArray(meshNode, "nlist",
             AiArrayConvert( nlist.size() / sampleTimes.size(), 
-                    sampleTimes.size(), AI_TYPE_FLOAT, (void*)(&(nlist[0])),
-                            TRUE));
+                    sampleTimes.size(), AI_TYPE_FLOAT, (void*)(&(nlist[0]))));
         
         if ( !nidxs.empty() )
         {
             AiNodeSetArray(meshNode, "nidxs",
                     AiArrayConvert(nidxs.size(), 1, AI_TYPE_UINT,
-                            &(nidxs[0]), TRUE));
+                            &(nidxs[0])));
         }
         else
         {
             AiNodeSetArray(meshNode, "nidxs",
                     AiArrayConvert(vidxs.size(), 1, AI_TYPE_UINT,
-                            &(vidxs[0]), TRUE));
+                            &(vidxs[0])));
         }
     }
     

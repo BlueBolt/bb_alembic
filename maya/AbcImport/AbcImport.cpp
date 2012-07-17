@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -257,9 +257,13 @@ MStatus AbcImport::doIt(const MArgList & args)
             // resolve the relative path
             MFileObject absoluteFile;
             absoluteFile.setRawFullName(filename);
+#if MAYA_API_VERSION < 201300
             if (absoluteFile.resolvedFullName() != 
                 absoluteFile.expandedFullName())
             {
+#else
+            if (!MFileObject::isAbsolutePath(filename)) {
+#endif
                 // this is a relative path
                 MString absoluteFileName = directoryName + "/" + filename;
                 absoluteFile.setRawFullName(absoluteFileName);

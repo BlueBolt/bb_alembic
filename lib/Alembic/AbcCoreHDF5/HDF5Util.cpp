@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -59,6 +59,15 @@ hid_t CreationOrderPlist()
     ABCA_ASSERT( status >= 0,
                   "CreationOrderPlist: "
                   "H5Pset_link_creation_order() failed" );
+
+    // always store as dense to work around a possible phase change bug
+	// see google code issue #258
+    status = H5Pset_link_phase_change( ID, 0, 0 );
+
+    ABCA_ASSERT( status >= 0,
+                  "CreationOrderPlist: "
+                  "H5Pset_link_phase_change() failed" );
+
     return ID;
 }
 

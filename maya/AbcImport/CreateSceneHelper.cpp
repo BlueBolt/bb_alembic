@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -348,6 +348,8 @@ MStatus CreateSceneVisitor::walk(Alembic::Abc::IArchive & iRoot)
     MStatus status = MS::kSuccess;
 
     MObject saveParent = mParent;
+
+    if (!iRoot.valid()) return MS::kFailure;
 
     Alembic::Abc::IObject top = iRoot.getTop();
     size_t numChildren = top.getNumChildren();

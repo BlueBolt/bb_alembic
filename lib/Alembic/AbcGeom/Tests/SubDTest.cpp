@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -89,6 +89,9 @@ void Example1_MeshOut()
     mesh_samp.setCreases( creases, creaseLengths, creaseSharpnesses );
     mesh_samp.setCorners( corners, cornerSharpnesses );
 
+    // velocities
+    mesh_samp.setVelocities( V3fArraySample( ( const V3f * )g_veloc,
+                                            g_numVerts ) );
     // UVs
     OV2fGeomParam::Sample uvsamp( V2fArraySample( (const V2f *)g_uvs,
                                                   g_numUVs ),
@@ -199,6 +202,13 @@ void Example1_MeshIn()
         TESTING_ASSERT( 10.0 == (*(samp1.getCornerSharpnesses()))[i] );
     }
 
+    for ( size_t i = 0 ; i < samp1.getVelocities()->size() ; ++i )
+    {
+        V3f veloc( g_veloc[i*3], g_veloc[i*3+1], g_veloc[i*3+2] );
+        std::cout << "velocities[" << i << "]: "
+        << (*(samp1.getVelocities()))[i] << std::endl;
+        TESTING_ASSERT( veloc == (*(samp1.getVelocities()))[i] );
+    }
 
     // test the second sample has '1' as the interpolate boundary value
     TESTING_ASSERT( 1 == samp1.getInterpolateBoundary() );
@@ -237,6 +247,16 @@ void Example1_MeshIn()
     {
         PropertyHeader p = arbattrs.getPropertyHeader(i);
         TESTING_ASSERT( IC3fGeomParam::matches( p.getMetaData() ) );
+
+        TESTING_ASSERT( IC3fGeomParam::matches( p ) );
+        TESTING_ASSERT( OC3fGeomParam::matches( p ) );
+        TESTING_ASSERT( ! IC3cGeomParam::matches( p ) );
+        TESTING_ASSERT( ! OC3cGeomParam::matches( p ) );
+        TESTING_ASSERT( ! IInt32GeomParam::matches( p ) );
+        TESTING_ASSERT( ! IFloatGeomParam::matches( p ) );
+        TESTING_ASSERT( ! IDoubleGeomParam::matches( p ) );
+        TESTING_ASSERT( ! IV3iGeomParam::matches( p ) );
+        TESTING_ASSERT( ! IV3fGeomParam::matches( p ) );
 
         if ( p.getName() == "color" )
         {

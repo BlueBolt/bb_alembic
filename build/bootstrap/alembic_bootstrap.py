@@ -214,8 +214,12 @@ def configureCMakeBoost( cmake_args ):
 
     try:
         cmake_extra_args += ' -D BOOST_INCLUDEDIR:PATH="%s"' % cmake_args[1]
+        
+        cmake_extra_args += ' -D BOOST_ROOT:PATH="%s/boost"' % cmake_args[1]
 
         cmake_extra_args += " -D BOOST_LIBRARYDIR:PATH=%s" % libdir
+
+        cmake_extra_args += " -D Boost_LIBRARY_DIRS:FILEPATH=%s" % libdir
 
         cmake_extra_args += " -D Boost_THREAD_LIBRARY:FILEPATH=%s" % libpath
 

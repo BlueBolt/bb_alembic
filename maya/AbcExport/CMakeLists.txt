@@ -87,4 +87,4 @@ TARGET_LINK_LIBRARIES( AbcExport
   ${ZLIB_LIBRARIES} ${EXTERNAL_MATH_LIBS} )
 
 INSTALL( TARGETS AbcExport
-         DESTINATION maya/$ENV{MAYA_VERSION}/plug-ins )
+         DESTINATION maya/plug-ins )

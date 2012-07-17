@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -98,6 +98,11 @@ void IPolyMeshSchema::init( const Abc::Argument &iArg0,
         m_normalsParam = IN3fGeomParam( _this, "N", iArg0, iArg1 );
     }
 
+    if ( this->getPropertyHeader( ".velocities" ) != NULL )
+    {
+        m_velocitiesProperty = Abc::IV3fArrayProperty( _this, ".velocities",
+                                               iArg0, iArg1 );
+    }
 
     IObject _thisObject = this->getParent().getObject();
     size_t numChildren = _thisObject.getNumChildren();
@@ -124,6 +129,7 @@ IPolyMeshSchema::operator=(const IPolyMeshSchema & rhs)
     IGeomBaseSchema<PolyMeshSchemaInfo>::operator=(rhs);
 
     m_positionsProperty = rhs.m_positionsProperty;
+    m_velocitiesProperty = rhs.m_velocitiesProperty;
     m_indicesProperty   = rhs.m_indicesProperty;
     m_countsProperty    = rhs.m_countsProperty;
 

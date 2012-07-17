@@ -131,6 +131,8 @@ void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
     {
         std::string faceSetName;
         
+        std::cout << "#Alembic :: This is a SubdivisonSurface!!!" << std::endl;
+        
         ISubD subd( parent, ohead.getName() );
         
         //if we haven't reached the end of a specified -objectpath,
@@ -156,6 +158,8 @@ void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
     else if ( IPolyMesh::matches( ohead ) )
     {
         std::string faceSetName;
+        
+        std::cout << "#Alembic :: This is a Polymesh!!!" << std::endl;
         
         IPolyMesh polymesh( parent, ohead.getName() );
         

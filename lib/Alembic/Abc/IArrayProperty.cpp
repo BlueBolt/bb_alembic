@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -109,6 +109,37 @@ void IArrayProperty::get( AbcA::ArraySamplePtr& oSamp,
         iSS.getIndex( m_property->getTimeSampling(),
                       m_property->getNumSamples() ),
         oSamp );
+
+    ALEMBIC_ABC_SAFE_CALL_END();
+}
+
+//-*****************************************************************************
+void IArrayProperty::getAs( void * oSample,
+                            AbcA::PlainOldDataType iPod,
+                            const ISampleSelector &iSS )
+{
+    ALEMBIC_ABC_SAFE_CALL_BEGIN( "IArrayProperty::getAs(PlainOldDataType)" );
+
+    m_property->getAs( iSS.getIndex( m_property->getTimeSampling(),
+                                     m_property->getNumSamples() ),
+                       oSample,
+                       iPod
+                     );
+
+    ALEMBIC_ABC_SAFE_CALL_END();
+}
+
+//-*****************************************************************************
+void IArrayProperty::getAs( void * oSample,
+                            const ISampleSelector &iSS )
+{
+    ALEMBIC_ABC_SAFE_CALL_BEGIN( "IArrayProperty::getAs()" );
+
+    m_property->getAs( iSS.getIndex( m_property->getTimeSampling(),
+                                     m_property->getNumSamples() ),
+                       oSample,
+                       m_property->getDataType().getPod()
+                     );
 
     ALEMBIC_ABC_SAFE_CALL_END();
 }

@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -84,6 +84,20 @@ ReadWstringArray( AbcA::ReadArraySampleCachePtr iCache,
                   hid_t iParent,
                   const std::string &iArrayName,
                   const AbcA::DataType &iDataType );
+
+//-*****************************************************************************
+void
+ReadStringArray( void * iIntoLocation,
+                 hid_t iParent,
+                 const std::string &iName,
+                 const AbcA::DataType &iDataType );
+
+//-*****************************************************************************
+void
+ReadWstringArray( void * iIntoLocation,
+                 hid_t iParent,
+                 const std::string &iName,
+                 const AbcA::DataType &iDataType );
 
 } // End namespace ALEMBIC_VERSION_NS
 

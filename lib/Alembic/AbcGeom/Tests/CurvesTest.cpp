@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -136,6 +136,8 @@ void Example1_CurvesIn()
     IFloatGeomParam::Sample widthSample;
     curves.getWidthsParam().getExpanded( widthSample );
     TESTING_ASSERT( widthSample.getVals()->size() == 12);
+    TESTING_ASSERT( IFloatGeomParam::matches(
+                        curves.getWidthsParam().getMetaData() ) );
     TESTING_ASSERT( widthSample.getScope() == kVertexScope );
 
 

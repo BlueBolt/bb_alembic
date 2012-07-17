@@ -112,5 +112,32 @@ global proc shelf_Alembic () {
         -sourceType "mel" 
         -commandRepeatable 1
     ;
+    
+    //Toggle the display state of any archives under your current selection
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Toggle the display state of any archives under your current selection" 
+        -enableBackground 0
+        -align "center" 
+        -label "alembicNodes=ls(sl=True,dag=True,ap=True,type='alembicArchiveNod..." 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.25 
+        -image "pythonFamily.png" 
+        -image1 "pythonFamily.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "alembicNodes=ls(sl=True,dag=True,ap=True,type='alembicArchiveNode')\n\ndoSwitch=False\n\nif len(alembicNodes) > 30:\n    pd=confirmDialog( title='Confirm', message='Are you sure?\\n There are %s nodes that will be switched.' % len(alembicNodes),\n     button=['Yes','No'], defaultButton='Yes', cancelButton='No', dismissString='No' )\n\n    if pd == 'Yes':\n        doSwitch=True\nelse:\n    doSwitch=True\n    \nif doSwitch:\n\n    for n in alembicNodes:\n        n.sgl.set(1-n.sgl.get())" 
+        -sourceType "python" 
+        -commandRepeatable 1
+    ;
 
 } 

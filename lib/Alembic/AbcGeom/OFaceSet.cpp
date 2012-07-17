@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -139,7 +139,7 @@ Abc::Box3d computeBoundsFromPositionsByFaces (const Int32ArraySample & faces,
     {
         vertIndexBegin = vertIndexEnd;
         vertIndexEnd = vertIndexBegin + meshFaceCounts[faceIndex];
-        ABCA_ASSERT( vertIndexEnd < numIndices,
+        ABCA_ASSERT( vertIndexEnd <= numIndices,
                      "Face in mesh has count of vertices that is greater "
                      "than total number of vertex defined in mesh.");
 

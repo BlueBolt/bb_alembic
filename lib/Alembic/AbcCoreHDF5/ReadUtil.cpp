@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -532,7 +532,7 @@ ReadArray( AbcA::ReadArraySampleCachePtr iCache,
         key.origPOD = iDataType.getPod();
         key.readPOD = key.origPOD;
 
-        key.numBytes = iDataType.getNumBytes() *
+        key.numBytes = Util::PODNumBytes( key.readPOD ) *
             H5Sget_simple_extent_npoints( dspaceId );
 
         foundDigest = ReadKey( dsetId, "key", key );
@@ -543,7 +543,7 @@ ReadArray( AbcA::ReadArraySampleCachePtr iCache,
         {
             AbcA::ArraySamplePtr ret = found.getSample();
             assert( ret );
-            if ( ret->getDataType() != iDataType )
+            if ( ret->getDataType().getPod() != iDataType.getPod() )
             {
                 ABCA_THROW( "ERROR: Read data type for dset: " << iName
                             << ": " << ret->getDataType()
@@ -648,6 +648,71 @@ ReadArray( AbcA::ReadArraySampleCachePtr iCache,
     // already has fancy-dan deleter built in.
     // I REALLY LOVE SMART PTRS.
     return ret;
+}
+
+//-*****************************************************************************
+void
+ReadArray( void * iIntoLocation,
+           hid_t iParent,
+           const std::string &iName,
+           const AbcA::DataType &iDataType,
+           hid_t iType )
+{
+    // Dispatch string stuff.
+    if ( iDataType.getPod() == kStringPOD )
+    {
+        return ReadStringArray( iIntoLocation, iParent, iName, iDataType );
+    }
+    else if ( iDataType.getPod() == kWstringPOD )
+    {
+        return ReadWstringArray( iIntoLocation, iParent, iName, iDataType );
+    }
+    assert( iDataType.getPod() != kStringPOD &&
+            iDataType.getPod() != kWstringPOD );
+
+    // Open the data set.
+    hid_t dsetId = H5Dopen( iParent, iName.c_str(), H5P_DEFAULT );
+    ABCA_ASSERT( dsetId >= 0, "Cannot open dataset: " << iName );
+    DsetCloser dsetCloser( dsetId );
+
+    // Read the data space.
+    hid_t dspaceId = H5Dget_space( dsetId );
+    ABCA_ASSERT( dspaceId >= 0, "Could not get dataspace for dataSet: "
+                 << iName );
+    DspaceCloser dspaceCloser( dspaceId );
+
+    // Read the data type.
+    hid_t dtypeId = H5Dget_type( dsetId );
+    ABCA_ASSERT( dtypeId >= 0, "Could not get datatype for dataSet: "
+                 << iName );
+    DtypeCloser dtypeCloser( dtypeId );
+
+    H5S_class_t dspaceClass = H5Sget_simple_extent_type( dspaceId );
+    if ( dspaceClass == H5S_SIMPLE )
+    {
+        // Get the dimensions
+        int rank = H5Sget_simple_extent_ndims( dspaceId );
+        ABCA_ASSERT( rank == 1,
+                     "H5Sget_simple_extent_ndims() must be 1." );
+
+        hsize_t hdim = 0;
+
+        rank = H5Sget_simple_extent_dims( dspaceId, &hdim, NULL );
+
+        ABCA_ASSERT( hdim > 0,
+                     "Degenerate dims in Dataset read" );
+
+        // And... read into it.
+        herr_t status = H5Dread( dsetId, iType,
+                                 H5S_ALL, H5S_ALL, H5P_DEFAULT,
+                                 iIntoLocation );
+
+        ABCA_ASSERT( status >= 0, "H5Dread() failed." );
+    }
+    else if ( dspaceClass != H5S_NULL )
+    {
+        ABCA_THROW( "Unexpected scalar dataspace encountered." );
+    }
 }
 
 //-*****************************************************************************

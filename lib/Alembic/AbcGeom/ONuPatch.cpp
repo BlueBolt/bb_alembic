@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -77,6 +77,20 @@ void ONuPatchSchema::set( const ONuPatchSchema::Sample &iSamp  )
         for ( size_t i = 0; i < numSamples; ++i )
         {
             m_childBoundsProperty.set( emptyBox );
+        }
+    }
+
+    // do we need to create velocities prop?
+    if ( iSamp.getVelocities() && !m_velocitiesProperty )
+    {
+        m_velocitiesProperty = Abc::OV3fArrayProperty( this->getPtr(), ".velocities",
+                                               m_positionsProperty.getTimeSampling() );
+
+        const V3fArraySample empty;
+        const size_t numSamps = m_positionsProperty.getNumSamples();
+        for ( size_t i = 0 ; i < numSamps ; ++i )
+        {
+            m_velocitiesProperty.set( empty );
         }
     }
 
@@ -232,6 +246,11 @@ void ONuPatchSchema::set( const ONuPatchSchema::Sample &iSamp  )
             m_positionWeightsProperty.set( iSamp.getPositionWeights() );
         }
 
+        if ( m_velocitiesProperty )
+        {
+            m_velocitiesProperty.set( iSamp.getVelocities() );
+        }
+
         if ( m_uvsParam )
         {
             m_uvsParam.set( iSamp.getUVs() );
@@ -288,6 +307,11 @@ void ONuPatchSchema::set( const ONuPatchSchema::Sample &iSamp  )
             m_positionWeightsProperty.set( iSamp.getPositionWeights() );
         }
 
+        if ( m_velocitiesProperty )
+        {
+            m_velocitiesProperty.set( iSamp.getVelocities() );
+        }
+
         // handle trim curves
         if ( m_trimNumLoopsProperty )
         {
@@ -340,9 +364,10 @@ void ONuPatchSchema::setFromPrevious( )
     m_vKnotProperty.setFromPrevious();
 
     m_selfBoundsProperty.setFromPrevious();
-    m_childBoundsProperty.setFromPrevious();
 
-    // handle option properties
+    // handle optional properties
+    if ( m_childBoundsProperty ) { m_childBoundsProperty.setFromPrevious(); }
+    if ( m_velocitiesProperty ) { m_velocitiesProperty.setFromPrevious(); }
     if ( m_uvsParam ) { m_uvsParam.setFromPrevious(); }
     if ( m_normalsParam ) { m_normalsParam.setFromPrevious(); }
     if ( m_positionWeightsProperty )

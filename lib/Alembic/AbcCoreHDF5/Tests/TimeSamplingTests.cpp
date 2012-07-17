@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -48,7 +48,7 @@
 //-*****************************************************************************
 namespace A5 = Alembic::AbcCoreHDF5;
 
-namespace AbcA = Alembic::AbcCoreAbstract::v1;
+namespace AbcA = Alembic::AbcCoreAbstract;
 
 //-*****************************************************************************
 void testTimeSamplingScalar()

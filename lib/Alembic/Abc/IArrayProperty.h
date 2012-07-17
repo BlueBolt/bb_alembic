@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -128,6 +128,15 @@ public:
     //! ...
     void get( AbcA::ArraySamplePtr& oSample,
               const ISampleSelector &iSS = ISampleSelector() );
+
+    //! Get a sample into the address of a datum as a particular POD type.
+    void getAs( void *oSample, AbcA::PlainOldDataType iPod,
+                const ISampleSelector &iSS = ISampleSelector() );
+
+    //! Get a sample into the address of a datum as the POD type of this
+    //! array property.
+    void getAs( void *oSample,
+                const ISampleSelector &iSS = ISampleSelector() );
 
     //! Get a key from an address of a datum.
     //! ...

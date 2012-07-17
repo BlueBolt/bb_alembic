@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -111,6 +111,14 @@ ReadArray( AbcA::ReadArraySampleCachePtr iCache,
            const AbcA::DataType &iDataType,
            hid_t iFileType,
            hid_t iNativeType );
+
+//-*****************************************************************************
+void
+ReadArray( void * iIntoLocation,
+           hid_t iParent,
+           const std::string &iName,
+           const AbcA::DataType &iDataType,
+           hid_t iType );
 
 //-*****************************************************************************
 // Fills in oTimeSamples with the different TimeSampling that the archive uses

@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -45,6 +45,7 @@ namespace Abc = Alembic::Abc;
 // This data is used by both the PolyMesh and SubD tests.
 extern const size_t g_numVerts;
 extern const Abc::float32_t g_verts[];
+extern const Abc::float32_t g_veloc[];
 
 extern const size_t g_numIndices;
 extern const Abc::int32_t g_indices[];

@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -47,6 +47,17 @@ const Abc::float32_t g_verts[] = { -1.0f, -1.0f, -1.0f,
                                           1.0f, -1.0f, 1.0f,
                                           -1.0f, 1.0f, 1.0f,
                                           1.0f, 1.0f, 1.0f };
+
+//-*****************************************************************************
+// optional velocities to go with the vertices
+const Abc::float32_t g_veloc[] = { -0.5f, -0.5f, -0.5f,
+    0.25f, -0.5f, -0.5f,
+    -0.5f, 0.25f, -0.5f,
+    0.25f, 0.25f, -0.5f,
+    -0.5f, -0.5f, 0.25f,
+    0.25f, -0.5f, 0.25f,
+    -0.5f, 0.25f, 0.25f,
+    0.25f, 0.25f, 0.25f };
 
 //-*****************************************************************************
 // Indices of the cube vertices
