@@ -1,8 +1,7 @@
 ##-*****************************************************************************
 ##
-## Copyright (c) 2009-2011,
-##  Sony Pictures Imageworks Inc. and
-##  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
+## Copyright (c) 2009-2011, Industrial Light & Magic,
+##   a division of Lucasfilm Entertainment Company Ltd.
 ##
 ## All rights reserved.
 ##
@@ -15,10 +14,9 @@
 ## copyright notice, this list of conditions and the following disclaimer
 ## in the documentation and/or other materials provided with the
 ## distribution.
-## *       Neither the name of Sony Pictures Imageworks, nor
-## Industrial Light & Magic, nor the names of their contributors may be used
-## to endorse or promote products derived from this software without specific
-## prior written permission.
+## *       Neither the name of Industrial Light & Magic nor the names of
+## its contributors may be used to endorse or promote products derived
+## from this software without specific prior written permission.
 ##
 ## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 ## "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -34,8 +32,47 @@
 ##
 ##-*****************************************************************************
 
+PROJECT( ALEMBIC_ARNOLD_PROCEDURAL_MODULE )
+
+
 IF( ${ALEMBIC_ARNOLD_FOUND} )
-ADD_SUBDIRECTORY( Tests )
-ADD_SUBDIRECTORY( Procedural )
-ADD_SUBDIRECTORY( bb_ArnoldProcedural )
+
+SET( H_FILES
+  ArbGeomParams.h
+  PathUtil.h
+  ProcArgs.h
+  SampleUtil.h
+  WriteGeo.h
+  )
+
+SET( CXX_FILES
+  ArbGeomParams.cpp
+  PathUtil.cpp
+  ProcArgs.cpp
+  ProcMain.cpp
+  SampleUtil.cpp
+  WriteGeo.cpp
+)
+
+SET( CORE_LIBS
+  AlembicAbcGeom
+  AlembicAbc
+  AlembicAbcCoreHDF5
+  AlembicAbcCoreAbstract
+  AlembicUtil )
+
+ADD_ARNOLD_CXX_PLUGIN( bb_AlembicArnoldProcedural ProcMain.cpp ${H_FILES} ${CXX_FILES} )
+TARGET_LINK_LIBRARIES( bb_AlembicArnoldProcedural
+  ${CORE_LIBS}
+  ${ALEMBIC_HDF5_LIBS}
+  ${ALEMBIC_ILMBASE_LIBS}
+  ${CMAKE_THREAD_LIBS_INIT}
+  ${ZLIB_LIBRARIES}
+)
+
+INSTALL( TARGETS bb_AlembicArnoldProcedural
+         DESTINATION arnold )
+
+
+
 ENDIF()
