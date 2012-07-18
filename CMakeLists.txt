@@ -179,6 +179,7 @@ FIND_PACKAGE(ZLIB REQUIRED)
 #-******************************************************************************
 FIND_PACKAGE( OpenGL )
 FIND_PACKAGE( GLUT )
+FIND_PACKAGE( GLEW )
 
 IF ( ${WINDOWS} )
   # Do a windows OpenGL thing, whatever that may be
@@ -187,7 +188,7 @@ ELSEIF( ${DARWIN} )
   # Do a darwin OpenGL thing.
   SET( ALEMBIC_GL_LIBS ${GLUT_LIBRARY} "-framework OpenGL" )
 ELSE()
-  SET( ALEMBIC_GL_LIBS GLEW ${GLUT_LIBRARY} ${OPENGL_LIBRARIES} )
+  SET( ALEMBIC_GL_LIBS ${GLEW_LIBRARY} ${GLUT_LIBRARY} ${OPENGL_LIBRARIES} )
 ENDIF()
 
 MESSAGE( STATUS "OpenGL Libraries: ${ALEMBIC_GL_LIBS}" )
