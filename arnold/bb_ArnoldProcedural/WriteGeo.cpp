@@ -496,6 +496,10 @@ AtNode * ProcessPolyMeshBase(
         AiNodeSetStr( meshNode, "subdiv_uv_smoothing", "pin_borders" );
 
       }
+
+
+    AiNodeSetBool( meshNode, "invert_normals", true );
+
     
     if ( instanceNode == NULL )
     {
