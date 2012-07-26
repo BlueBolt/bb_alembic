@@ -50,6 +50,7 @@ ProcArgs::ProcArgs( const char * paramStr )
   , shutterClose(0)
   , excludeXform(false)
   , subdIterations(0)
+  , subdUVSmoothing("pin_corners")
   , proceduralNode(0)
 {
     // TODO, grab the shutter a camera attached to AiUniverse if present
@@ -141,6 +142,22 @@ ProcArgs::ProcArgs( const char * paramStr )
             if ( i < tokens.size() )
             {
                 subdIterations = atoi( tokens[i].c_str() );
+            }
+        }
+        else if ( token == "-subduvsmoothing" )
+        {
+            ++i;
+            if ( i < tokens.size() )
+            {
+                subdUVSmoothing = tokens[i];
+            }
+        }
+        else if ( token == "-disp_map" )
+        {
+            ++i;
+            if ( i < tokens.size() )
+            {
+                disp_map = tokens[i];
             }
         }
         else if ( token == "-makeinstance" )

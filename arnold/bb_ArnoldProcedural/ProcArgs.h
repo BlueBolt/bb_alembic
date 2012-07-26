@@ -60,6 +60,8 @@ struct ProcArgs
     , excludeXform( rhs.excludeXform )
     , makeInstance( rhs.makeInstance )
     , subdIterations ( rhs.subdIterations )
+    , subdUVSmoothing ( rhs.subdUVSmoothing )
+    , disp_map ( rhs.disp_map )
     , proceduralNode( rhs.proceduralNode )
     {}
 
@@ -78,6 +80,9 @@ struct ProcArgs
     bool makeInstance;
     int subdIterations;
     
+    std::string subdUVSmoothing;
+    std::string disp_map;
+
     AtNode * proceduralNode;
     
     std::vector<struct AtNode *> createdNodes;

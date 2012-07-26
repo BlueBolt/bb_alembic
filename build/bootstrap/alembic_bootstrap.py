@@ -918,6 +918,9 @@ def runCMake( opts, srcdir, ranBootstrap = False ):
         
         if opts.arnold:
             cmake_extra_args += ' -D ARNOLD_ROOT:STRING="%s"' %opts.arnold
+            
+        if opts.mtoa:
+            cmake_extra_args += ' -D MTOA_ROOT:STRING="%s"' %opts.mtoa            
 
         if opts.hdf5_include_dir:
             cmake_extra_args += ' -D HDF5_C_INCLUDE_DIR:PATH="%s"' % \
@@ -1000,6 +1003,10 @@ def makeParser( mk_cmake_basename ):
     configOptions.add_option( "--with-arnold", dest="arnold", type="string",
                               default=None, help="ARNOLD location",
                               metavar="ARNOLD_ROOT" )
+    
+    configOptions.add_option( "--with-mtoa", dest="mtoa", type="string",
+                              default=None, help="MtoA location",
+                              metavar="MTOA_ROOT" )
 
     configOptions.add_option( "--hdf5_include_dir", dest="hdf5_include_dir",
                               type="string", default=None,

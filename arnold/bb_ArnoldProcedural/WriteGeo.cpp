@@ -488,19 +488,22 @@ AtNode * ProcessPolyMeshBase(
         AddArbitraryGeomParams( arbGeomParams, frameSelector, meshNode );
     }
     
+
+    AiNodeSetBool( meshNode, "smoothing", true );
+
     if (subdiv_iterations > 0)
       {
 
         AiNodeSetStr( meshNode, "subdiv_type", "catclark" );
         AiNodeSetInt( meshNode, "subdiv_iterations", args.subdIterations );
-        AiNodeSetStr( meshNode, "subdiv_uv_smoothing", "pin_borders" );
-
+        AiNodeSetStr( meshNode, "subdiv_uv_smoothing", args.subdUVSmoothing.c_str() );
       }
 
 
     AiNodeSetBool( meshNode, "invert_normals", true );
-
     
+    // TODO: Displacments
+
     if ( instanceNode == NULL )
     {
         if ( xformSamples )

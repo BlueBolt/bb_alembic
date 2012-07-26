@@ -267,7 +267,6 @@ ELSE()
     ENDIF()
 ENDIF()
 
-
 ADD_SUBDIRECTORY( python EXCLUDE_FROM_ALL )
 
 # Include Maya stuff
@@ -283,6 +282,20 @@ ELSE()
         MESSAGE(STATUS "For some reason, MAYA_FOUND is False?")
     ENDIF()
 ENDIF()
+
+# Include MtoA stuff
+IF(DEFINED USE_MTOA AND NOT USE_MTOA)
+    MESSAGE(STATUS "Skipping MtoA Extensions")
+ELSE()
+    MESSAGE( STATUS "About to include AlembicMtoA.cmake" )
+    INCLUDE( "./build/AlembicMtoA.cmake" )
+    IF( ALEMBIC_MTOA_FOUND )
+        MESSAGE(STATUS "Building MtoA plugins" )
+    ELSE()
+        MESSAGE(STATUS "For some reason, ALEMBIC_MTOA_FOUND is False?")
+    ENDIF()
+ENDIF()
+
 
 # example code not supported
 ADD_SUBDIRECTORY( examples )

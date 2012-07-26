@@ -79,7 +79,7 @@ FIND_PATH( ALEMBIC_ARNOLD_INCLUDE_PATH ai.h
            NO_CMAKE_PATH
            NO_SYSTEM_ENVIRONMENT_PATH
            NO_CMAKE_SYSTEM_PATH
-           DOC "The directory where ri.h resides" )
+           DOC "The directory where ai.h resides" )
 
 FIND_LIBRARY( ALEMBIC_ARNOLD_LIBARNOLD ai
               PATHS
