@@ -51,6 +51,7 @@ ProcArgs::ProcArgs( const char * paramStr )
   , excludeXform(false)
   , subdIterations(0)
   , subdUVSmoothing("pin_corners")
+  , disp_padding(-AI_BIG)
   , proceduralNode(0)
 {
     // TODO, grab the shutter a camera attached to AiUniverse if present
@@ -158,6 +159,14 @@ ProcArgs::ProcArgs( const char * paramStr )
             if ( i < tokens.size() )
             {
                 disp_map = tokens[i];
+            }
+        }
+        else if ( token == "-disp_padding" )
+        {
+            ++i;
+            if ( i < tokens.size() )
+            {
+                disp_padding = atof( tokens[i].c_str() );
             }
         }
         else if ( token == "-makeinstance" )

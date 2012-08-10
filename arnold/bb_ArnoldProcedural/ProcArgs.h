@@ -82,6 +82,7 @@ struct ProcArgs
     
     std::string subdUVSmoothing;
     std::string disp_map;
+    double disp_padding;
 
     AtNode * proceduralNode;
     

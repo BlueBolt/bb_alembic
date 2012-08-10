@@ -260,7 +260,6 @@ AtNode * ProcessPolyMeshBase(
         std::ostringstream buffer;
         AbcA::ArraySampleKey sampleKey;
         
-        
         for ( SampleTimeSet::iterator I = sampleTimes.begin();
                 I != sampleTimes.end(); ++I )
         {
@@ -283,8 +282,7 @@ AtNode * ProcessPolyMeshBase(
         if ( args.proceduralNode )
         {
             AiNodeSetInt( instanceNode, "visibility",
-                    AiNodeGetInt( args.proceduralNode, "visibility" ) );
-        
+            AiNodeGetInt( args.proceduralNode, "visibility" ) );
         }
         else
         {
@@ -292,7 +290,6 @@ AtNode * ProcessPolyMeshBase(
         }
         
         ApplyTransformation( instanceNode, xformSamples, args );
-        
         
         NodeCache::iterator I = g_meshCache.find(cacheId);
         if ( I != g_meshCache.end() )
@@ -502,7 +499,13 @@ AtNode * ProcessPolyMeshBase(
 
     AiNodeSetBool( meshNode, "invert_normals", true );
     
-    // TODO: Displacments
+    if ( args.disp_map != "" )
+    {
+        AtNode* disp_node = AiNodeLookUpByName(args.disp_map.c_str());
+        AiNodeSetPtr( meshNode, "disp_map", disp_node );
+
+
+    }
 
     if ( instanceNode == NULL )
     {
