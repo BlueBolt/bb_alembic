@@ -299,7 +299,8 @@ int ProcInit( struct AtNode *node, void **user_ptr )
     {
         std::cerr << "exception thrown\n";
     }
-    
+
+    //AiMsgInfo("[bb_AlembicArnoldProcedural] object search pattern: %s", args->pattern.c_str());
     
     return 1;
 }
@@ -317,6 +318,9 @@ int ProcCleanup( void *user_ptr )
 int ProcNumNodes( void *user_ptr )
 {
     ProcArgs * args = reinterpret_cast<ProcArgs*>( user_ptr );
+    const char* nodeName = AiNodeGetName(args->proceduralNode);
+    AiMsgInfo("[bb_AlembicArnoldProcedural] number of nodes in %s: %d", nodeName,args->createdNodes.size());
+
     return (int) args->createdNodes.size();
 }
 
@@ -328,6 +332,9 @@ struct AtNode* ProcGetNode(void *user_ptr, int i)
     
     if ( i >= 0 && i < (int) args->createdNodes.size() )
     {
+        const char* nodeName = AiNodeGetName(args->createdNodes[i]);
+        AiMsgInfo("[bb_AlembicArnoldProcedural] rendering internal node : %s", nodeName);
+
         return args->createdNodes[i];
     }
     

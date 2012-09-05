@@ -51,6 +51,7 @@ ProcArgs::ProcArgs( const char * paramStr )
   , excludeXform(false)
   , subdIterations(0)
   , subdUVSmoothing("pin_corners")
+  , pattern("*")
   , disp_padding(-AI_BIG)
   , proceduralNode(0)
 {
@@ -130,6 +131,14 @@ ProcArgs::ProcArgs( const char * paramStr )
             if ( i < tokens.size() )
             {
                 objectpath = tokens[i];
+            }
+        }
+        else if ( token == "-pattern" )
+        {
+            ++i;
+            if ( i < tokens.size() )
+            {
+                pattern = tokens[i];
             }
         }
         else if ( token == "-excludexform" )
@@ -238,6 +247,12 @@ void ProcArgs::usage()
     std::cerr << std::endl;
     std::cerr << std::endl;
     
+    std::cerr << std::endl;    std::cerr << "-pattern \"*\" " << std::endl;
+
+    std::cerr << "If given will only load geometry that mtches the given pattern.";
+    std::cerr << std::endl;
+    std::cerr << std::endl;
+
     std::cerr << "-excludexform" << std::endl;
     std::cerr << std::endl;
     

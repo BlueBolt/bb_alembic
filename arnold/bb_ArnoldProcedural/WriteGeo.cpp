@@ -34,6 +34,9 @@
 //
 //-*****************************************************************************
 
+
+//
+
 #include "WriteGeo.h"
 #include "ArbGeomParams.h"
 
@@ -52,6 +55,78 @@ bool nodeHasParameter( struct AtNode * node, const std::string & paramName)
 {
     return AiNodeEntryLookUpParameter( AiNodeGetNodeEntry( node ),
             paramName.c_str() ) != NULL;
+}
+
+bool matchPattern(std::string str, std::string pat)
+{
+    // given a path name and a pattern see if the path string mtches the pattern
+    bool found = false;
+    std::vector<std::string> parts;
+    std::string temp;
+    if (pat == "*")
+        return true;
+    if (pat.size() - 1 > str.size())
+        return false;
+    std::string::const_iterator it = pat.begin(), end = pat.end();
+    size_t counter = 0;
+    while (it != end)
+    {
+        if (*it != '*')
+            temp += *it;
+        if (*it == '*')
+        {
+            parts.push_back(temp);
+            temp = "";
+        }
+        it++;
+    }
+    parts.push_back(temp);
+    std::vector<std::string>::const_iterator vecIt = parts.begin(), vecEnd = parts.end();
+    if (!parts[0].empty())
+    {
+        if (parts[0] != str.substr(0, parts[0].size()))
+            return false;
+    }
+    else
+        vecIt++;
+    size_t size = str.size();
+    size_t pos = 0;
+    size_t tempSize;
+    while (vecIt != vecEnd)
+    {
+        temp = *vecIt;
+        tempSize = temp.size();
+        if (temp.empty())
+            return true;
+        while (pos + tempSize < size)
+        {
+            if (temp == str.substr(pos, temp.size()))
+            {
+                str.erase(0, pos + temp.size());
+                found = true;
+                break;
+            }
+            pos++;
+        }
+        if (found == false)
+            return false;
+        pos = 0;
+        vecIt++;
+    }
+    return true;
+}
+
+void getInstanceName(char *buf, size_t bufsize, const char* name)
+{
+   int index = 0;
+   while(1){
+       sprintf(buf,"%s_instance_%05d", name, index);
+       AtNode *tmp = AiNodeLookUpByName(buf);
+       if(!tmp){
+           return;
+       }
+       index++;
+   }
 }
 
 
@@ -251,34 +326,41 @@ AtNode * ProcessPolyMeshBase(
     
     std::string name = args.nameprefix + prim.getFullName();
     
+    // check if this meshes name matches the search pattern in the arguments
+
+    if ( !matchPattern(name,args.pattern) && args.pattern != "*" )
+    {
+        return NULL;
+    }
+
     AtNode * instanceNode = NULL;
     
-    std::string cacheId;
-    
-    if ( args.makeInstance )
-    {
-        std::ostringstream buffer;
-        AbcA::ArraySampleKey sampleKey;
-        
-        for ( SampleTimeSet::iterator I = sampleTimes.begin();
-                I != sampleTimes.end(); ++I )
-        {
-            ISampleSelector sampleSelector( *I );
-            ps.getPositionsProperty().getKey(sampleKey, sampleSelector);
-            
-            buffer << GetRelativeSampleTime( args, (*I) ) << ":";
-            sampleKey.digest.print(buffer);
-            buffer << ":";
-        }
-        
-        buffer << "@" << subdiv_iterations;
-        buffer << "@" << facesetName;
-        
-        cacheId = buffer.str();
-        
+    // detect if this node is already in the scene if so generate a ginstance and apply the transform to it
+
+    AtNode *masterProc = AiNodeLookUpByName(name.c_str());
+    if(masterProc)
+      {
+
+//        AiMsgInfo("[bb_AlembicArnoldProcedural] Generating instance from: %s", name.c_str());
+
         instanceNode = AiNode( "ginstance" );
-        AiNodeSetStr( instanceNode, "name", name.c_str() );
+
+        // get the name for this instance
         
+        char name_buff[1024]; // name buffer
+        
+        getInstanceName(name_buff, sizeof(name_buff), name.c_str());
+
+        AiNodeSetStr( instanceNode, "name", name_buff );
+        AiNodeSetPtr(instanceNode, "node", masterProc);
+        AiNodeSetBool(instanceNode, "inherit_xform", false);
+        
+        AtMatrix matrix;
+        AtVector scaleVector;
+        AiV3Create(scaleVector, 1, 1, 1);
+        AiM4Scaling(matrix, &scaleVector);
+        AiNodeSetMatrix(instanceNode, "matrix", matrix);
+
         if ( args.proceduralNode )
         {
             AiNodeSetInt( instanceNode, "visibility",
@@ -288,242 +370,288 @@ AtNode * ProcessPolyMeshBase(
         {
             AiNodeSetInt( instanceNode, "visibility", AI_RAY_ALL );
         }
-        
+
+        //apply the transform to this instance
         ApplyTransformation( instanceNode, xformSamples, args );
-        
-        NodeCache::iterator I = g_meshCache.find(cacheId);
-        if ( I != g_meshCache.end() )
-        {
-            AiNodeSetPtr(instanceNode, "node", (*I).second );
-            return NULL;
-        }
-        
-    }
-    
-    
-    
-    SampleTimeSet singleSampleTimes;
-    singleSampleTimes.insert( args.frame / args.fps );
-    
-    
-    std::vector<AtByte> nsides;
-    std::vector<AtFloat> vlist;
-    
-    std::vector<AtFloat> uvlist;
-    std::vector<AtUInt> uvidxs;
-    
-    
-    // POTENTIAL OPTIMIZATIONS LEFT TO THE READER
-    // 1) vlist needn't be copied if it's a single sample
-    
-    bool isFirstSample = true;
-    for ( SampleTimeSet::iterator I = sampleTimes.begin();
-          I != sampleTimes.end(); ++I, isFirstSample = false)
-    {
-        ISampleSelector sampleSelector( *I );
-        typename primT::schema_type::Sample sample = ps.getValue( sampleSelector );
-        
-        if ( isFirstSample )
-        {
-            size_t numPolys = sample.getFaceCounts()->size();
-            nsides.reserve( sample.getFaceCounts()->size() );
-            for ( size_t i = 0; i < numPolys; ++i ) 
-            {
-                int32_t n = sample.getFaceCounts()->get()[i];
-                
-                if ( n > 255 )
-                {
-                    // TODO, warning about unsupported face
-                    return NULL;
-                }
-                
-                nsides.push_back( (AtByte) n );
-            }
-            
-            size_t vidxSize = sample.getFaceIndices()->size();
-            vidxs.reserve( vidxSize );
-            vidxs.insert( vidxs.end(), sample.getFaceIndices()->get(),
-                    sample.getFaceIndices()->get() + vidxSize );
-        }
-        
-        
-        vlist.reserve( vlist.size() + sample.getPositions()->size() * 3);
-        vlist.insert( vlist.end(),
-                (const float32_t*) sample.getPositions()->get(),
-                ((const float32_t*) sample.getPositions()->get()) +
-                        sample.getPositions()->size() * 3 );
-    }
-    
-    ProcessIndexedBuiltinParam(
-            ps.getUVsParam(),
-            singleSampleTimes,
-            uvlist,
-            uvidxs,
-            2);
-    
-    
-    AtNode* meshNode = AiNode( "polymesh" );
-    
-    if (!meshNode)
-    {
-        AiMsgError("Failed to make polymesh node for %s",
-                prim.getFullName().c_str());
-        return NULL;
-    }
-    
-    args.createdNodes.push_back(meshNode);
-    
-    if ( instanceNode != NULL)
-    {
-        AiNodeSetStr( meshNode, "name", (name + ":src").c_str() );
-    }
-    else
-    {
-        AiNodeSetStr( meshNode, "name", name.c_str() );
-    }
-    
-    
-    
-    
-    AiNodeSetArray(meshNode, "vidxs", 
-            AiArrayConvert(vidxs.size(), 1, AI_TYPE_UINT,
-                    (void*)&vidxs[0]));
-    
-    AiNodeSetArray(meshNode, "nsides",
-            AiArrayConvert(nsides.size(), 1, AI_TYPE_BYTE,
-                    &(nsides[0])));
-    
-    AiNodeSetArray(meshNode, "vlist",
-            AiArrayConvert( vlist.size() / sampleTimes.size(), 
-                    sampleTimes.size(), AI_TYPE_FLOAT, (void*)(&(vlist[0]))));
-    
-    if ( !uvlist.empty() )
-    {
-        //TODO, option to disable v flipping
-        for (size_t i = 1, e = uvlist.size(); i < e; i += 2)
-        {
-            uvlist[i] = 1.0 - uvlist[i];
-        }
-        
-        AiNodeSetArray(meshNode, "uvlist",
-            AiArrayConvert( uvlist.size() / sampleTimes.size(), 
-                    sampleTimes.size(), AI_TYPE_FLOAT, (void*)(&(uvlist[0]))));
-        
-        if ( !uvidxs.empty() )
-        {
-            AiNodeSetArray(meshNode, "uvidxs",
-                    AiArrayConvert(uvidxs.size(), 1, AI_TYPE_UINT,
-                            &(uvidxs[0])));
-        }
-        else
-        {
-            AiNodeSetArray(meshNode, "uvidxs",
-                    AiArrayConvert(vidxs.size(), 1, AI_TYPE_UINT,
-                            &(vidxs[0])));
-        }
-    }
-    
-    if ( sampleTimes.size() > 1 )
-    {
-        std::vector<float> relativeSampleTimes;
-        relativeSampleTimes.reserve( sampleTimes.size() );
-        
-        for (SampleTimeSet::const_iterator I = sampleTimes.begin();
-                I != sampleTimes.end(); ++I )
-        {
-            relativeSampleTimes.push_back(
-                    GetRelativeSampleTime( args, (*I) ) );
-                    
-        }
-        
-        AiNodeSetArray( meshNode, "deform_time_samples",
-                AiArrayConvert(relativeSampleTimes.size(), 1,
-                        AI_TYPE_FLOAT, &relativeSampleTimes[0]));
-    }
-    
-    // faceset visibility array
-    if ( !facesetName.empty() )
-    {
-        if ( ps.hasFaceSet( facesetName ) )
-        {
-            ISampleSelector frameSelector( *singleSampleTimes.begin() );
-            
-            
-            IFaceSet faceSet = ps.getFaceSet( facesetName );
-            IFaceSetSchema::Sample faceSetSample = 
-                    faceSet.getSchema().getValue( frameSelector );
-            
-            std::set<int> facesToKeep;
-            
-            
-            facesToKeep.insert( faceSetSample.getFaces()->get(),
-                    faceSetSample.getFaces()->get() +
-                            faceSetSample.getFaces()->size() );
-            
-            std::vector<AtBoolean> faceVisArray;
-            faceVisArray.reserve( nsides.size() );
-            
-            for ( int i = 0; i < (int) nsides.size(); ++i )
-            {
-                faceVisArray.push_back(
-                        facesToKeep.find( i ) != facesToKeep.end() );
-            }
-            
-            if ( AiNodeDeclare( meshNode, "face_visibility", "uniform BOOL" ) )
-            {
-                AiNodeSetArray( meshNode, "face_visibility",
-                        AiArrayConvert( faceVisArray.size(), 1, AI_TYPE_BOOLEAN,
-                                (void *) &faceVisArray[0] ) );
-            }
-        }
-    }
-    
-    {
-        ICompoundProperty arbGeomParams = ps.getArbGeomParams();
-        ISampleSelector frameSelector( *singleSampleTimes.begin() );
-        
-        AddArbitraryGeomParams( arbGeomParams, frameSelector, meshNode );
-    }
-    
 
-    AiNodeSetBool( meshNode, "smoothing", true );
+        // add this guy to the list of created nodes
+        args.createdNodes.push_back(instanceNode);
 
-    if (subdiv_iterations > 0)
+        return instanceNode;
+
+      } else {
+
+        std::string cacheId;
+
+        // TODO:: Remove the makeinstance line and clean up any references
+        // to the instanceNode from the original procedural.
+//
+//        if ( args.makeInstance )
+//        {
+//            std::ostringstream buffer;
+//            AbcA::ArraySampleKey sampleKey;
+//
+//            for ( SampleTimeSet::iterator I = sampleTimes.begin();
+//                    I != sampleTimes.end(); ++I )
+//            {
+//                ISampleSelector sampleSelector( *I );
+//                ps.getPositionsProperty().getKey(sampleKey, sampleSelector);
+//
+//                buffer << GetRelativeSampleTime( args, (*I) ) << ":";
+//                sampleKey.digest.print(buffer);
+//                buffer << ":";
+//            }
+//
+//            buffer << "@" << subdiv_iterations;
+//            buffer << "@" << facesetName;
+//
+//            cacheId = buffer.str();
+//
+//            instanceNode = AiNode( "ginstance" );
+//            AiNodeSetStr( instanceNode, "name", name.c_str() );
+//
+//            if ( args.proceduralNode )
+//            {
+//                AiNodeSetInt( instanceNode, "visibility",
+//                AiNodeGetInt( args.proceduralNode, "visibility" ) );
+//            }
+//            else
+//            {
+//                AiNodeSetInt( instanceNode, "visibility", AI_RAY_ALL );
+//            }
+//
+//            ApplyTransformation( instanceNode, xformSamples, args );
+//
+//            NodeCache::iterator I = g_meshCache.find(cacheId);
+//            if ( I != g_meshCache.end() )
+//            {
+//                AiNodeSetPtr(instanceNode, "node", (*I).second );
+//                return NULL;
+//            }
+//
+//        }
+    
+      SampleTimeSet singleSampleTimes;
+      singleSampleTimes.insert( args.frame / args.fps );
+
+
+      std::vector<AtByte> nsides;
+      std::vector<AtFloat> vlist;
+
+      std::vector<AtFloat> uvlist;
+      std::vector<AtUInt> uvidxs;
+
+
+      // POTENTIAL OPTIMIZATIONS LEFT TO THE READER
+      // 1) vlist needn't be copied if it's a single sample
+
+      bool isFirstSample = true;
+      for ( SampleTimeSet::iterator I = sampleTimes.begin();
+            I != sampleTimes.end(); ++I, isFirstSample = false)
       {
+          ISampleSelector sampleSelector( *I );
+          typename primT::schema_type::Sample sample = ps.getValue( sampleSelector );
 
-        AiNodeSetStr( meshNode, "subdiv_type", "catclark" );
-        AiNodeSetInt( meshNode, "subdiv_iterations", args.subdIterations );
-        AiNodeSetStr( meshNode, "subdiv_uv_smoothing", args.subdUVSmoothing.c_str() );
+          if ( isFirstSample )
+          {
+              size_t numPolys = sample.getFaceCounts()->size();
+              nsides.reserve( sample.getFaceCounts()->size() );
+              for ( size_t i = 0; i < numPolys; ++i )
+              {
+                  int32_t n = sample.getFaceCounts()->get()[i];
+
+                  if ( n > 255 )
+                  {
+                      // TODO, warning about unsupported face
+                      return NULL;
+                  }
+
+                  nsides.push_back( (AtByte) n );
+              }
+
+              size_t vidxSize = sample.getFaceIndices()->size();
+              vidxs.reserve( vidxSize );
+              vidxs.insert( vidxs.end(), sample.getFaceIndices()->get(),
+                      sample.getFaceIndices()->get() + vidxSize );
+          }
+
+
+          vlist.reserve( vlist.size() + sample.getPositions()->size() * 3);
+          vlist.insert( vlist.end(),
+                  (const float32_t*) sample.getPositions()->get(),
+                  ((const float32_t*) sample.getPositions()->get()) +
+                          sample.getPositions()->size() * 3 );
+      }
+
+      ProcessIndexedBuiltinParam(
+              ps.getUVsParam(),
+              singleSampleTimes,
+              uvlist,
+              uvidxs,
+              2);
+
+
+      AtNode* meshNode = AiNode( "polymesh" );
+
+      if (!meshNode)
+      {
+          AiMsgError("Failed to make polymesh node for %s",
+                  prim.getFullName().c_str());
+          return NULL;
+      }
+
+      args.createdNodes.push_back(meshNode);
+
+      if ( instanceNode != NULL)
+      {
+          AiNodeSetStr( meshNode, "name", (name + ":src").c_str() );
+      }
+      else
+      {
+          AiNodeSetStr( meshNode, "name", name.c_str() );
       }
 
 
-    AiNodeSetBool( meshNode, "invert_normals", true );
-    
-    if ( args.disp_map != "" )
-    {
-        AtNode* disp_node = AiNodeLookUpByName(args.disp_map.c_str());
-        AiNodeSetPtr( meshNode, "disp_map", disp_node );
 
 
-    }
+      AiNodeSetArray(meshNode, "vidxs",
+              AiArrayConvert(vidxs.size(), 1, AI_TYPE_UINT,
+                      (void*)&vidxs[0]));
 
-    if ( instanceNode == NULL )
-    {
-        if ( xformSamples )
+      AiNodeSetArray(meshNode, "nsides",
+              AiArrayConvert(nsides.size(), 1, AI_TYPE_BYTE,
+                      &(nsides[0])));
+
+      AiNodeSetArray(meshNode, "vlist",
+              AiArrayConvert( vlist.size() / sampleTimes.size(),
+                      sampleTimes.size(), AI_TYPE_FLOAT, (void*)(&(vlist[0]))));
+
+      if ( !uvlist.empty() )
+      {
+          //TODO, option to disable v flipping
+          for (size_t i = 1, e = uvlist.size(); i < e; i += 2)
+          {
+              uvlist[i] = 1.0 - uvlist[i];
+          }
+
+          AiNodeSetArray(meshNode, "uvlist",
+              AiArrayConvert( uvlist.size() / sampleTimes.size(),
+                      sampleTimes.size(), AI_TYPE_FLOAT, (void*)(&(uvlist[0]))));
+
+          if ( !uvidxs.empty() )
+          {
+              AiNodeSetArray(meshNode, "uvidxs",
+                      AiArrayConvert(uvidxs.size(), 1, AI_TYPE_UINT,
+                              &(uvidxs[0])));
+          }
+          else
+          {
+              AiNodeSetArray(meshNode, "uvidxs",
+                      AiArrayConvert(vidxs.size(), 1, AI_TYPE_UINT,
+                              &(vidxs[0])));
+          }
+      }
+
+      if ( sampleTimes.size() > 1 )
+      {
+          std::vector<float> relativeSampleTimes;
+          relativeSampleTimes.reserve( sampleTimes.size() );
+
+          for (SampleTimeSet::const_iterator I = sampleTimes.begin();
+                  I != sampleTimes.end(); ++I )
+          {
+              relativeSampleTimes.push_back(
+                      GetRelativeSampleTime( args, (*I) ) );
+
+          }
+
+          AiNodeSetArray( meshNode, "deform_time_samples",
+                  AiArrayConvert(relativeSampleTimes.size(), 1,
+                          AI_TYPE_FLOAT, &relativeSampleTimes[0]));
+      }
+
+      // faceset visibility array
+      if ( !facesetName.empty() )
+      {
+          if ( ps.hasFaceSet( facesetName ) )
+          {
+              ISampleSelector frameSelector( *singleSampleTimes.begin() );
+
+
+              IFaceSet faceSet = ps.getFaceSet( facesetName );
+              IFaceSetSchema::Sample faceSetSample =
+                      faceSet.getSchema().getValue( frameSelector );
+
+              std::set<int> facesToKeep;
+
+
+              facesToKeep.insert( faceSetSample.getFaces()->get(),
+                      faceSetSample.getFaces()->get() +
+                              faceSetSample.getFaces()->size() );
+
+              std::vector<AtBoolean> faceVisArray;
+              faceVisArray.reserve( nsides.size() );
+
+              for ( int i = 0; i < (int) nsides.size(); ++i )
+              {
+                  faceVisArray.push_back(
+                          facesToKeep.find( i ) != facesToKeep.end() );
+              }
+
+              if ( AiNodeDeclare( meshNode, "face_visibility", "uniform BOOL" ) )
+              {
+                  AiNodeSetArray( meshNode, "face_visibility",
+                          AiArrayConvert( faceVisArray.size(), 1, AI_TYPE_BOOLEAN,
+                                  (void *) &faceVisArray[0] ) );
+              }
+          }
+      }
+
+      {
+          ICompoundProperty arbGeomParams = ps.getArbGeomParams();
+          ISampleSelector frameSelector( *singleSampleTimes.begin() );
+
+          AddArbitraryGeomParams( arbGeomParams, frameSelector, meshNode );
+      }
+
+
+      AiNodeSetBool( meshNode, "smoothing", true );
+
+      if (subdiv_iterations > 0)
         {
-            ApplyTransformation( meshNode, xformSamples, args );
+
+          AiNodeSetStr( meshNode, "subdiv_type", "catclark" );
+          AiNodeSetInt( meshNode, "subdiv_iterations", args.subdIterations );
+          AiNodeSetStr( meshNode, "subdiv_uv_smoothing", args.subdUVSmoothing.c_str() );
         }
-        
-        return meshNode;
-    }
-    else
-    {
-        AiNodeSetInt( meshNode, "visibility", 0 );
-        
-        AiNodeSetPtr(instanceNode, "node", meshNode );
-        g_meshCache[cacheId] = meshNode;
-        return meshNode;
-        
+
+
+      AiNodeSetBool( meshNode, "invert_normals", true );
+
+      if ( args.disp_map != "" )
+      {
+          AtNode* disp_node = AiNodeLookUpByName(args.disp_map.c_str());
+          AiNodeSetPtr( meshNode, "disp_map", disp_node );
+      }
+
+      if ( instanceNode == NULL )
+      {
+          if ( xformSamples )
+          {
+              ApplyTransformation( meshNode, xformSamples, args );
+          }
+
+          return meshNode;
+      }
+      else
+      {
+          AiNodeSetInt( meshNode, "visibility", 0 );
+
+          AiNodeSetPtr(instanceNode, "node", meshNode );
+          g_meshCache[cacheId] = meshNode;
+          return meshNode;
+
+      }
     }
     
 }
@@ -546,39 +674,40 @@ void ProcessPolyMesh( IPolyMesh &polymesh, ProcArgs &args,
     {
         return;
     }
+
+//    IPolyMeshSchema &ps = polymesh.getSchema();
+//
+//    std::vector<AtFloat> nlist;
+//    std::vector<AtUInt> nidxs;
+//
+//    ProcessIndexedBuiltinParam(
+//            ps.getNormalsParam(),
+//            sampleTimes,
+//            nlist,
+//            nidxs,
+//            3);
+//
+//    if ( !nlist.empty() )
+//    {
+//        AiNodeSetArray(meshNode, "nlist",
+//            AiArrayConvert( nlist.size() / sampleTimes.size(),
+//                    sampleTimes.size(), AI_TYPE_FLOAT, (void*)(&(nlist[0]))));
+//
+//        if ( !nidxs.empty() )
+//        {
+//            AiNodeSetArray(meshNode, "nidxs",
+//                    AiArrayConvert(nidxs.size(), 1, AI_TYPE_UINT,
+//                            &(nidxs[0])));
+//        }
+//        else
+//        {
+//            AiNodeSetArray(meshNode, "nidxs",
+//                    AiArrayConvert(vidxs.size(), 1, AI_TYPE_UINT,
+//                            &(vidxs[0])));
+//        }
+//    }
     
-    IPolyMeshSchema &ps = polymesh.getSchema();
-    
-    std::vector<AtFloat> nlist;
-    std::vector<AtUInt> nidxs;
-    
-    ProcessIndexedBuiltinParam(
-            ps.getNormalsParam(),
-            sampleTimes,
-            nlist,
-            nidxs,
-            3);
-    
-    if ( !nlist.empty() )
-    {
-        AiNodeSetArray(meshNode, "nlist",
-            AiArrayConvert( nlist.size() / sampleTimes.size(), 
-                    sampleTimes.size(), AI_TYPE_FLOAT, (void*)(&(nlist[0]))));
-        
-        if ( !nidxs.empty() )
-        {
-            AiNodeSetArray(meshNode, "nidxs",
-                    AiArrayConvert(nidxs.size(), 1, AI_TYPE_UINT,
-                            &(nidxs[0])));
-        }
-        else
-        {
-            AiNodeSetArray(meshNode, "nidxs",
-                    AiArrayConvert(vidxs.size(), 1, AI_TYPE_UINT,
-                            &(vidxs[0])));
-        }
-    }
-    
+
 }
 
 //-*************************************************************************

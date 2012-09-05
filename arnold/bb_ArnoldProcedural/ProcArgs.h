@@ -61,6 +61,7 @@ struct ProcArgs
     , makeInstance( rhs.makeInstance )
     , subdIterations ( rhs.subdIterations )
     , subdUVSmoothing ( rhs.subdUVSmoothing )
+    , pattern( rhs.pattern )
     , disp_map ( rhs.disp_map )
     , proceduralNode( rhs.proceduralNode )
     {}
@@ -70,6 +71,8 @@ struct ProcArgs
     std::string nameprefix;
     
     std::string objectpath;
+    std::string pattern;
+
     double frame;
     double fps;
     double shutterOpen;

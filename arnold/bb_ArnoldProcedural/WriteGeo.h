@@ -41,6 +41,9 @@
 #include "ProcArgs.h"
 #include "SampleUtil.h"
 
+#include <string>
+#include <vector>
+
 using namespace Alembic::AbcGeom;
 //-*****************************************************************************
 
