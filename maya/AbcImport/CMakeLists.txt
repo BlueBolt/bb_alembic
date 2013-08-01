@@ -38,6 +38,7 @@ PROJECT( ABC_IMPORT_MAYA_MODULE )
 
 SET( H_FILES
   AbcImport.h
+  AlembicImportFileTranslator.h
   AlembicNode.h
   CameraHelper.h
   CreateSceneHelper.h
@@ -53,6 +54,7 @@ SET( H_FILES
 
 SET( CXX_FILES
   AbcImport.cpp
+  AlembicImportFileTranslator.cpp
   AlembicNode.cpp
   CameraHelper.cpp
   CreateSceneHelper.cpp
@@ -71,9 +73,12 @@ SET( SOURCE_FILES ${CXX_FILES} ${H_FILES} )
 
 SET( CORE_LIBS
   AlembicAbcGeom
+  AlembicAbcCoreFactory
   AlembicAbc
   AlembicAbcCoreHDF5
+  AlembicAbcCoreOgawa
   AlembicAbcCoreAbstract
+  AlembicOgawa
   AlembicUtil )
 
 INCLUDE_DIRECTORIES( ${ALEMBIC_HDF5_INCLUDE_PATH} )
@@ -89,4 +94,4 @@ TARGET_LINK_LIBRARIES( AbcImport
   ${ZLIB_LIBRARIES} ${EXTERNAL_MATH_LIBS} )
 
 INSTALL( TARGETS AbcImport
-         DESTINATION maya/$ENV{MAYA_VERSION}/plug-ins )
+         DESTINATION maya/plug-ins )

@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -98,8 +98,8 @@ public:
 
         if ( tsPtr )
         {
-            tsIndex = iParent->getObject()->getArchive()->
-                addTimeSampling( *tsPtr );
+            tsIndex = GetCompoundPropertyWriterPtr( iParent )->getObject(
+                        )->getArchive()->addTimeSampling( *tsPtr );
         }
 
         init( tsIndex );
@@ -125,8 +125,8 @@ public:
 
         if ( tsPtr )
         {
-            tsIndex = iParent->getObject()->getArchive()->
-                addTimeSampling( *tsPtr );
+            tsIndex = GetCompoundPropertyWriterPtr( iParent )->getObject(
+                    )->getArchive()->addTimeSampling( *tsPtr );
         }
 
         init( tsIndex );
@@ -168,10 +168,11 @@ public:
 
     Abc::OCompoundProperty getArbGeomParams();
     Abc::OCompoundProperty getUserProperties();
+    Abc::OBox3dProperty getChildBoundsProperty();
 
     //-*************************************************************************
     // ABC BASE MECHANISMS
-    // These functions are used by Abc to deal with errors, rewrapping,
+    // These functions are used by Abc to deal with errors, validity,
     // and so on.
     //-*************************************************************************
 
@@ -184,10 +185,7 @@ public:
         m_opsPWPtr.reset();
         m_valsPWPtr.reset();
         m_protoSample.reset();
-        m_animChannelsProperty.reset();
-
-        m_staticChans.clear();
-        m_staticChans.resize( 0 );
+        m_data.reset();
 
         m_arbGeomParams.reset();
         m_userProperties.reset();
@@ -233,25 +231,28 @@ protected:
 
     Abc::OBoolProperty m_isNotConstantIdentityProperty;
 
-    Abc::OUInt32ArrayProperty m_animChannelsProperty;
-
     // ensure that our sample's topology is unchanging between
     // calls to set; see usage in OXformSchema::set()
     XformSample m_protoSample;
-
-    std::vector<bool> m_staticChans;
 
     bool m_isIdentity;
 
     Abc::OCompoundProperty m_arbGeomParams;
 
     Abc::OCompoundProperty m_userProperties;
+
+    class Data;
+
+    // shared and not scoped because we want this to be shared across copies
+    Util::shared_ptr< Data > m_data;
 };
 
 //-*****************************************************************************
 // SCHEMA OBJECT
 //-*****************************************************************************
 typedef Abc::OSchemaObject<OXformSchema> OXform;
+
+typedef Util::shared_ptr< OXform > OXformPtr;
 
 } // End namespace ALEMBIC_VERSION_NS
 

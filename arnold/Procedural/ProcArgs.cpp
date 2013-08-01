@@ -49,6 +49,7 @@ ProcArgs::ProcArgs( const char * paramStr )
   , shutterOpen(0)
   , shutterClose(0)
   , excludeXform(false)
+  , makeInstance(false)
   , subdIterations(0)
   , proceduralNode(0)
 {
@@ -154,7 +155,7 @@ ProcArgs::ProcArgs( const char * paramStr )
 
 void ProcArgs::usage()
 {
-    std::cerr << "AlembicRiProcedural usage:" << std::endl;
+    std::cerr << "AlembicArnoldProcedural usage:" << std::endl;
     std::cerr << std::endl;
     
     

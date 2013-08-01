@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -45,17 +45,10 @@ ParamListBuilder::~ParamListBuilder()
     for ( std::vector<RtString>::iterator I = m_retainedStrings.begin();
             I != m_retainedStrings.end(); ++I )
     {
-        free( const_cast<char*>(*I) );
+        free( (*I) );
     }
     
     m_retainedStrings.clear();
-    for ( std::vector<RtToken>::iterator I = m_outputDeclarations.begin();
-            I != m_outputDeclarations.end(); ++I )
-    {
-        free( const_cast<char*>(*I) );
-    }
-    
-    m_outputDeclarations.clear();
 }
 
 
@@ -63,10 +56,10 @@ ParamListBuilder::~ParamListBuilder()
 void ParamListBuilder::add( const std::string & declaration, RtPointer value,
                             ArraySamplePtr sampleToRetain )
 {
-
-    m_outputDeclarations.push_back(
-        strdup( const_cast<char *>( declaration.c_str() ) ) ); 
-
+    //save a copy of the declaration string
+    m_retainedStrings.push_back( strdup( declaration.c_str() ) );
+    m_outputDeclarations.push_back( m_retainedStrings.back() );
+    
     m_values.push_back( value );
 
     if ( sampleToRetain )
@@ -239,6 +232,15 @@ void AddArbitraryGeomParams( ICompoundProperty &parent,
                 "float",
                 paramListBuilder);
         }
+        else if ( IV3dGeomParam::matches( propHeader ) )
+        {
+            AddGeomParamToParamListBuilderAsFloat<IV3dGeomParam, double>(
+                parent,
+                propHeader,
+                sampleSelector,
+                "vector",
+                paramListBuilder);
+        }
         else if ( IInt32GeomParam::matches( propHeader ) )
         {
             AddGeomParamToParamListBuilder<IInt32GeomParam>(
@@ -284,6 +286,15 @@ void AddArbitraryGeomParams( ICompoundProperty &parent,
                 "point",
                 paramListBuilder);
         }
+        else if ( IP3dGeomParam::matches( propHeader ) )
+        {
+            AddGeomParamToParamListBuilderAsFloat<IP3dGeomParam, double>(
+                parent,
+                propHeader,
+                sampleSelector,
+                "point",
+                paramListBuilder);
+        }
         else if ( IN3fGeomParam::matches( propHeader ) )
         {
             AddGeomParamToParamListBuilder<IN3fGeomParam>(
@@ -302,13 +313,21 @@ void AddArbitraryGeomParams( ICompoundProperty &parent,
                 "color",
                 paramListBuilder);
         }
-        if ( IM44fGeomParam::matches( propHeader ) )
+        else if ( IM44fGeomParam::matches( propHeader ) )
         {
             AddGeomParamToParamListBuilder<IM44fGeomParam>(
                 parent,
                 propHeader,
                 sampleSelector,
                 "matrix",
+                paramListBuilder);
+        }
+        else if ( IBoolGeomParam::matches( propHeader ) )
+        {
+            AddGeomParamToParamListBuilderAsInt<IBoolGeomParam, bool_t>(
+                parent,
+                propHeader,
+                sampleSelector,
                 paramListBuilder);
         }
 

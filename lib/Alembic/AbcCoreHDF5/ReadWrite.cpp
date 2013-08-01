@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -45,12 +45,25 @@ namespace AbcCoreHDF5 {
 namespace ALEMBIC_VERSION_NS {
 
 //-*****************************************************************************
+WriteArchive::WriteArchive()
+{
+    m_cacheHierarchy = false;
+}
+
+//-*****************************************************************************
+WriteArchive::WriteArchive( bool iCacheHierarchy )
+{
+    m_cacheHierarchy = iCacheHierarchy;
+}
+
+//-*****************************************************************************
 AbcA::ArchiveWriterPtr
 WriteArchive::operator()( const std::string &iFileName,
                           const AbcA::MetaData &iMetaData ) const
 {
-    AbcA::ArchiveWriterPtr archivePtr( new AwImpl( iFileName,
-                                                   iMetaData ) );
+    Alembic::Util::shared_ptr<AwImpl> archivePtr(
+        new AwImpl( iFileName, iMetaData, m_cacheHierarchy ) );
+
     return archivePtr;
 }
 
@@ -64,12 +77,26 @@ CreateCache()
 
 
 //-*****************************************************************************
+ReadArchive::ReadArchive()
+{
+    m_cacheHierarchy = false;
+}
+
+//-*****************************************************************************
+ReadArchive::ReadArchive( bool iCacheHierarchy )
+{
+    m_cacheHierarchy = iCacheHierarchy;
+}
+
+//-*****************************************************************************
 // This version creates a cache.
 AbcA::ArchiveReaderPtr
 ReadArchive::operator()( const std::string &iFileName ) const
 {
     AbcA::ReadArraySampleCachePtr cachePtr = CreateCache();
-    AbcA::ArchiveReaderPtr archivePtr( new ArImpl( iFileName, cachePtr ) );
+    Alembic::Util::shared_ptr<ArImpl> archivePtr(
+        new ArImpl( iFileName, cachePtr, m_cacheHierarchy ) );
+
     return archivePtr;
 }
 
@@ -79,8 +106,8 @@ AbcA::ArchiveReaderPtr
 ReadArchive::operator()( const std::string &iFileName,
                          AbcA::ReadArraySampleCachePtr iCachePtr ) const
 {
-    AbcA::ArchiveReaderPtr archivePtr( new ArImpl( iFileName,
-                                                   iCachePtr ) );
+    Alembic::Util::shared_ptr<ArImpl> archivePtr(
+        new ArImpl( iFileName, iCachePtr, m_cacheHierarchy ) );
     return archivePtr;
 }
 

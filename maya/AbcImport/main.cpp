@@ -36,6 +36,7 @@
 
 #include "AlembicNode.h"
 #include "AbcImport.h"
+#include "AlembicImportFileTranslator.h"
 
 #include <maya/MGlobal.h>
 #include <maya/MFnPlugin.h>
@@ -50,14 +51,35 @@ MStatus initializePlugin(MObject obj)
     const char * pluginVersion = "1.0";
     MFnPlugin plugin(obj, "Alembic", pluginVersion, "Any");
 
-    MStatus status = plugin.registerCommand("AbcImport",
+    MStatus status;
+
+    status = plugin.registerCommand("AbcImport",
                                 AbcImport::creator,
                                 AbcImport::createSyntax);
+    if (!status)
+    {
+        status.perror("registerCommand");
+    }
 
     status = plugin.registerNode("AlembicNode",
                                 AlembicNode::mMayaNodeId,
                                 &AlembicNode::creator,
                                 &AlembicNode::initialize);
+    if (!status)
+    {
+        status.perror("registerNode");
+    }
+
+    status = plugin.registerFileTranslator("Alembic",
+                                NULL,
+                                AlembicImportFileTranslator::creator,
+                                NULL,
+                                NULL,
+                                true);
+    if (!status)
+    {
+        status.perror("registerFileTranslator");
+    }
 
     MString info = "AbcImport v";
     info += pluginVersion;
@@ -74,8 +96,23 @@ MStatus uninitializePlugin(MObject obj)
 
     MStatus status;
 
-    status = plugin.deregisterCommand("AlembicImport");
+    status = plugin.deregisterFileTranslator("Alembic");
+    if (!status)
+    {
+        status.perror("deregisterFileTranslator");
+    }
+
     status = plugin.deregisterNode(AlembicNode::mMayaNodeId);
+    if (!status)
+    {
+        status.perror("deregisterNode");
+    }
+
+    status = plugin.deregisterCommand("AbcImport");
+    if (!status)
+    {
+        status.perror("deregisterCommand");
+    }
 
     return status;
 }

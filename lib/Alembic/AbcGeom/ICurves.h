@@ -76,12 +76,11 @@ public:
         BasisType getBasis() const { return m_basis; }
 
         Abc::Box3d getSelfBounds() const { return m_selfBounds; }
-        Abc::Box3d getChildBounds() const { return m_childBounds; }
         Abc::V3fArraySamplePtr getVelocities() const { return m_velocities; }
 
         bool valid() const
         {
-            return m_positions;
+            return m_positions.get() != 0;
         }
 
         void reset()
@@ -94,7 +93,6 @@ public:
             m_basis = kBezierBasis;
 
             m_selfBounds.makeEmpty();
-            m_childBounds.makeEmpty();
         }
 
         ALEMBIC_OPERATOR_BOOL( valid() );
@@ -105,7 +103,6 @@ public:
         Abc::V3fArraySamplePtr m_velocities;
 
         Abc::Box3d m_selfBounds;
-        Abc::Box3d m_childBounds;
 
         // type, wrap, and nVertices
         Abc::Int32ArraySamplePtr m_nVertices;
@@ -201,10 +198,10 @@ public:
 
     //-*************************************************************************
     void get( sample_type &oSample,
-              const Abc::ISampleSelector &iSS = Abc::ISampleSelector() );
+              const Abc::ISampleSelector &iSS = Abc::ISampleSelector() ) const;
 
     sample_type getValue( const Abc::ISampleSelector &iSS =
-                          Abc::ISampleSelector() )
+                          Abc::ISampleSelector() ) const
     {
         sample_type smp;
         get( smp, iSS );
@@ -226,11 +223,20 @@ public:
         return m_nVerticesProperty;
     }
 
-    IV2fGeomParam &getUVsParam() { return m_uvsParam; }
-    IN3fGeomParam &getNormalsParam() { return m_normalsParam; }
-    IFloatGeomParam &getWidthsParam() { return m_widthsParam; }
+    IV2fGeomParam getUVsParam() const
+    {
+        return m_uvsParam;
+    }
 
+    IN3fGeomParam getNormalsParam() const
+    {
+        return m_normalsParam;
+    }
 
+    IFloatGeomParam getWidthsParam() const
+    {
+        return m_widthsParam;
+    }
 
     //-*************************************************************************
     // ABC BASE MECHANISMS
@@ -284,6 +290,8 @@ protected:
 
 //-*****************************************************************************
 typedef Abc::ISchemaObject<ICurvesSchema> ICurves;
+
+typedef Util::shared_ptr< ICurves > ICurvesPtr;
 
 } // End namespace ALEMBIC_VERSION_NS
 

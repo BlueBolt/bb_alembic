@@ -1,6 +1,6 @@
 ##-*****************************************************************************
 ##
-## Copyright (c) 2009-2011,
+## Copyright (c) 2009-2013,
 ##  Sony Pictures Imageworks Inc. and
 ##  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 ##
@@ -50,6 +50,8 @@ SET( CXX_FILES
   OCompoundProperty.cpp
   OObject.cpp
   OScalarProperty.cpp
+
+  Reference.cpp
 )
 
 SET( H_FILES 
@@ -83,6 +85,8 @@ SET( H_FILES
   OTypedArrayProperty.h
   OTypedScalarProperty.h
 
+  Reference.h
+
   TypedArraySample.h
   TypedPropertyTraits.h
 )
@@ -94,9 +98,12 @@ ADD_LIBRARY( AlembicAbc ${SOURCE_FILES} )
 INSTALL( TARGETS AlembicAbc
          LIBRARY DESTINATION lib
          ARCHIVE DESTINATION lib/static )
- 
+
 INSTALL( FILES ${H_FILES}
          DESTINATION include/Alembic/Abc
          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
 
-ADD_SUBDIRECTORY( Tests )
+IF( NOT ALEMBIC_NO_TESTS )
+	ADD_SUBDIRECTORY( Tests )
+ENDIF()
+

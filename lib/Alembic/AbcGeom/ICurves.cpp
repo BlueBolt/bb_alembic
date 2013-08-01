@@ -51,7 +51,8 @@ MeshTopologyVariance ICurvesSchema::getTopologyVariance() const
         return kConstantTopology;
     }
 
-    else if ( m_basisAndTypeProperty.isConstant() )
+    else if ( m_nVerticesProperty.isConstant() &&
+              m_basisAndTypeProperty.isConstant() )
     {
         return kHomogenousTopology;
     }
@@ -80,13 +81,15 @@ void ICurvesSchema::init( const Abc::Argument &iArg0,
     AbcA::CompoundPropertyReaderPtr _this = this->getPtr();
 
     // no matching so we pick up old assets written as V3f
-    m_positionsProperty = Abc::IP3fArrayProperty( _this, "P", kNoMatching );
+    m_positionsProperty = Abc::IP3fArrayProperty( _this, "P", kNoMatching,
+        args.getErrorHandlerPolicy() );
 
     m_nVerticesProperty = Abc::IInt32ArrayProperty( _this, "nVertices",
-                                            args.getSchemaInterpMatching());
+                                                    iArg0, iArg1 );
+
 
     m_basisAndTypeProperty = Abc::IScalarProperty( _this, "curveBasisAndType",
-                                          args.getSchemaInterpMatching());
+        args.getErrorHandlerPolicy());
 
     // none of the things below here are guaranteed to exist
     if ( this->getPropertyHeader( "uv" ) != NULL )
@@ -115,7 +118,7 @@ void ICurvesSchema::init( const Abc::Argument &iArg0,
 
 //-*****************************************************************************
 void ICurvesSchema::get( ICurvesSchema::Sample &oSample,
-                         const Abc::ISampleSelector &iSS )
+                         const Abc::ISampleSelector &iSS ) const
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "ICurvesSchema::get()" );
 
@@ -135,11 +138,6 @@ void ICurvesSchema::get( ICurvesSchema::Sample &oSample,
     if ( m_selfBoundsProperty )
     {
         m_selfBoundsProperty.get( oSample.m_selfBounds, iSS );
-    }
-
-    if ( m_childBoundsProperty && m_childBoundsProperty.getNumSamples() > 0 )
-    {
-        m_childBoundsProperty.get( oSample.m_childBounds, iSS );
     }
 
     if ( m_velocitiesProperty && m_velocitiesProperty.getNumSamples() > 0 )

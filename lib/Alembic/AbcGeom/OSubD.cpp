@@ -60,35 +60,57 @@ void OSubDSchema::set( const Sample &iSamp )
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "OSubDSchema::set()" );
 
-    // do we need to create child bounds?
-    if ( iSamp.getChildBounds().hasVolume() && !m_childBoundsProperty )
-    {
-        m_childBoundsProperty = Abc::OBox3dProperty( this->getPtr(), ".childBnds",
-            m_positionsProperty.getTimeSampling() );
-
-        Abc::Box3d emptyBox;
-        emptyBox.makeEmpty();
-
-        size_t numSamples = m_positionsProperty.getNumSamples();
-
-        // set all the missing samples
-        for ( size_t i = 0; i < numSamples; ++i )
-        {
-            m_childBoundsProperty.set( emptyBox );
-        }
-    }
-
     // do we need to create velocities prop?
     if ( iSamp.getVelocities() && !m_velocitiesProperty )
     {
         m_velocitiesProperty = Abc::OV3fArrayProperty( this->getPtr(), ".velocities",
                                                m_positionsProperty.getTimeSampling() );
 
-        const V3fArraySample empty;
+        std::vector< V3f > emptyVec;
+        const V3fArraySample empty( emptyVec );
         const size_t numSamps = m_positionsProperty.getNumSamples();
         for ( size_t i = 0 ; i < numSamps ; ++i )
         {
             m_velocitiesProperty.set( empty );
+        }
+    }
+
+    // do we need to create uvs?
+    if ( iSamp.getUVs() && !m_uvsParam )
+    {
+        std::vector<V2f> emptyVals;
+        std::vector<Util::uint32_t> emptyIndices;
+
+        OV2fGeomParam::Sample empty;
+
+        if ( iSamp.getUVs().getIndices() )
+        {
+            empty = OV2fGeomParam::Sample( Abc::V2fArraySample( emptyVals ),
+                Abc::UInt32ArraySample( emptyIndices ),
+                iSamp.getUVs().getScope() );
+
+            // UVs are indexed
+            m_uvsParam = OV2fGeomParam( this->getPtr(), "uv", true,
+                                        empty.getScope(), 1,
+                                        this->getTimeSampling() );
+        }
+        else
+        {
+            empty = OV2fGeomParam::Sample( Abc::V2fArraySample( emptyVals ),
+                                           iSamp.getUVs().getScope() );
+
+            // UVs are not indexed
+            m_uvsParam = OV2fGeomParam( this->getPtr(), "uv", false,
+                                   empty.getScope(), 1,
+                                   this->getTimeSampling() );
+        }
+
+        size_t numSamples = m_positionsProperty.getNumSamples();
+
+        // set all the missing samples
+        for ( size_t i = 0; i < numSamples; ++i )
+        {
+            m_uvsParam.set( empty );
         }
     }
 
@@ -104,9 +126,6 @@ void OSubDSchema::set( const Sample &iSamp )
         m_positionsProperty.set( iSamp.getPositions() );
         m_faceIndicesProperty.set( iSamp.getFaceIndices() );
         m_faceCountsProperty.set( iSamp.getFaceCounts() );
-
-        if ( m_childBoundsProperty )
-        { m_childBoundsProperty.set( iSamp.getChildBounds() ); }
 
         if ( m_velocitiesProperty )
         { SetPropUsePrevIfNull( m_velocitiesProperty, iSamp.getVelocities() ); }
@@ -127,21 +146,6 @@ void OSubDSchema::set( const Sample &iSamp )
 
         if ( iSamp.getUVs().getVals() )
         {
-            if ( iSamp.getUVs().getIndices() )
-            {
-                // UVs are indexed
-                m_uvsParam = OV2fGeomParam( this->getPtr(), "uv", true,
-                                       iSamp.getUVs().getScope(), 1,
-                                       this->getTimeSampling() );
-            }
-            else
-            {
-                // UVs are not indexed
-                m_uvsParam = OV2fGeomParam( this->getPtr(), "uv", false,
-                                       iSamp.getUVs().getScope(), 1,
-                                       this->getTimeSampling() );
-            }
-
             m_uvsParam.set( iSamp.getUVs() );
         }
 
@@ -279,11 +283,6 @@ void OSubDSchema::set( const Sample &iSamp )
 
         SetPropUsePrevIfNull( m_subdSchemeProperty, iSamp.getSubdivisionScheme() );
 
-        if ( m_childBoundsProperty )
-        {
-            SetPropUsePrevIfNull( m_childBoundsProperty, iSamp.getChildBounds() );
-        }
-
         if ( m_velocitiesProperty )
         {
             SetPropUsePrevIfNull( m_velocitiesProperty, iSamp.getVelocities() );
@@ -346,11 +345,6 @@ void OSubDSchema::setFromPrevious()
 
     m_selfBoundsProperty.setFromPrevious();
 
-    if ( m_childBoundsProperty )
-    {
-        m_childBoundsProperty.setFromPrevious();
-    }
-
     if ( m_velocitiesProperty ) { m_velocitiesProperty.setFromPrevious(); }
 
     if ( m_uvsParam ) { m_uvsParam.setFromPrevious(); }
@@ -403,11 +397,6 @@ void OSubDSchema::setTimeSampling( uint32_t iIndex )
         m_holesProperty.setTimeSampling( iIndex );
     }
 
-    if ( m_childBoundsProperty )
-    {
-        m_childBoundsProperty.setTimeSampling( iIndex );
-    }
-
     if ( m_velocitiesProperty )
     {
         m_velocitiesProperty.setTimeSampling( iIndex );
@@ -445,8 +434,7 @@ OSubDSchema::createFaceSet( const std::string &iFaceSetName )
     ABCA_ASSERT( m_faceSets.find (iFaceSetName) == m_faceSets.end (),
                  "faceSet has already been created in SubD." );
 
-    m_faceSets [iFaceSetName] = OFaceSet (this->getParent ().getObject (),
-        iFaceSetName);
+    m_faceSets [iFaceSetName] = OFaceSet (getObject (), iFaceSetName);
 
     return m_faceSets [iFaceSetName];
 

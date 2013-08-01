@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -35,32 +35,34 @@
 //-*****************************************************************************
 
 #include <Alembic/Abc/All.h>
+#include <Alembic/AbcCoreFactory/All.h>
 #include <Alembic/AbcCoreHDF5/All.h>
-
-#include <boost/lexical_cast.hpp>
+#include <Alembic/AbcCoreOgawa/All.h>
 
 #include <set>
 
-#include "Assert.h"
+#include <Alembic/AbcCoreAbstract/Tests/Assert.h>
 
 namespace Abc = Alembic::Abc;
 using namespace Abc;
 
+namespace AbcF = Alembic::AbcCoreFactory;
+
 //-*****************************************************************************
-static std::vector<int32_t> intArraySamp;
+static std::vector<Alembic::Util::int32_t> intArraySamp;
 static std::set<std::string> PATHS;
 
-static const int32_t NUM_TOP_CHILDREN = 100;
-static const int32_t DEPTH = 499;
+static const Alembic::Util::int32_t NUM_TOP_CHILDREN = 100;
+static const Alembic::Util::int32_t DEPTH = 499;
 
-static const int32_t HIGHVAL = 200;
+static const Alembic::Util::int32_t HIGHVAL = 200;
 
 typedef std::pair< std::set<std::string>::iterator, bool > PATH_PAIR;
 
 //-*****************************************************************************
 void makeIntArraySamp()
 {
-    for ( int32_t i = 0 ; i < HIGHVAL ; i++ )
+    for ( Alembic::Util::int32_t i = 0 ; i < HIGHVAL ; i++ )
     {
         intArraySamp.push_back( i );
     }
@@ -77,9 +79,10 @@ void makeDeepHierarchy( OObject parent, const int level )
         return;
     }
 
-    makeDeepHierarchy( OObject( parent,
-                                boost::lexical_cast<std::string>( level ) ),
-                       level + 1 );
+    std::ostringstream strm;
+    strm << level;
+    std::string levelName = strm.str();
+    makeDeepHierarchy( OObject( parent, levelName ), level + 1 );
 }
 
 //-*****************************************************************************
@@ -118,22 +121,35 @@ void readDeepHierarchy( IObject parent, const int level, const IObject& orig )
         return;
     }
 
-    readDeepHierarchy( IObject( parent,
-                                boost::lexical_cast<std::string>( level ) ),
-                       level + 1, orig );
+    std::ostringstream strm;
+    strm << level;
+    std::string levelName = strm.str();
+    readDeepHierarchy( IObject( parent, levelName ), level + 1, orig );
 }
 
 //-*****************************************************************************
-void simpleTestOut( const std::string &iArchiveName )
+void simpleTestOut( const std::string &iArchiveName, bool useOgawa )
 {
-    OArchive archive( Alembic::AbcCoreHDF5::WriteArchive(),
-                      iArchiveName );
+    OArchive archive;
+    if (useOgawa)
+    {
+        archive = OArchive( Alembic::AbcCoreOgawa::WriteArchive(),
+            iArchiveName, ErrorHandler::kThrowPolicy );
+    }
+    else
+    {
+        archive = OArchive( Alembic::AbcCoreHDF5::WriteArchive(),
+            iArchiveName, ErrorHandler::kThrowPolicy );
+    }
     OObject archiveTop( archive, kTop );
 
     // create 100 top-level children
     for ( int i = 0 ; i < NUM_TOP_CHILDREN ; i++ )
     {
-        OObject obj( archiveTop, boost::lexical_cast<std::string>( i ) );
+        std::ostringstream strm;
+        strm << i;
+        std::string name = strm.str();
+        OObject obj( archiveTop, name );
         makeDeepHierarchy( obj, 0 );
     }
 }
@@ -141,8 +157,10 @@ void simpleTestOut( const std::string &iArchiveName )
 //-*****************************************************************************
 void simpleTestIn( const std::string &iArchiveName )
 {
-    IArchive archive( Alembic::AbcCoreHDF5::ReadArchive(),
-                      iArchiveName, ErrorHandler::kThrowPolicy );
+    AbcF::IFactory factory;
+    factory.setPolicy(  ErrorHandler::kThrowPolicy );
+    AbcF::IFactory::CoreType coreType;
+    IArchive archive = factory.getArchive(iArchiveName, coreType);
 
     IObject archiveTop = archive.getTop();
 
@@ -150,7 +168,9 @@ void simpleTestIn( const std::string &iArchiveName )
 
     for ( int i = 0 ; i < NUM_TOP_CHILDREN ; i++ )
     {
-        std::string cname = boost::lexical_cast<std::string>( i );
+        std::ostringstream strm;
+        strm << i;
+        std::string cname = strm.str();
         IObject obj( archiveTop, cname );
         readDeepHierarchy( obj, 0, obj  );
     }
@@ -166,7 +186,14 @@ int main( int argc, char *argv[] )
     // make the int array sample values
     makeIntArraySamp();
 
-    simpleTestOut( arkive );
+    bool useOgawa = true;
+    simpleTestOut( arkive, useOgawa );
+    simpleTestIn( arkive );
+
+    PATHS.clear();
+
+    useOgawa = false;
+    simpleTestOut( arkive, useOgawa );
     simpleTestIn( arkive );
 
     return 0;

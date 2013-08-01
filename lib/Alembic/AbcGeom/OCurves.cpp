@@ -55,30 +55,14 @@ void OCurvesSchema::set( const OCurvesSchema::Sample &iSamp )
     // the version number
     basisAndType[3] = basisAndType[2];
 
-    // do we need to create child bounds?
-    if ( iSamp.getChildBounds().hasVolume() && !m_childBoundsProperty)
-    {
-        m_childBoundsProperty = Abc::OBox3dProperty( *this, ".childBnds",
-                                             m_positionsProperty.getTimeSampling() );
-        Abc::Box3d emptyBox;
-        emptyBox.makeEmpty();
-
-        size_t numSamples = m_positionsProperty.getNumSamples();
-
-        // set all the missing samples
-        for ( size_t i = 0; i < numSamples; ++i )
-        {
-            m_childBoundsProperty.set( emptyBox );
-        }
-    }
-
     // do we need to create velocities prop?
     if ( iSamp.getVelocities() && !m_velocitiesProperty )
     {
         m_velocitiesProperty = Abc::OV3fArrayProperty( this->getPtr(), ".velocities",
                                                m_positionsProperty.getTimeSampling() );
 
-        const V3fArraySample empty;
+        std::vector<V3f> emptyVec;
+        const V3fArraySample empty(emptyVec);
         const size_t numSamps = m_positionsProperty.getNumSamples();
         for ( size_t i = 0 ; i < numSamps ; ++i )
         {
@@ -87,24 +71,34 @@ void OCurvesSchema::set( const OCurvesSchema::Sample &iSamp )
     }
 
     // do we need to create uvs?
-    if ( iSamp.getUVs().getVals() && !m_uvsParam )
+    if ( iSamp.getUVs() && !m_uvsParam )
     {
+        std::vector<V2f> emptyVals;
+        std::vector<Util::uint32_t> emptyIndices;
+
+        OV2fGeomParam::Sample empty;
+
         if ( iSamp.getUVs().getIndices() )
         {
+            empty = OV2fGeomParam::Sample( Abc::V2fArraySample( emptyVals ),
+                Abc::UInt32ArraySample( emptyIndices ),
+                iSamp.getUVs().getScope() );
+
             // UVs are indexed
             m_uvsParam = OV2fGeomParam( this->getPtr(), "uv", true,
-                                   iSamp.getUVs().getScope(), 1,
-                                   this->getTimeSampling() );
+                                        empty.getScope(), 1,
+                                        this->getTimeSampling() );
         }
         else
         {
+            empty = OV2fGeomParam::Sample( Abc::V2fArraySample( emptyVals ),
+                                           iSamp.getUVs().getScope() );
+
             // UVs are not indexed
             m_uvsParam = OV2fGeomParam( this->getPtr(), "uv", false,
-                                   iSamp.getUVs().getScope(), 1,
+                                   empty.getScope(), 1,
                                    this->getTimeSampling() );
         }
-
-        OV2fGeomParam::Sample empty;
 
         size_t numSamples = m_positionsProperty.getNumSamples();
 
@@ -116,25 +110,33 @@ void OCurvesSchema::set( const OCurvesSchema::Sample &iSamp )
     }
 
     // do we need to create normals?
-    if ( iSamp.getNormals().getVals() && !m_normalsParam )
+    if ( iSamp.getNormals() && !m_normalsParam )
     {
+        std::vector<V3f> emptyVals;
+        std::vector<Util::uint32_t> emptyIndices;
+
+        ON3fGeomParam::Sample empty;
 
         if ( iSamp.getNormals().getIndices() )
         {
+            empty = ON3fGeomParam::Sample( Abc::V3fArraySample( emptyVals ),
+                Abc::UInt32ArraySample( emptyIndices ),
+                iSamp.getNormals().getScope() );
+
             // normals are indexed
             m_normalsParam = ON3fGeomParam( this->getPtr(), "N", true,
-                                       iSamp.getNormals().getScope(),
-                                       1, this->getTimeSampling() );
+                empty.getScope(), 1, this->getTimeSampling() );
         }
         else
         {
+            empty = ON3fGeomParam::Sample( Abc::V3fArraySample( emptyVals ),
+                                           iSamp.getNormals().getScope() );
+
             // normals are not indexed
             m_normalsParam = ON3fGeomParam( this->getPtr(), "N", false,
-                                       iSamp.getNormals().getScope(), 1,
-                                       this->getTimeSampling() );
+                                        empty.getScope(), 1,
+                                        this->getTimeSampling() );
         }
-
-        ON3fGeomParam::Sample empty;
 
         size_t numSamples = m_positionsProperty.getNumSamples();
 
@@ -148,8 +150,16 @@ void OCurvesSchema::set( const OCurvesSchema::Sample &iSamp )
     // do we need to create widths?
     if ( iSamp.getWidths().getVals() && !m_widthsParam )
     {
+        std::vector<float> emptyVals;
+        std::vector<Util::uint32_t> emptyIndices;
+        OFloatGeomParam::Sample empty;
+
         if ( iSamp.getWidths().getIndices() )
         {
+            empty = OFloatGeomParam::Sample( Abc::FloatArraySample( emptyVals ),
+                Abc::UInt32ArraySample( emptyIndices ),
+                iSamp.getWidths().getScope() );
+
             // widths are indexed for some weird reason which is
             // technically ok, just wasteful
             m_widthsParam = OFloatGeomParam( this->getPtr(), "width", true,
@@ -158,13 +168,14 @@ void OCurvesSchema::set( const OCurvesSchema::Sample &iSamp )
         }
         else
         {
+            empty = OFloatGeomParam::Sample( Abc::FloatArraySample( emptyVals ),
+                                             iSamp.getWidths().getScope() );
+
             // widths are not indexed
             m_widthsParam = OFloatGeomParam( this->getPtr(), "width", false,
                                              iSamp.getWidths().getScope(), 1,
                                              this->getTimeSampling() );
         }
-
-        OFloatGeomParam::Sample empty;
 
         size_t numSamples = m_positionsProperty.getNumSamples();
 
@@ -189,9 +200,6 @@ void OCurvesSchema::set( const OCurvesSchema::Sample &iSamp )
 
         if ( m_velocitiesProperty )
         { m_velocitiesProperty.set( iSamp.getVelocities() ); }
-
-        if ( iSamp.getChildBounds().hasVolume() )
-        { m_childBoundsProperty.set( iSamp.getChildBounds() ); }
 
         if ( iSamp.getSelfBounds().isEmpty() )
         {
@@ -241,9 +249,6 @@ void OCurvesSchema::set( const OCurvesSchema::Sample &iSamp )
             m_basisAndTypeProperty.setFromPrevious();
         }
 
-        if ( m_childBoundsProperty )
-        { SetPropUsePrevIfNull( m_childBoundsProperty, iSamp.getChildBounds() ); }
-
         if ( m_velocitiesProperty )
         { SetPropUsePrevIfNull( m_velocitiesProperty, iSamp.getVelocities() ); }
 
@@ -289,11 +294,53 @@ void OCurvesSchema::setFromPrevious()
 
     m_selfBoundsProperty.setFromPrevious();
 
-    if ( m_childBoundsProperty ) { m_childBoundsProperty.setFromPrevious(); }
     if ( m_velocitiesProperty ) { m_velocitiesProperty.setFromPrevious(); }
     if ( m_uvsParam ) { m_uvsParam.setFromPrevious(); }
     if ( m_normalsParam ) { m_normalsParam.setFromPrevious(); }
     if ( m_widthsParam ) { m_widthsParam.setFromPrevious(); }
+
+    ALEMBIC_ABC_SAFE_CALL_END();
+}
+
+//-*****************************************************************************
+void OCurvesSchema::setTimeSampling( uint32_t iIndex )
+{
+    ALEMBIC_ABC_SAFE_CALL_BEGIN(
+        "OCurvesSchema::setTimeSampling( uint32_t )" );
+
+    m_positionsProperty.setTimeSampling( iIndex );
+    m_nVerticesProperty.setTimeSampling( iIndex );
+
+    m_basisAndTypeProperty.setTimeSampling( iIndex );
+
+    m_selfBoundsProperty.setTimeSampling( iIndex );
+
+    if ( m_velocitiesProperty )
+    {
+        m_velocitiesProperty.setTimeSampling( iIndex );
+    }
+
+    if ( m_uvsParam ) { m_uvsParam.setTimeSampling( iIndex ); }
+
+    if ( m_normalsParam ) { m_normalsParam.setTimeSampling( iIndex ); }
+    if ( m_widthsParam ) { m_widthsParam.setTimeSampling( iIndex ); }
+
+    m_positionsProperty.setTimeSampling( iIndex );
+
+    ALEMBIC_ABC_SAFE_CALL_END();
+}
+
+//-*****************************************************************************
+void OCurvesSchema::setTimeSampling( AbcA::TimeSamplingPtr iTime )
+{
+    ALEMBIC_ABC_SAFE_CALL_BEGIN(
+        "OCurvesSchema::setTimeSampling( TimeSamplingPtr )" );
+
+    if ( iTime )
+    {
+        uint32_t tsIndex = getObject().getArchive().addTimeSampling( *iTime );
+        setTimeSampling( tsIndex );
+    }
 
     ALEMBIC_ABC_SAFE_CALL_END();
 }

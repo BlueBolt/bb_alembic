@@ -39,10 +39,8 @@
 #include <Alembic/AbcGeom/Visibility.h>
 #include <Alembic/AbcGeom/ArchiveBounds.h>
 #include <Alembic/AbcGeom/IGeomParam.h>
-#include <boost/random.hpp>
-#include <boost/lexical_cast.hpp>
 
-#include "Assert.h"
+#include <Alembic/AbcCoreAbstract/Tests/Assert.h>
 
 namespace Abc = Alembic::Abc;
 
@@ -50,7 +48,6 @@ using namespace Alembic::AbcGeom; // Contains Abc, AbcCoreAbstract
 
 using Alembic::AbcCoreAbstract::chrono_t;
 using Alembic::AbcCoreAbstract::index_t;
-using Alembic::Util::uint32_t;
 
 //
 // The tests in this file are intended to exercise Abc helper
@@ -73,7 +70,7 @@ void writeSimpleProperties(const std::string &archiveName)
                       archiveName, ErrorHandler::kThrowPolicy );
     OObject archiveTop = archive.getTop();
 
-    uint32_t tsidx = archive.addTimeSampling(ts);
+    Alembic::Util::uint32_t tsidx = archive.addTimeSampling(ts);
 
     OObject foochild( archiveTop, "foochild" );
 
@@ -88,8 +85,9 @@ void writeSimpleProperties(const std::string &archiveName)
     {
         // Create 'numChildren' children, all parented under
         //  the archive
-        std::string name = "child_";
-        name.append( boost::lexical_cast<std::string>( ii ) );
+        std::ostringstream strm;
+        strm << "child_" <<ii;
+        std::string name = strm.str();
         OObject child( archiveTop, name );
         OCompoundProperty childProps = child.getProperties();
 
@@ -278,7 +276,7 @@ void readSimpleProperties(const std::string &archiveName)
                         {
                             IBoolProperty prop( props,  propNames[jj] );
                             TESTING_ASSERT( !IBoolGeomParam::matches(
-                                                prop.getMetaData() ) );
+                                                prop.getHeader() ) );
                             printSampleValue( prop, iss );
                             break;
                         }
@@ -288,7 +286,7 @@ void readSimpleProperties(const std::string &archiveName)
                         {
                             IUcharProperty prop( props,  propNames[jj] );
                             TESTING_ASSERT( !IUcharGeomParam::matches(
-                                                prop.getMetaData() ) );
+                                                prop.getHeader() ) );
                             printSampleValue( prop, iss );
                             break;
                         }
@@ -296,7 +294,7 @@ void readSimpleProperties(const std::string &archiveName)
                         {
                             ICharProperty prop( props,  propNames[jj] );
                             TESTING_ASSERT( !ICharGeomParam::matches(
-                                                prop.getMetaData() ) );
+                                                prop.getHeader() ) );
                             printSampleValue( prop, iss );
                             break;
                         }
@@ -306,7 +304,7 @@ void readSimpleProperties(const std::string &archiveName)
                         {
                             IUInt16Property prop( props,  propNames[jj] );
                             TESTING_ASSERT( !IUInt16GeomParam::matches(
-                                                prop.getMetaData() ) );
+                                                prop.getHeader() ) );
                             printSampleValue( prop, iss );
                             break;
                         }
@@ -314,7 +312,7 @@ void readSimpleProperties(const std::string &archiveName)
                         {
                             IInt16Property prop( props,  propNames[jj] );
                             TESTING_ASSERT( !IInt16GeomParam::matches(
-                                                prop.getMetaData() ) );
+                                                prop.getHeader() ) );
                             printSampleValue( prop, iss );
                             break;
                         }
@@ -324,7 +322,7 @@ void readSimpleProperties(const std::string &archiveName)
                         {
                             IUInt32Property prop( props,  propNames[jj] );
                             TESTING_ASSERT( !IUInt32GeomParam::matches(
-                                                prop.getMetaData() ) );
+                                                prop.getHeader() ) );
                             printSampleValue( prop, iss );
                             break;
                         }
@@ -332,7 +330,7 @@ void readSimpleProperties(const std::string &archiveName)
                         {
                             IInt32Property prop( props,  propNames[jj] );
                             TESTING_ASSERT( !IInt32GeomParam::matches(
-                                                prop.getMetaData() ) );
+                                                prop.getHeader() ) );
                             printSampleValue( prop, iss );
                             break;
                         }
@@ -342,7 +340,7 @@ void readSimpleProperties(const std::string &archiveName)
                         {
                             IUInt64Property prop( props,  propNames[jj] );
                             TESTING_ASSERT( !IUInt64GeomParam::matches(
-                                                prop.getMetaData() ) );
+                                                prop.getHeader() ) );
                             printSampleValue( prop, iss );
                             break;
                         }
@@ -350,7 +348,7 @@ void readSimpleProperties(const std::string &archiveName)
                         {
                             IInt64Property prop( props,  propNames[jj] );
                             TESTING_ASSERT( !IInt64GeomParam::matches(
-                                                prop.getMetaData() ) );
+                                                prop.getHeader() ) );
                             printSampleValue( prop, iss );
                             break;
                         }
@@ -363,7 +361,7 @@ void readSimpleProperties(const std::string &archiveName)
                             //                  iss );
                             IHalfProperty prop( props,  propNames[jj] );
                             TESTING_ASSERT( !IHalfGeomParam::matches(
-                                                prop.getMetaData() ) );
+                                                prop.getHeader() ) );
                             break;
                         }
 
@@ -371,7 +369,7 @@ void readSimpleProperties(const std::string &archiveName)
                         {
                             IFloatProperty prop( props,  propNames[jj] );
                             TESTING_ASSERT( !IFloatGeomParam::matches(
-                                                prop.getMetaData() ) );
+                                                prop.getHeader() ) );
                             printSampleValue( prop, iss );
                             break;
                         }
@@ -379,7 +377,7 @@ void readSimpleProperties(const std::string &archiveName)
                         {
                             IDoubleProperty prop( props,  propNames[jj] );
                             TESTING_ASSERT( !IDoubleGeomParam::matches(
-                                                prop.getMetaData() ) );
+                                                prop.getHeader() ) );
                             printSampleValue( prop, iss );
                             break;
                         }
@@ -417,7 +415,7 @@ void writeNestedCommpoundWithVis(const std::string &archiveName)
 
     const chrono_t dt = 1.0 / 24.0;
     TimeSampling ts(dt, 666.0); // uniform with cycle=dt starting at 666.0
-    uint32_t tsidx = archive.addTimeSampling(ts);
+    Alembic::Util::uint32_t tsidx = archive.addTimeSampling(ts);
 
     // Create several objects under top called "child_N"
     // child_1 will be set to have hidden visibility.
@@ -425,8 +423,9 @@ void writeNestedCommpoundWithVis(const std::string &archiveName)
     {
         // Create 'numChildren' children, all parented under
         //  the archive
-        std::string name = "child_";
-        name.append( boost::lexical_cast<std::string>( ii ) );
+        std::ostringstream strm;
+        strm << "child_" << ii;
+        std::string name = strm.str();
         OObject child( archiveTop, name );
 
         // Create a compound property on this child object named
@@ -552,9 +551,10 @@ void readNestedCommpoundWithVis(const std::string &archiveName)
     // child of child1 (which is hidden) means that this child should be
     // hidden too
     IObject child1SubObject( child1, "nested_object");
-    ABCA_ASSERT( IsAncestorInvisible (child1SubObject) == false, "object under child1 should eval to being not visible");
-    ABCA_ASSERT( IsAncestorInvisible (child1) == false, "child1 should eval to being not visible");
-    ABCA_ASSERT( IsAncestorInvisible (otherChild) == true, "other object should eval to being visible");
+    ABCA_ASSERT( IsAncestorInvisible (archiveTop) == false, "top root should be visible");
+    ABCA_ASSERT( IsAncestorInvisible (child1SubObject) == true, "object under child1 should eval to being not visible");
+    ABCA_ASSERT( IsAncestorInvisible (child1) == true, "child1 should eval to being not visible");
+    ABCA_ASSERT( IsAncestorInvisible (otherChild) == false, "other object should eval to being visible");
 
     // Done - the archive closes itself
 }

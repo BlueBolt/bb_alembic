@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2013,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -46,7 +46,7 @@ namespace util
 
 struct cmpDag
 {
-    bool operator()( const MDagPath& lhs, const MDagPath& rhs )
+    bool operator()( const MDagPath& lhs, const MDagPath& rhs ) const
     {
             std::string name1(lhs.fullPathName().asChar());
             std::string name2(rhs.fullPathName().asChar());
@@ -81,6 +81,19 @@ inline MStatus isUnsigned(MString str, const MString & usage)
     return status;
 }
 
+// safely inverse a scale component
+inline double inverseScale(double scale)
+{
+    const double kScaleEpsilon = 1.0e-12;
+
+    if (scale < kScaleEpsilon && scale >= 0.0)
+        return 1.0 / kScaleEpsilon;
+    else if (scale > -kScaleEpsilon && scale < 0.0)
+        return 1.0 / -kScaleEpsilon;
+    else
+        return 1.0 / scale;
+}
+
 // seconds per frame
 double spf();
 
@@ -108,8 +121,9 @@ bool isIntermediate(const MObject & object);
 // returns true for visible and lod invisible and not templated objects
 bool isRenderable(const MObject & object);
 
-// strip all namespaces from the node name, go from taco:foo:bar to bar
-MString stripNamespaces(const MString & iNodeName);
+// strip iDepth namespaces from the node name, go from taco:foo:bar to bar
+// for iDepth > 1
+MString stripNamespaces(const MString & iNodeName, unsigned int iDepth);
 
 // returns the Help string for AbcExport
 MString getHelpText();
@@ -120,7 +134,6 @@ struct PlugAndObjScalar
 {
     MPlug plug;
     MObject obj;
-    Alembic::Abc::OObject propParent;
     Alembic::Abc::OScalarProperty prop;
 };
 
@@ -136,31 +149,41 @@ struct JobArgs
     JobArgs()
     {
         excludeInvisible = false;
+        filterEulerRotations = false;
         noNormals = false;
-        stripNamespace = false;
+        stripNamespace = 0;
         useSelectionList = false;
         worldSpace = false;
         writeVisibility = false;
         writeUVs = false;
         writeColorSets = false;
+        writeFaceSets = false;
     }
 
     bool excludeInvisible;
+    bool filterEulerRotations;
     bool noNormals;
-    bool stripNamespace;
+    unsigned int stripNamespace;
     bool useSelectionList;
     bool worldSpace;
     bool writeVisibility;
     bool writeUVs;
     bool writeColorSets;
+    bool writeFaceSets;
 
     std::string melPerFrameCallback;
     std::string melPostCallback;
     std::string pythonPerFrameCallback;
     std::string pythonPostCallback;
 
+    // to put into .arbGeomParam
     std::vector< std::string > prefixFilters;
     std::set< std::string > attribs;
+
+    // to put into .userProperties
+    std::vector< std::string > userPrefixFilters;
+    std::set< std::string > userAttribs;
+
     util::ShapeSet dagPaths;
 };
 

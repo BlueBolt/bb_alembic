@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -48,6 +48,28 @@ namespace ALEMBIC_VERSION_NS {
 //-*****************************************************************************
 //-*****************************************************************************
 
+//-*****************************************************************************
+void
+WriteReferences( hid_t iParent,
+                 const std::string& iRefName,
+                 size_t iNumRefs,
+                 const void *iRefs )
+{
+    hsize_t dims[1];
+    dims[0] = iNumRefs;
+
+    hid_t dspaceId = H5Screate_simple( 1, dims, NULL );
+    DspaceCloser dspaceCloser( dspaceId );
+
+    hid_t dsetId = H5Dcreate2( iParent, iRefName.c_str(), H5T_STD_REF_OBJ,
+                               dspaceId, H5P_DEFAULT, H5P_DEFAULT,H5P_DEFAULT);
+    DsetCloser dsetCloser( dsetId );
+
+    herr_t status = H5Dwrite( dsetId, H5T_STD_REF_OBJ, H5S_ALL, H5S_ALL,
+                       H5P_DEFAULT, iRefs);
+
+    ABCA_ASSERT( status >= 0, "Couldn't write reference: " << iRefName );
+}
 //-*****************************************************************************
 WrittenArraySampleMap &
 GetWrittenArraySampleMap( AbcA::ArchiveWriterPtr iVal )
@@ -372,9 +394,7 @@ CopyWrittenArray( hid_t iGroup,
 
 //-*****************************************************************************
 void WritePropertyInfo( hid_t iGroup,
-                    const std::string &iName,
-                    AbcA::PropertyType iPropertyType,
-                    const AbcA::DataType &iDataType,
+                    const AbcA::PropertyHeader &iHeader,
                     bool isScalarLike,
                     uint32_t iTimeSamplingIndex,
                     uint32_t iNumSamples,
@@ -385,31 +405,31 @@ void WritePropertyInfo( hid_t iGroup,
     uint32_t info[5] = {0, 0, 0, 0, 0};
     uint32_t numFields = 1;
 
-    static const uint32_t ptypeMask = ( uint32_t )BOOST_BINARY (
-        0000 0000 0000 0000 0000 0000 0000 0011 );
+    // 0000 0000 0000 0000 0000 0000 0000 0011
+    static const uint32_t ptypeMask = 0x0003;
 
-    static const uint32_t podMask = ( uint32_t )BOOST_BINARY (
-        0000 0000 0000 0000 0000 0000 0011 1100 );
+    // 0000 0000 0000 0000 0000 0000 0011 1100
+    static const uint32_t podMask = 0x003c;
 
-    static const uint32_t hasTsidxMask = ( uint32_t )BOOST_BINARY (
-        0000 0000 0000 0000 0000 0000 0100 0000 );
+    // 0000 0000 0000 0000 0000 0000 0100 0000
+    static const uint32_t hasTsidxMask = 0x0040;
 
-    static const uint32_t noRepeatsMask = ( uint32_t )BOOST_BINARY (
-        0000 0000 0000 0000 0000 0000 1000 0000 );
+    // 0000 0000 0000 0000 0000 0000 1000 0000
+    static const uint32_t noRepeatsMask = 0x0080;
 
-    static const uint32_t extentMask = ( uint32_t )BOOST_BINARY(
-        0000 0000 0000 0000 1111 1111 0000 0000 );
+    // 0000 0000 0000 0000 1111 1111 0000 0000
+    static const uint32_t extentMask = 0xff00;
 
-    // for compounds we just write out 0
-    if ( iPropertyType != AbcA::kCompoundProperty )
+    // compounds are treated differently
+    if ( iHeader.getPropertyType() != AbcA::kCompoundProperty )
     {
         // Slam the property type in there.
-        info[0] |= ptypeMask & ( uint32_t )iPropertyType;
+        info[0] |= ptypeMask & ( uint32_t )iHeader.getPropertyType();
 
         // arrays may be scalar like, scalars are already scalar like
         info[0] |= ( uint32_t ) isScalarLike;
 
-        uint32_t pod = ( uint32_t )iDataType.getPod();
+        uint32_t pod = ( uint32_t )iHeader.getDataType().getPod();
         info[0] |= podMask & ( pod << 2 );
 
         if (iTimeSamplingIndex != 0)
@@ -422,7 +442,7 @@ void WritePropertyInfo( hid_t iGroup,
             info[0] |= noRepeatsMask;
         }
 
-        uint32_t extent = ( uint32_t )iDataType.getExtent();
+        uint32_t extent = ( uint32_t )iHeader.getDataType().getExtent();
         info[0] |= extentMask & ( extent << 8 );
 
         ABCA_ASSERT( iFirstChangedIndex <= iNumSamples &&
@@ -458,9 +478,11 @@ void WritePropertyInfo( hid_t iGroup,
 
     }
 
-    WriteSmallArray( iGroup, iName + ".info",
+    WriteSmallArray( iGroup, iHeader.getName() + ".info",
         H5T_STD_U32LE, H5T_NATIVE_UINT32, numFields,
         ( const void * ) info );
+
+    WriteMetaData( iGroup, iHeader.getName() + ".meta", iHeader.getMetaData());
 }
 
 //-*****************************************************************************

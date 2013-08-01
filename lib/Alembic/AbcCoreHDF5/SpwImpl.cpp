@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -73,8 +73,7 @@ SpwImpl::SpwImpl( AbcA::CompoundPropertyWriterPtr iParent,
 //-*****************************************************************************
 SpwImpl::~SpwImpl()
 {
-    WritePropertyInfo( m_parentGroup, m_header->getName(),
-        m_header->getPropertyType(), m_header->getDataType(), true,
+    WritePropertyInfo( m_parentGroup, *m_header, true,
         m_timeSamplingIndex, m_nextSampleIndex, m_firstChangedIndex,
         m_lastChangedIndex );
 }

@@ -40,7 +40,7 @@
 MayaNurbsSurfaceWriter::MayaNurbsSurfaceWriter(MDagPath & iDag,
     Alembic::Abc::OObject & iParent, Alembic::Util::uint32_t iTimeIndex,
     const JobArgs & iArgs) :
-    mIsSurfaceAnimated(false), mIsTrimCurveAnimated(false), mDagPath(iDag)
+    mIsSurfaceAnimated(false), mDagPath(iDag)
 {
     MStatus stat;
     MObject surface = iDag.node();
@@ -53,32 +53,36 @@ MayaNurbsSurfaceWriter::MayaNurbsSurfaceWriter(MDagPath & iDag,
     }
 
     MString name = nurbs.name();
-    if (iArgs.stripNamespace)
-    {
-        name = util::stripNamespaces(name);
-    }
+    name = util::stripNamespaces(name, iArgs.stripNamespace);
+
 
     Alembic::AbcGeom::ONuPatch obj(iParent, name.asChar(), iTimeIndex);
     mSchema = obj.getSchema();
 
     Alembic::Abc::OCompoundProperty cp;
+    Alembic::Abc::OCompoundProperty up;
     if (AttributesWriter::hasAnyAttr(nurbs, iArgs))
     {
         cp = mSchema.getArbGeomParams();
+        up = mSchema.getUserProperties();
     }
 
-    mAttrs = AttributesWriterPtr(new AttributesWriter(cp, obj, nurbs,
+    mAttrs = AttributesWriterPtr(new AttributesWriter(cp, up, obj, nurbs,
         iTimeIndex, iArgs));
 
-    if (iTimeIndex != 0 && util::isAnimated(surface))
+    // for now if it a trim surface, treat it like it's animated
+    if ( iTimeIndex != 0 && (nurbs.isTrimmedSurface() ||
+        util::isAnimated(surface)) )
+    {
         mIsSurfaceAnimated = true;
+    }
 
     write();
 }
 
 bool MayaNurbsSurfaceWriter::isAnimated() const
 {
-    return  mIsSurfaceAnimated || mIsTrimCurveAnimated ||
+    return  mIsSurfaceAnimated ||
             (mAttrs != NULL && mAttrs->isAnimated());
 }
 

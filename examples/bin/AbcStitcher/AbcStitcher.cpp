@@ -36,6 +36,8 @@
 
 #include <Alembic/AbcGeom/All.h>
 #include <Alembic/AbcCoreHDF5/All.h>
+#include <Alembic/AbcCoreOgawa/All.h>
+#include <Alembic/AbcCoreFactory/All.h>
 
 #include "util.h"
 
@@ -83,7 +85,7 @@ void init(std::vector< IObject > & iObjects, OObject & oParentObj,
 {
     const std::string fullNodeName = iObjects[0].getFullName();
 
-    // gether information from the first input node in the list:
+    // gather information from the first input node in the list:
     IDataSchema iSchema0 = IData(iObjects[0], Alembic::Abc::kWrapExisting).getSchema();
 
     TimeSamplingPtr tsPtr0 = iSchema0.getTimeSampling();
@@ -99,12 +101,31 @@ void init(std::vector< IObject > & iObjects, OObject & oParentObj,
     ICompoundPropertyVec iArbGeomCompoundProps;
     iArbGeomCompoundProps.reserve(iObjects.size());
 
-    ICompoundPropertyVec iUserCompoundProps;
-    iUserCompoundProps.reserve(iObjects.size());
-
     ICompoundProperty arbProp = iSchema0.getArbGeomParams();
     if (arbProp)  // might be empty
         iArbGeomCompoundProps.push_back(arbProp);
+
+    ICompoundPropertyVec iUserCompoundProps;
+    iUserCompoundProps.reserve(iObjects.size());
+
+    ICompoundProperty userProp = iSchema0.getUserProperties();
+    if (userProp)  // might be empty
+        iUserCompoundProps.push_back(userProp);
+
+    ICompoundPropertyVec iSchemaProps;
+    iSchemaProps.reserve(iObjects.size());
+
+    Abc::IBox3dProperty childBounds = iSchema0.getChildBoundsProperty();
+    TimeSamplingPtr ctsPtr0;
+    TimeSamplingType ctsType0;
+    if (childBounds)
+    {
+        ctsPtr0 = childBounds.getTimeSampling();
+        ctsType0 = tsPtr0->getTimeSamplingType();
+        std::string nameAndBounds = fullNodeName + " child bounds";
+        checkAcyclic(ctsType0, nameAndBounds);
+        iSchemaProps.push_back(iSchema0);
+    }
 
     bool hasVisible = cp.getPropertyHeader("visible")?true:false;
 
@@ -147,6 +168,42 @@ void init(std::vector< IObject > & iObjects, OObject & oParentObj,
         ICompoundProperty userProp = iSchema.getUserProperties();
         if (userProp)  // might be empty
             iUserCompoundProps.push_back(userProp);
+
+        Abc::IBox3dProperty childBounds = iSchema.getChildBoundsProperty();
+        TimeSamplingPtr ctsPtr;
+        TimeSamplingType ctsType;
+        if (childBounds)
+        {
+            ctsPtr = childBounds.getTimeSampling();
+            ctsType = ctsPtr->getTimeSamplingType();
+            iSchemaProps.push_back(iSchema);
+        }
+
+        if (!(ctsType0 == ctsType))
+        {
+            std::cerr <<
+                "Can not stitch different sampling type for child bounds on\""
+                << fullNodeName << "\"" << std::endl;
+            // more details on this
+            if (ctsType.getNumSamplesPerCycle()
+                != ctsType0.getNumSamplesPerCycle())
+            {
+                std::cerr << "\tnumSamplesPerCycle values are different"
+                    << std::endl;
+            }
+            if (ctsType.getTimePerCycle() != ctsType0.getTimePerCycle())
+            {
+                std::cerr << "\ttimePerCycle values are different"
+                    << std::endl;
+            }
+            if (!ctsPtr0 || !ctsPtr)
+            {
+                std::cerr << "\tchild bounds are missing on some archives"
+                    << std::endl;
+            }
+            exit(1);
+        }
+
     }
 
     OData oData(oParentObj, iObjects[0].getName(), tsPtr0);
@@ -172,6 +229,18 @@ void init(std::vector< IObject > & iObjects, OObject & oParentObj,
     {
         OCompoundProperty oUserCompoundProp = oSchema.getUserProperties();
         stitchCompoundProp(iUserCompoundProps, oUserCompoundProp);
+    }
+
+    if (iSchemaProps.size() == iObjects.size())
+    {
+        stitchScalarProp(childBounds.getHeader(), iSchemaProps, oSchema);
+    }
+    else if (iSchemaProps.size() != 0)
+    {
+        std::cerr << "Child bounds are missing on some archives for:\""
+            << fullNodeName << "\"" << std::endl;
+
+        exit(1);
     }
 }
 
@@ -276,6 +345,10 @@ void visitObjects(std::vector< IObject > & iObjects, OObject & oParentObj)
                 if (posPtr)
                     oSamp.setPositions(*posPtr);
 
+                Abc::V3fArraySamplePtr velocPtr = iSamp.getVelocities();
+                if (velocPtr)
+                    oSamp.setVelocities(*velocPtr);
+
                 Abc::Int32ArraySamplePtr faceIndicesPtr = iSamp.getFaceIndices();
                 if (faceIndicesPtr)
                     oSamp.setFaceIndices(*faceIndicesPtr);
@@ -313,7 +386,6 @@ void visitObjects(std::vector< IObject > & iObjects, OObject & oParentObj)
                     oSamp.setHoles(*holePtr);
 
                 oSamp.setSubdivisionScheme(iSamp.getSubdivisionScheme());
-                oSamp.setChildBounds(iSamp.getChildBounds());
 
                 // set uvs
                 IV2fGeomParam::Sample iUVSample;
@@ -321,7 +393,7 @@ void visitObjects(std::vector< IObject > & iObjects, OObject & oParentObj)
                 if (uvs)
                 {
                     getOGeomParamSamp <IV2fGeomParam, IV2fGeomParam::Sample,
-                        OV2fGeomParam::Sample>(uvs, iUVSample, 
+                        OV2fGeomParam::Sample>(uvs, iUVSample,
                                                oUVSample, reqIdx);
                     oSamp.setUVs(oUVSample);
                 }
@@ -361,6 +433,10 @@ void visitObjects(std::vector< IObject > & iObjects, OObject & oParentObj)
                 if (posPtr)
                     oSamp.setPositions(*posPtr);
 
+                Abc::V3fArraySamplePtr velocPtr = iSamp.getVelocities();
+                if (velocPtr)
+                    oSamp.setVelocities(*velocPtr);
+
                 Abc::Int32ArraySamplePtr faceIndicesPtr = iSamp.getFaceIndices();
                 if (faceIndicesPtr)
                     oSamp.setFaceIndices(*faceIndicesPtr);
@@ -375,7 +451,7 @@ void visitObjects(std::vector< IObject > & iObjects, OObject & oParentObj)
                 if (uvs)
                 {
                     getOGeomParamSamp <IV2fGeomParam, IV2fGeomParam::Sample,
-                        OV2fGeomParam::Sample>(uvs, iUVSample, 
+                        OV2fGeomParam::Sample>(uvs, iUVSample,
                                                oUVSample, reqIdx);
                     oSamp.setUVs(oUVSample);
                 }
@@ -390,8 +466,6 @@ void visitObjects(std::vector< IObject > & iObjects, OObject & oParentObj)
                                                oNormalsSample, reqIdx);
                     oSamp.setNormals(oNormalsSample);
                 }
-
-                oSamp.setChildBounds(iSamp.getChildBounds());
 
                 oSchema.set(oSamp);
             }
@@ -453,6 +527,11 @@ void visitObjects(std::vector< IObject > & iObjects, OObject & oParentObj)
                 Abc::P3fArraySamplePtr posPtr = iSamp.getPositions();
                 if (posPtr)
                     oSamp.setPositions(*posPtr);
+
+                Abc::V3fArraySamplePtr velocPtr = iSamp.getVelocities();
+                if (velocPtr)
+                    oSamp.setVelocities(*velocPtr);
+
                 oSamp.setType(iSamp.getType());
                 Abc::Int32ArraySamplePtr curvsNumPtr = iSamp.getCurvesNumVertices();
                 if (curvsNumPtr)
@@ -475,7 +554,7 @@ void visitObjects(std::vector< IObject > & iObjects, OObject & oParentObj)
                 if (iUVs)
                 {
                     getOGeomParamSamp <IV2fGeomParam, IV2fGeomParam::Sample,
-                        OV2fGeomParam::Sample>(iUVs, iUVSample, 
+                        OV2fGeomParam::Sample>(iUVs, iUVSample,
                                                oUVSample, reqIdx);
                     oSamp.setUVs(oUVSample);
                 }
@@ -490,7 +569,6 @@ void visitObjects(std::vector< IObject > & iObjects, OObject & oParentObj)
                     oSamp.setNormals(oNormalsSample);
                 }
 
-                oSamp.setChildBounds(iSamp.getChildBounds());
                 oSchema.set(oSamp);
             }
         }
@@ -527,7 +605,7 @@ void visitObjects(std::vector< IObject > & iObjects, OObject & oParentObj)
                     oSamp.setIds(*idPtr);
                 Abc::V3fArraySamplePtr velocPtr = iSamp.getVelocities();
                 if (velocPtr)
-                    oSamp.setPositions(*velocPtr);
+                    oSamp.setVelocities(*velocPtr);
 
                 IFloatGeomParam::Sample iWidthSample;
                 OFloatGeomParam::Sample oWidthSample;
@@ -539,7 +617,6 @@ void visitObjects(std::vector< IObject > & iObjects, OObject & oParentObj)
                     oSamp.setWidths(oWidthSample);
                 }
 
-                oSamp.setChildBounds(iSamp.getChildBounds());
                 oSchema.set(oSamp);
             }
         }
@@ -576,6 +653,10 @@ void visitObjects(std::vector< IObject > & iObjects, OObject & oParentObj)
                 if (posPtr)
                     oSamp.setPositions(*posPtr);
 
+                Abc::V3fArraySamplePtr velocPtr = iSamp.getVelocities();
+                if (velocPtr)
+                    oSamp.setVelocities(*velocPtr);
+
                 oSamp.setNu(iSamp.getNumU());
                 oSamp.setNv(iSamp.getNumV());
                 oSamp.setUOrder(iSamp.getUOrder());
@@ -594,7 +675,7 @@ void visitObjects(std::vector< IObject > & iObjects, OObject & oParentObj)
                 if (uvs)
                 {
                     getOGeomParamSamp <IV2fGeomParam, IV2fGeomParam::Sample,
-                        OV2fGeomParam::Sample>(uvs, iUVSample, 
+                        OV2fGeomParam::Sample>(uvs, iUVSample,
                                                oUVSample, reqIdx);
                     oSamp.setUVs(oUVSample);
                 }
@@ -623,15 +704,23 @@ void visitObjects(std::vector< IObject > & iObjects, OObject & oParentObj)
                                        *(iSamp.getTrimV()),
                                        *(iSamp.getTrimW()));
                 }
-                oSamp.setChildBounds(iSamp.getChildBounds());
                 oSchema.set(oSamp);
             }
         }
     }
     else
     {
-        std::cerr << iObjects[0].getFullName() << " is an unsupported schema" << std::endl;
-        return;
+        outObj = OObject(oParentObj, outObj.getName(), outObj.getMetaData());
+
+        // collect the top level compound property
+        ICompoundPropertyVec iCompoundProps(iObjects.size());
+        for (size_t i = 0; i < iObjects.size(); i++)
+        {
+            iCompoundProps[i] = iObjects[i].getProperties();
+        }
+
+        OCompoundProperty oCompoundProperty = outObj.getProperties();
+        stitchCompoundProp(iCompoundProps, oCompoundProperty);
     }
 
     // After done writing THIS OObject node, if input nodes have children,
@@ -676,10 +765,14 @@ int main( int argc, char *argv[] )
         std::map< chrono_t, size_t > minIndexMap;
         size_t rootChildren = 0;
 
+        Alembic::AbcCoreFactory::IFactory factory;
+        factory.setPolicy(ErrorHandler::kThrowPolicy);
+        Alembic::AbcCoreFactory::IFactory::CoreType coreType;
+
         for (int i = 2; i < argc; ++i)
         {
-            IArchive archive( Alembic::AbcCoreHDF5::ReadArchive(),
-                argv[i], ErrorHandler::kThrowPolicy );
+
+            IArchive archive = factory.getArchive(argv[i], coreType);
             IObject iRoot = archive.getTop();
             size_t numChildren = iRoot.getNumChildren();
             if (!iRoot.valid() || numChildren < 1)
@@ -696,13 +789,13 @@ int main( int argc, char *argv[] )
             else if (rootChildren != numChildren)
             {
                 std::cerr << "ERROR: " << argv[i] <<
-                    " doesn't have the same number of children as: " << 
+                    " doesn't have the same number of children as: " <<
                     argv[i-1] << std::endl;
             }
 
             // reorder the input files according to their mins
             chrono_t min = DBL_MAX;
-            uint32_t numSamplings = archive.getNumTimeSamplings();
+            Alembic::Util::uint32_t numSamplings = archive.getNumTimeSamplings();
             if (numSamplings > 1)
             {
                 // timesampling index 0 is special, so it will be skipped
@@ -712,7 +805,7 @@ int main( int argc, char *argv[] )
                 //
                 min = archive.getTimeSampling(1)->getSampleTime(0);
 
-                for (uint32_t s = 2; s < numSamplings; ++s)
+                for (Alembic::Util::uint32_t s = 2; s < numSamplings; ++s)
                 {
                     chrono_t thisMin =
                         archive.getTimeSampling(s)->getSampleTime(0);
@@ -732,12 +825,18 @@ int main( int argc, char *argv[] )
                 {
                     minIndexMap.insert(std::make_pair(min, i-2));
                 }
-                else if (argv[2] != argv[i-2])
+                else if (argv[2] != argv[i])
                 {
                     std::cerr << "ERROR: overlapping frame range between "
-                        << argv[2] << " and " << argv[i-2] << std::endl;
+                        << argv[2] << " and " << argv[i] << std::endl;
                     return 1;
                 }
+            }
+            else
+            {
+                std::cerr << "ERROR: " << archive.getName() <<
+                    " only has default (static) TimeSampling." << std::endl;
+                return 1;
             }
 
             iArchives.push_back(archive);
@@ -760,9 +859,20 @@ int main( int argc, char *argv[] )
         std::string userStr;
 
         // Create an archive with the default writer
-        OArchive oArchive = CreateArchiveWithInfo(
-            Alembic::AbcCoreHDF5::WriteArchive(),
-            fileName, appWriter, userStr, ErrorHandler::kThrowPolicy);
+        OArchive oArchive;
+        if (coreType == Alembic::AbcCoreFactory::IFactory::kHDF5)
+        {
+            oArchive = CreateArchiveWithInfo(
+                Alembic::AbcCoreHDF5::WriteArchive(),
+                fileName, appWriter, userStr, ErrorHandler::kThrowPolicy);
+        }
+        else if (coreType == Alembic::AbcCoreFactory::IFactory::kOgawa)
+        {
+            oArchive = CreateArchiveWithInfo(
+                Alembic::AbcCoreHDF5::WriteArchive(),
+                fileName, appWriter, userStr, ErrorHandler::kThrowPolicy);
+        }
+
         OObject oRoot = oArchive.getTop();
         if (!oRoot.valid())
             return -1;

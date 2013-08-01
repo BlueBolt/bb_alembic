@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -38,6 +38,7 @@
 #define _Alembic_AbcGeom_Basis_h_
 
 #include <string>
+#include <Alembic/Util/Foundation.h>
 
 namespace Alembic {
 namespace AbcGeom {

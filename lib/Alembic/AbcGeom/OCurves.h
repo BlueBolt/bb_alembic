@@ -157,10 +157,6 @@ public:
         void setSelfBounds( const Abc::Box3d &iBnds )
         { m_selfBounds = iBnds; }
 
-        const Abc::Box3d &getChildBounds() const { return m_childBounds; }
-        void setChildBounds( const Abc::Box3d &iBnds )
-        { m_childBounds = iBnds; }
-
         // velocities accessor
         const Abc::V3fArraySample &getVelocities() const { return m_velocities; }
         void setVelocities( const Abc::V3fArraySample &iVelocities )
@@ -187,7 +183,6 @@ public:
             m_nVertices.reset();
 
             m_selfBounds.makeEmpty();
-            m_childBounds.makeEmpty();
 
             m_type = kCubic;
             m_wrap = kNonPeriodic;
@@ -212,7 +207,6 @@ public:
 
         // bounding box attributes
         Abc::Box3d m_selfBounds;
-        Abc::Box3d m_childBounds;
 
     };
 
@@ -261,8 +255,8 @@ public:
 
         if ( tsPtr )
         {
-            tsIndex = iParent->getObject()->getArchive()->
-                addTimeSampling( *tsPtr );
+            tsIndex = GetCompoundPropertyWriterPtr( iParent )->getObject(
+                )->getArchive()->addTimeSampling( *tsPtr );
         }
 
         init( tsIndex );
@@ -286,8 +280,8 @@ public:
 
         if ( tsPtr )
         {
-            tsIndex = iParent->getObject()->getArchive()->
-                addTimeSampling( *tsPtr );
+            tsIndex = GetCompoundPropertyWriterPtr( iParent )->getObject(
+                )->getArchive()->addTimeSampling( *tsPtr );
         }
 
         init( tsIndex );
@@ -307,8 +301,11 @@ public:
 
     //! Return the time sampling type, which is stored on each of the
     //! sub properties.
-    AbcA::TimeSamplingPtr getTimeSampling()
+    AbcA::TimeSamplingPtr getTimeSampling() const
     { return m_positionsProperty.getTimeSampling(); }
+
+    void setTimeSampling( uint32_t iIndex );
+    void setTimeSampling( AbcA::TimeSamplingPtr iTime );
 
     //-*************************************************************************
     // SAMPLE STUFF
@@ -316,7 +313,7 @@ public:
 
     //! Get number of samples written so far.
     //! ...
-    size_t getNumSamples()
+    size_t getNumSamples() const
     { return m_positionsProperty.getNumSamples(); }
 
     //! Set a sample! Sample zero has to have non-degenerate
@@ -329,7 +326,7 @@ public:
 
     //-*************************************************************************
     // ABC BASE MECHANISMS
-    // These functions are used by Abc to deal with errors, rewrapping,
+    // These functions are used by Abc to deal with errors, validity,
     // and so on.
     //-*************************************************************************
 
@@ -380,6 +377,8 @@ protected:
 // SCHEMA OBJECT
 //-*****************************************************************************
 typedef Abc::OSchemaObject<OCurvesSchema> OCurves;
+
+typedef Util::shared_ptr< OCurves > OCurvesPtr;
 
 } // End namespace ALEMBIC_VERSION_NS
 

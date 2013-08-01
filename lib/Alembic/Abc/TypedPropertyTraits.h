@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -54,8 +54,11 @@ namespace ALEMBIC_VERSION_NS {
 #define ALEMBIC_ABC_DECLARE_TYPE_TRAITS( VAL, POD, EXTENT, INTERP, PTDEF ) \
 struct PTDEF                                                            \
 {                                                                       \
+    static const PlainOldDataType pod_enum = POD;                       \
+    static const int extent = EXTENT;                                   \
     typedef VAL         value_type;                                     \
     static const char * interpretation()  { return ( INTERP ) ; }       \
+    static const char * name() { return #PTDEF; }                       \
     static AbcA::DataType     dataType()                                \
     { return AbcA::DataType( POD, EXTENT ) ; }                          \
     static value_type   defaultValue()                                  \
@@ -67,12 +70,16 @@ struct PTDEF                                                            \
 #define DECLARE_POD_TRAITS( POD_TYPE , PTDEF )                          \
 struct PTDEF                                                            \
 {                                                                       \
+    static const PlainOldDataType pod_enum =                            \
+                        PODTraitsFromType< POD_TYPE >::pod_enum;        \
+    static const int extent = 1;                                        \
     typedef POD_TYPE    value_type;                                     \
     static const char * interpretation()  { return ""; }                \
+    static const char * name() { return #PTDEF; }                       \
     static AbcA::DataType     dataType()                                \
     { return AbcA::DataType( PODTraitsFromType< POD_TYPE >::pod_enum, 1 ); } \
     static value_type   defaultValue()                                  \
-    { return PODTraitsFromType< POD_TYPE >::default_value(); }    \
+    { return PODTraitsFromType< POD_TYPE >::default_value(); }          \
 }
 
 //-*****************************************************************************
@@ -150,9 +157,6 @@ ALEMBIC_ABC_DECLARE_TYPE_TRAITS( V2d, kFloat64POD, 2, "normal", N2dTPTraits );
 // N3f and N3d is typedefed in Foundation from V3f and V3d
 ALEMBIC_ABC_DECLARE_TYPE_TRAITS( N3f, kFloat32POD, 3, "normal", N3fTPTraits );
 ALEMBIC_ABC_DECLARE_TYPE_TRAITS( N3d, kFloat64POD, 3, "normal", N3dTPTraits );
-
-
-
 
 } // End namespace ALEMBIC_VERSION_NS
 

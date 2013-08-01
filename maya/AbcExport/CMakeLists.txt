@@ -71,7 +71,9 @@ SET( CORE_LIBS
   AlembicAbcGeom
   AlembicAbc
   AlembicAbcCoreHDF5
+  AlembicAbcCoreOgawa
   AlembicAbcCoreAbstract
+  AlembicOgawa
   AlembicUtil )
 
 INCLUDE_DIRECTORIES( ${ALEMBIC_HDF5_INCLUDE_PATH} )
@@ -87,4 +89,4 @@ TARGET_LINK_LIBRARIES( AbcExport
   ${ZLIB_LIBRARIES} ${EXTERNAL_MATH_LIBS} )
 
 INSTALL( TARGETS AbcExport
-         DESTINATION maya/$ENV{MAYA_VERSION}/plug-ins )
+         DESTINATION maya/plug-ins )

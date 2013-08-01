@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -60,6 +60,9 @@
 #include <Alembic/AbcGeom/CameraSample.h>
 #include <Alembic/AbcGeom/OCamera.h>
 #include <Alembic/AbcGeom/ICamera.h>
+
+#include <Alembic/AbcGeom/ILight.h>
+#include <Alembic/AbcGeom/OLight.h>
 
 #include <Alembic/AbcGeom/INuPatch.h>
 #include <Alembic/AbcGeom/ONuPatch.h>

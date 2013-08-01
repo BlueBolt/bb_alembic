@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -46,12 +46,17 @@ namespace ALEMBIC_VERSION_NS {
 //-*****************************************************************************
 //! Will return a shared pointer to the archive writer
 //! There is only one way to create an archive writer in AbcCoreHDF5.
-struct WriteArchive
+class WriteArchive
 {
+public:
+    WriteArchive();
+    explicit WriteArchive( bool iCacheHierarchy );
+
     ::Alembic::AbcCoreAbstract::ArchiveWriterPtr
     operator()( const std::string &iFileName,
-                const ::Alembic::AbcCoreAbstract::MetaData &iMetaData )
-        const;
+                const ::Alembic::AbcCoreAbstract::MetaData &iMetaData ) const;
+private:
+    bool m_cacheHierarchy;
 };
 
 //-*****************************************************************************
@@ -66,8 +71,12 @@ CreateCache( void );
 //-*****************************************************************************
 //! Will return a shared pointer to the archive reader
 //! This version creates a cache associated with the archive.
-struct ReadArchive
+class ReadArchive
 {
+public:
+    ReadArchive();
+    explicit ReadArchive( bool iCacheHierarchy );
+
     // Make our own cache.
     ::Alembic::AbcCoreAbstract::ArchiveReaderPtr
     operator()( const std::string &iFileName ) const;
@@ -75,8 +84,10 @@ struct ReadArchive
     // Take the given cache.
     ::Alembic::AbcCoreAbstract::ArchiveReaderPtr
     operator()( const std::string &iFileName,
-                ::Alembic::AbcCoreAbstract::ReadArraySampleCachePtr iCache )
-        const;
+                ::Alembic::AbcCoreAbstract::ReadArraySampleCachePtr iCache
+              ) const;
+private:
+    bool m_cacheHierarchy;
 };
 
 } // End namespace ALEMBIC_VERSION_NS

@@ -52,6 +52,9 @@ SET( CXX_FILES
   OFaceSet.cpp
   IFaceSet.cpp
 
+  OLight.cpp
+  ILight.cpp
+
   ONuPatch.cpp
   INuPatch.cpp
 
@@ -86,6 +89,9 @@ SET( H_FILES
   GeometryScope.h
 
   SchemaInfoDeclarations.h
+
+  OLight.h
+  ILight.h
 
   FilmBackXformOp.h
   CameraSample.h
@@ -136,4 +142,7 @@ INSTALL( FILES ${H_FILES}
          DESTINATION include/Alembic/AbcGeom
          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
 
-ADD_SUBDIRECTORY( Tests )
+IF( NOT ALEMBIC_NO_TESTS )
+	ADD_SUBDIRECTORY( Tests )
+ENDIF()
+

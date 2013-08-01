@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -36,8 +36,7 @@
 
 #include <Alembic/Abc/All.h>
 #include <Alembic/AbcCoreHDF5/All.h>
-#include <boost/random.hpp>
-#include "Assert.h"
+#include <Alembic/AbcCoreAbstract/Tests/Assert.h>
 
 #include <ImathMath.h>
 
@@ -60,7 +59,7 @@ void simpleTestOut( const std::string &iArchiveName )
 
     OInt32ArrayProperty i32ap( c0Props, "i32ap" );
 
-    boost::shared_ptr<std::vector<int32_t> > vptr( new std::vector<int32_t>( 50, 4 ) );
+    Alembic::Util::shared_ptr<std::vector<int32_t> > vptr( new std::vector<int32_t>( 50, 4 ) );
 
     Int32ArraySample samp( *vptr );
 

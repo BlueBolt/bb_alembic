@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -34,16 +34,18 @@
 //
 //-*****************************************************************************
 
-#include <Alembic/Abc/All.h>
+#include <Alembic/AbcCoreFactory/All.h>
 #include <Alembic/AbcCoreHDF5/All.h>
-#include <boost/random.hpp>
-#include "Assert.h"
+#include <Alembic/AbcCoreOgawa/All.h>
+#include <Alembic/Abc/All.h>
+#include <Alembic/AbcCoreAbstract/Tests/Assert.h>
 
 #include <ImathMath.h>
 
 #include <limits>
 
 namespace Abc = Alembic::Abc;
+namespace AbcF = Alembic::AbcCoreFactory;
 using namespace Abc;
 
 //-*****************************************************************************
@@ -61,10 +63,20 @@ static const chrono_t CHRONO_EPSILON = \
     std::numeric_limits<chrono_t>::epsilon() * 32.0;
 
 //-*****************************************************************************
-void simpleTestOut( const std::string &iArchiveName )
+void simpleTestOut( const std::string &iArchiveName, bool useOgawa )
 {
-    OArchive archive( Alembic::AbcCoreHDF5::WriteArchive(),
-                      iArchiveName );
+    OArchive archive;
+    if (useOgawa)
+    {
+        archive = OArchive( Alembic::AbcCoreOgawa::WriteArchive(),
+            iArchiveName, ErrorHandler::kThrowPolicy );
+    }
+    else
+    {
+        archive = OArchive( Alembic::AbcCoreHDF5::WriteArchive(),
+            iArchiveName, ErrorHandler::kThrowPolicy );
+    }
+
     OObject archiveTop( archive, kTop );
 
     // 0th archive child
@@ -191,7 +203,7 @@ void simpleTestOut( const std::string &iArchiveName )
 
     // make some data for our array props
     std::vector<V3f> v3fpoints( numV3fPoints );
-    std::vector<int32_t> intpoints( numIntPoints );
+    std::vector<Alembic::Util::int32_t> intpoints( numIntPoints );
 
     chrono_t t = v3fStartTime;
 
@@ -233,10 +245,14 @@ void simpleTestOut( const std::string &iArchiveName )
 }
 
 //-*****************************************************************************
-void simpleTestIn( const std::string &iArchiveName )
+void simpleTestIn( const std::string &iArchiveName, bool useOgawa)
 {
-    IArchive archive( Alembic::AbcCoreHDF5::ReadArchive(),
-                      iArchiveName, ErrorHandler::kThrowPolicy );
+    AbcF::IFactory factory;
+    factory.setPolicy(  ErrorHandler::kThrowPolicy );
+    AbcF::IFactory::CoreType coreType;
+    IArchive archive = factory.getArchive(iArchiveName, coreType);
+    TESTING_ASSERT( (useOgawa && coreType == AbcF::IFactory::kOgawa) ||
+                    (!useOgawa && coreType == AbcF::IFactory::kHDF5) );
 
     IObject archiveTop = archive.getTop();
 
@@ -445,9 +461,9 @@ void simpleTestIn( const std::string &iArchiveName )
 
         for ( size_t j = 0 ; j < numPoints ; ++j )
         {
-            int32_t val = (*ac0iap0SampPtr)[j];
+            Alembic::Util::int32_t val = (*ac0iap0SampPtr)[j];
 
-            TESTING_ASSERT( val == ( int32_t ) ( i + j ) );
+            TESTING_ASSERT( val == ( Alembic::Util::int32_t ) ( i + j ) );
 
             std::cout << val << ", ";
         }
@@ -461,8 +477,11 @@ int main( int argc, char *argv[] )
 {
     const std::string arkive( "test2archive.abc" );
 
-    simpleTestOut( arkive );
-    simpleTestIn( arkive );
-
+    bool useOgawa = true;
+    simpleTestOut( arkive, useOgawa );
+    simpleTestIn( arkive, useOgawa );
+    useOgawa = false;
+    simpleTestOut( arkive, useOgawa );
+    simpleTestIn( arkive, useOgawa );
     return 0;
 }

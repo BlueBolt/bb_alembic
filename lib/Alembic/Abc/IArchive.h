@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2013,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -91,7 +91,7 @@ public:
 
         //! Wrap existing
         //! ...
-        WrapExistingFlag iWrap,
+        WrapExistingFlag /* iWrap */,
 
         //! Optional error handling policy
         //! ...
@@ -152,6 +152,12 @@ public:
     //! Returns the total number of TimeSamplingPtrs in the Archive
     //! TimeSampling pool.
     uint32_t getNumTimeSamplings();
+
+    //! Returns the maximum number of samples written for the TimeSampling at
+    //! the given index.  If an illegal iIndex is specified, or a max
+    //! number of samplings couldn't be found for that iIndex
+    //! (for older archives pre 1.1.3) INDEX_UNKNOWN will be returned.
+    index_t getMaxNumSamplesForTimeSamplingIndex( uint32_t iIndex );
 
     //! Valid returns whether this function set is
     //! valid.

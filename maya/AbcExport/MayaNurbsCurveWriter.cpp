@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -112,23 +112,21 @@ MayaNurbsCurveWriter::MayaNurbsCurveWriter(MDagPath & iDag,
             mIsAnimated = true;
     }
 
-    if (iArgs.stripNamespace)
-    {
-        name = util::stripNamespaces(name);
-    }
+    name = util::stripNamespaces(name, iArgs.stripNamespace);
 
     Alembic::AbcGeom::OCurves obj(iParent, name.asChar(), iTimeIndex);
     mSchema = obj.getSchema();
 
     Alembic::Abc::OCompoundProperty cp;
-    if (AttributesWriter::hasAnyAttr(iDag, iArgs))
+    Alembic::Abc::OCompoundProperty up;
+    if (AttributesWriter::hasAnyAttr(fnDepNode, iArgs))
     {
         cp = mSchema.getArbGeomParams();
+        up = mSchema.getUserProperties();
     }
 
-    mAttrs = AttributesWriterPtr(new AttributesWriter(cp, obj, iDag,
+    mAttrs = AttributesWriterPtr(new AttributesWriter(cp, up, obj, fnDepNode,
         iTimeIndex, iArgs));
-
 
     write();
 }
@@ -154,6 +152,7 @@ bool MayaNurbsCurveWriter::isAnimated() const
 void MayaNurbsCurveWriter::write()
 {
     Alembic::AbcGeom::OCurvesSchema::Sample samp;
+    samp.setBasis(Alembic::AbcGeom::kBsplineBasis);
 
     MStatus stat;
     mCVCount = 0;
@@ -217,11 +216,26 @@ void MayaNurbsCurveWriter::write()
         }
 
         Alembic::Util::int32_t numCVs = curve.numCVs(&stat);
-        nVertices[i] = numCVs;
-        mCVCount += numCVs;
 
         MPointArray cvArray;
         stat = curve.getCVs(cvArray, MSpace::kObject);
+
+        int repeatStartAndEnd = 0;
+        if (numCVs > 5 && curve.degree() == 3 &&
+            curve.form() == MFnNurbsCurve::kOpen)
+        {
+            repeatStartAndEnd = 2;
+            if (cvArray[0] == cvArray[1] && cvArray[0] == cvArray[2] &&
+                cvArray[numCVs - 1] == cvArray[numCVs - 2] &&
+                cvArray[numCVs - 1] == cvArray[numCVs - 3])
+            {
+                repeatStartAndEnd = 0;
+            }
+        }
+
+        mCVCount += numCVs + (2 * repeatStartAndEnd);
+        nVertices[i] = numCVs + (2 * repeatStartAndEnd);
+
         for (Alembic::Util::int32_t j = 0; j < numCVs; j++)
         {
             MPoint transformdPt;
@@ -233,6 +247,15 @@ void MayaNurbsCurveWriter::write()
             points.push_back(static_cast<float>(transformdPt.x));
             points.push_back(static_cast<float>(transformdPt.y));
             points.push_back(static_cast<float>(transformdPt.z));
+            if (repeatStartAndEnd > 0 && (j == 0 || j == numCVs - 1))
+            {
+                for (int k = 0; k < repeatStartAndEnd; ++k)
+                {
+                    points.push_back(static_cast<float>(transformdPt.x));
+                    points.push_back(static_cast<float>(transformdPt.y));
+                    points.push_back(static_cast<float>(transformdPt.z));
+                }
+            }
         }
 
         // width
@@ -250,6 +273,14 @@ void MayaNurbsCurveWriter::write()
                 for (Alembic::Util::int32_t i = 0; i < arraySum; i++)
                 {
                     width.push_back(static_cast<float>(doubleArrayData[i]));
+                    if (repeatStartAndEnd > 0 && (i == 0 || i == arraySum - 1))
+                    {
+                        for (int k = 0; k < repeatStartAndEnd; ++k)
+                        {
+                            points.push_back(
+                                static_cast<float>(doubleArrayData[i]));
+                        }
+                    }
                 }
             }
             else if (status == MS::kSuccess)

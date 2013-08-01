@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -37,9 +37,6 @@
 #ifndef _Alembic_AbcCoreAbstract_ArraySampleKey_h_
 #define _Alembic_AbcCoreAbstract_ArraySampleKey_h_
 
-#include <boost/unordered_map.hpp>
-#include <boost/unordered_set.hpp>
-
 #include <Alembic/AbcCoreAbstract/Foundation.h>
 #include <Alembic/AbcCoreAbstract/DataType.h>
 
@@ -47,7 +44,7 @@ namespace Alembic {
 namespace AbcCoreAbstract {
 namespace ALEMBIC_VERSION_NS {
 
-struct ArraySampleKey : public boost::totally_ordered<ArraySampleKey>
+struct ArraySampleKey : public Alembic::Util::totally_ordered<ArraySampleKey>
 {
     //! total number of bytes of the sample as originally stored
     uint64_t numBytes;
@@ -121,23 +118,11 @@ struct ArraySampleKeyStdHash :
 template <class MAPPED>
 struct UnorderedMapUtil
 {
-    typedef boost::unordered_map<ArraySampleKey,
-                                 MAPPED,
-                                 ArraySampleKeyStdHash,
-                                 ArraySampleKeyEqualTo> umap_type;
-    typedef boost::unordered_multimap<ArraySampleKey,
-                                      MAPPED,
-                                      ArraySampleKeyStdHash,
-                                      ArraySampleKeyEqualTo> umultimap_type;
+    typedef Alembic::Util::unordered_map<ArraySampleKey,
+                                         MAPPED,
+                                         ArraySampleKeyStdHash,
+                                         ArraySampleKeyEqualTo> umap_type;
 };
-
-//-*****************************************************************************
-// Unordered sets don't need a wrapping template.
-// This isn't a terribly useful type. And it's meaningless to have
-// multisets in this context.
-typedef boost::unordered_set<ArraySampleKey,
-                             ArraySampleKeyStdHash,
-                             ArraySampleKeyEqualTo> UnorderedArraySampleKeySet;
 
 } // End namespace ALEMBIC_VERSION_NS
 

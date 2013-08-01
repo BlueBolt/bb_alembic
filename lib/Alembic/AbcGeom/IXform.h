@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -85,7 +85,7 @@ public:
     {
         // Meta data and error handling are eaten up by
         // the super type, so all that's left is SchemaInterpMatching.
-        init( Abc::GetSchemaInterpMatching( iArg0, iArg1 ) );
+        init( iArg0, iArg1 );
     }
 
     //! This constructor does the same as the above, but uses the default
@@ -97,7 +97,7 @@ public:
                            const Abc::Argument &iArg1 = Abc::Argument() )
       : Abc::ISchema<XformSchemaInfo>( iParent, iArg0, iArg1 )
     {
-        init( Abc::GetSchemaInterpMatching( iArg0, iArg1 ) );
+        init( iArg0, iArg1 );
     }
 
     //! Wrap an existing IXform object
@@ -109,7 +109,7 @@ public:
                            const Abc::Argument &iArg1 = Abc::Argument() )
       : Abc::ISchema<XformSchemaInfo>( iThis, iFlag, iArg0, iArg1 )
     {
-        init( Abc::GetSchemaInterpMatching( iArg0, iArg1 ) );
+        init( iArg0, iArg1 );
     }
 
     //! explicit copy constructor to work around Windows compiler bug
@@ -119,23 +119,26 @@ public:
         *this = iCopy;
     }
 
-    AbcA::TimeSamplingPtr getTimeSampling();
+    AbcA::TimeSamplingPtr getTimeSampling() const;
 
     bool isConstant() const { return m_isConstant; }
 
     //! is this xform both constant and identity?
     bool isConstantIdentity() const { return m_isConstantIdentity; }
 
-    size_t getNumSamples();
+    size_t getNumSamples() const;
 
     //! fill the supplied sample reference with values
     void get( XformSample &oSamp,
-              const Abc::ISampleSelector &iSS = Abc::ISampleSelector() );
+              const Abc::ISampleSelector &iSS = Abc::ISampleSelector() ) const;
 
     XformSample getValue( const Abc::ISampleSelector &iSS =
-                          Abc::ISampleSelector() );
+                          Abc::ISampleSelector() ) const;
 
-    Abc::IBox3dProperty getChildBoundsProperty() { return m_childBoundsProperty; }
+    Abc::IBox3dProperty getChildBoundsProperty() const
+    {
+        return m_childBoundsProperty;
+    }
 
     // lightweight get to avoid constructing a sample
     // see XformSample.h for explanation of this property
@@ -166,9 +169,9 @@ public:
         return ( super_type::valid() );
     }
 
-    ICompoundProperty getArbGeomParams() { return m_arbGeomParams; }
+    ICompoundProperty getArbGeomParams() const { return m_arbGeomParams; }
 
-    ICompoundProperty getUserProperties() { return m_userProperties; }
+    ICompoundProperty getUserProperties() const { return m_userProperties; }
 
     //! unspecified-bool-type operator overload.
     //! ...
@@ -192,20 +195,22 @@ protected:
     XformSample m_sample;
 
 private:
-    void init( Abc::SchemaInterpMatching iMatching );
+    void init( const Abc::Argument &iArg0, const Abc::Argument &iArg1 );
 
     // is m_vals an ArrayProperty, or a ScalarProperty?
     bool m_useArrayProp;
 
     // fills m_valVec with data
     void getChannelValues( const AbcA::index_t iSampleIndex,
-                           XformSample & oSamp );
+                           XformSample & oSamp ) const;
 };
 
 //-*****************************************************************************
 // SCHEMA OBJECT
 //-*****************************************************************************
 typedef Abc::ISchemaObject<IXformSchema> IXform;
+
+typedef Util::shared_ptr< IXform > IXformPtr;
 
 } // End namespace ALEMBIC_VERSION_NS
 

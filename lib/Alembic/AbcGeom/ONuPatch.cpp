@@ -63,30 +63,14 @@ void ONuPatchSchema::set( const ONuPatchSchema::Sample &iSamp  )
 
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "ONuPatchSchema::set()" );
 
-    // do we need to create child bounds?
-    if ( iSamp.getChildBounds().hasVolume() && !m_childBoundsProperty)
-    {
-        m_childBoundsProperty = Abc::OBox3dProperty( *this, ".childBnds",
-                                             this->getTimeSampling() );
-        Abc::Box3d emptyBox;
-        emptyBox.makeEmpty();
-
-        size_t numSamples = m_positionsProperty.getNumSamples();
-
-        // set all the missing samples
-        for ( size_t i = 0; i < numSamples; ++i )
-        {
-            m_childBoundsProperty.set( emptyBox );
-        }
-    }
-
     // do we need to create velocities prop?
     if ( iSamp.getVelocities() && !m_velocitiesProperty )
     {
-        m_velocitiesProperty = Abc::OV3fArrayProperty( this->getPtr(), ".velocities",
-                                               m_positionsProperty.getTimeSampling() );
+        m_velocitiesProperty = Abc::OV3fArrayProperty( this->getPtr(),
+            ".velocities", m_positionsProperty.getTimeSampling() );
 
-        const V3fArraySample empty;
+        std::vector<V3f> emptyVec;
+        const V3fArraySample empty( emptyVec );
         const size_t numSamps = m_positionsProperty.getNumSamples();
         for ( size_t i = 0 ; i < numSamps ; ++i )
         {
@@ -97,17 +81,27 @@ void ONuPatchSchema::set( const ONuPatchSchema::Sample &iSamp  )
     // do we need to create uvs?
     if ( iSamp.getUVs() && !m_uvsParam )
     {
+        std::vector<V2f> emptyVals;
+        std::vector<Util::uint32_t> emptyIndices;
+
         OV2fGeomParam::Sample empty;
 
         if ( iSamp.getUVs().getIndices() )
         {
+            empty = OV2fGeomParam::Sample( Abc::V2fArraySample( emptyVals ),
+                Abc::UInt32ArraySample( emptyIndices ),
+                iSamp.getUVs().getScope() );
+
             // UVs are indexed
             m_uvsParam = OV2fGeomParam( this->getPtr(), "uv", true,
-                                   empty.getScope(), 1,
-                                   this->getTimeSampling() );
+                                        empty.getScope(), 1,
+                                        this->getTimeSampling() );
         }
         else
         {
+            empty = OV2fGeomParam::Sample( Abc::V2fArraySample( emptyVals ),
+                                           iSamp.getUVs().getScope() );
+
             // UVs are not indexed
             m_uvsParam = OV2fGeomParam( this->getPtr(), "uv", false,
                                    empty.getScope(), 1,
@@ -126,17 +120,26 @@ void ONuPatchSchema::set( const ONuPatchSchema::Sample &iSamp  )
     // do we need to create normals?
     if ( iSamp.getNormals() && !m_normalsParam )
     {
+        std::vector<V3f> emptyVals;
+        std::vector<Util::uint32_t> emptyIndices;
 
         ON3fGeomParam::Sample empty;
 
         if ( iSamp.getNormals().getIndices() )
         {
+            empty = ON3fGeomParam::Sample( Abc::V3fArraySample( emptyVals ),
+                Abc::UInt32ArraySample( emptyIndices ),
+                iSamp.getNormals().getScope() );
+
             // normals are indexed
             m_normalsParam = ON3fGeomParam( this->getPtr(), "N", true,
                 empty.getScope(), 1, this->getTimeSampling() );
         }
         else
         {
+            empty = ON3fGeomParam::Sample( Abc::V3fArraySample( emptyVals ),
+                                           iSamp.getNormals().getScope() );
+
             // normals are not indexed
             m_normalsParam = ON3fGeomParam( this->getPtr(), "N", false,
                                         empty.getScope(), 1,
@@ -158,7 +161,8 @@ void ONuPatchSchema::set( const ONuPatchSchema::Sample &iSamp  )
         m_positionWeightsProperty = Abc::OFloatArrayProperty( *this, "w",
                                                       this->getTimeSampling() );
 
-        Alembic::Abc::FloatArraySample emptySamp;
+        std::vector<float> emptyVec;
+        Alembic::Abc::FloatArraySample emptySamp( emptyVec );
 
         size_t numSamples = m_positionsProperty.getNumSamples();
 
@@ -172,8 +176,11 @@ void ONuPatchSchema::set( const ONuPatchSchema::Sample &iSamp  )
     if ( iSamp.hasTrimCurve() && !m_trimNumLoopsProperty )
     {
         AbcA::CompoundPropertyWriterPtr _this = this->getPtr();
-        Alembic::Abc::Int32ArraySample emptyIntSamp;
-        Alembic::Abc::FloatArraySample emptyFloatSamp;
+
+        std::vector<Util::int32_t> emptyIntVec;
+        std::vector<float> emptyFloatVec;
+        Alembic::Abc::Int32ArraySample emptyIntSamp( emptyIntVec );
+        Alembic::Abc::FloatArraySample emptyFloatSamp( emptyFloatVec );
 
         AbcA::TimeSamplingPtr tsPtr = this->getTimeSampling();
 
@@ -260,10 +267,6 @@ void ONuPatchSchema::set( const ONuPatchSchema::Sample &iSamp  )
         {
             m_normalsParam.set( iSamp.getNormals() );
         }
-
-        // set bounds
-        if ( iSamp.getChildBounds().hasVolume() )
-        { m_childBoundsProperty.set( iSamp.getChildBounds() ); }
 
         if ( iSamp.getSelfBounds().isEmpty() )
         {
@@ -366,7 +369,6 @@ void ONuPatchSchema::setFromPrevious( )
     m_selfBoundsProperty.setFromPrevious();
 
     // handle optional properties
-    if ( m_childBoundsProperty ) { m_childBoundsProperty.setFromPrevious(); }
     if ( m_velocitiesProperty ) { m_velocitiesProperty.setFromPrevious(); }
     if ( m_uvsParam ) { m_uvsParam.setFromPrevious(); }
     if ( m_normalsParam ) { m_normalsParam.setFromPrevious(); }
@@ -388,6 +390,66 @@ void ONuPatchSchema::setFromPrevious( )
         m_trimUProperty.setFromPrevious();
         m_trimVProperty.setFromPrevious();
         m_trimWProperty.setFromPrevious();
+    }
+
+    ALEMBIC_ABC_SAFE_CALL_END();
+}
+
+//-*****************************************************************************
+void ONuPatchSchema::setTimeSampling( uint32_t iIndex )
+{
+    ALEMBIC_ABC_SAFE_CALL_BEGIN(
+        "ONuPatchSchema::setTimeSampling( uint32_t )" );
+
+    m_positionsProperty.setTimeSampling( iIndex );
+    m_numUProperty.setTimeSampling( iIndex );
+    m_numVProperty.setTimeSampling( iIndex );
+    m_uOrderProperty.setTimeSampling( iIndex );
+    m_vOrderProperty.setTimeSampling( iIndex );
+    m_uKnotProperty.setTimeSampling( iIndex );
+    m_vKnotProperty.setTimeSampling( iIndex );
+
+    m_selfBoundsProperty.setTimeSampling( iIndex );
+
+    if ( m_velocitiesProperty )
+    {
+        m_velocitiesProperty.setTimeSampling( iIndex );
+    }
+
+    if ( m_uvsParam ) { m_uvsParam.setTimeSampling( iIndex ); }
+    if ( m_normalsParam ) { m_normalsParam.setTimeSampling( iIndex ); }
+    if ( m_positionWeightsProperty )
+    {
+        m_positionWeightsProperty.setTimeSampling( iIndex );
+    }
+
+    if ( m_trimNumLoopsProperty )
+    {
+        m_trimNumLoopsProperty.setTimeSampling( iIndex );
+        m_trimNumCurvesProperty.setTimeSampling( iIndex );
+        m_trimNumVerticesProperty.setTimeSampling( iIndex );
+        m_trimOrderProperty.setTimeSampling( iIndex );
+        m_trimKnotProperty.setTimeSampling( iIndex );
+        m_trimMinProperty.setTimeSampling( iIndex );
+        m_trimMaxProperty.setTimeSampling( iIndex );
+        m_trimUProperty.setTimeSampling( iIndex );
+        m_trimVProperty.setTimeSampling( iIndex );
+        m_trimWProperty.setTimeSampling( iIndex );
+    }
+
+    ALEMBIC_ABC_SAFE_CALL_END();
+}
+
+//-*****************************************************************************
+void ONuPatchSchema::setTimeSampling( AbcA::TimeSamplingPtr iTime )
+{
+    ALEMBIC_ABC_SAFE_CALL_BEGIN(
+        "ONuPatchSchema::setTimeSampling( TimeSamplingPtr )" );
+
+    if ( iTime )
+    {
+        uint32_t tsIndex = getObject().getArchive().addTimeSampling( *iTime );
+        setTimeSampling( tsIndex );
     }
 
     ALEMBIC_ABC_SAFE_CALL_END();

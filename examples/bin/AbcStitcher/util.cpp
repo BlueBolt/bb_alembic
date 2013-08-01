@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2013,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -46,6 +46,10 @@ using namespace Alembic::AbcCoreAbstract;
 index_t getIndexSample(index_t iCurOutIndex, TimeSamplingPtr iOutTime,
     index_t iInNumSamples, TimeSamplingPtr iInTime)
 {
+    // borrowed from TimeSampling.cpp
+    static const chrono_t kCHRONO_TOLERANCE =
+        std::numeric_limits<chrono_t>::epsilon() * 32.0 * 32.0;
+
     if (iCurOutIndex == 0)
     {
         return 0;
@@ -55,7 +59,9 @@ index_t getIndexSample(index_t iCurOutIndex, TimeSamplingPtr iOutTime,
 
     for (index_t i = 0; i < iInNumSamples; ++i)
     {
-        if (curTime < iInTime->getSampleTime(i))
+        chrono_t inChrono = iInTime->getSampleTime(i);
+        if (curTime <= inChrono ||
+            Imath::equalWithAbsError(curTime, inChrono, kCHRONO_TOLERANCE))
         {
             return i;
         }
@@ -89,7 +95,7 @@ void stitchArrayProp(const PropertyHeader & propHeader,
     size_t numInputs = iCompoundProps.size();
     for (size_t iCpIndex = 0; iCpIndex < numInputs; iCpIndex++)
     {
-        IArrayProperty reader(iCompoundProps[iCpIndex], propName, metaData);
+        IArrayProperty reader(iCompoundProps[iCpIndex], propName);
         index_t numSamples = reader.getNumSamples();
 
         ArraySamplePtr dataPtr;
@@ -110,7 +116,7 @@ void stitchArrayProp(const PropertyHeader & propHeader,
 
 template< typename T >
 void scalarPropIO(IScalarProperty & reader,
-                  uint8_t extent,
+                  Alembic::Util::uint8_t extent,
                   OScalarProperty & writer)
 {
     T * dataPtr = new T[extent];
@@ -145,8 +151,8 @@ void stitchScalarProp(const PropertyHeader & propHeader,
     size_t numInputs = iCompoundProps.size();
     for (size_t iCpIndex = 0; iCpIndex < numInputs; iCpIndex++)
     {
-        IScalarProperty reader(iCompoundProps[iCpIndex], propName, metaData);
-        uint8_t extent = dataType.getExtent();  // dimention of the data
+        IScalarProperty reader(iCompoundProps[iCpIndex], propName);
+        Alembic::Util::uint8_t extent = dataType.getExtent();  // dimension of the data
 
         switch(dataType.getPod())
         {
@@ -212,13 +218,19 @@ void stitchCompoundProp(ICompoundPropertyVec & iCompoundProps,
         const PropertyHeader & propHeader =
             iCompoundProps[0].getPropertyHeader(propIndex);
 
-        // skip for now
         if (propHeader.isCompound())
         {
-            continue;
+            ICompoundPropertyVec childProps(iCompoundProps.size());
+            for (size_t i = 0; i < childProps.size(); ++i)
+            {
+                childProps[i] = ICompoundProperty(iCompoundProps[i],
+                    propHeader.getName());
+            }
+            OCompoundProperty child(oCompoundProp, propHeader.getName(),
+                propHeader.getMetaData());
+            stitchCompoundProp(childProps, child);
         }
-
-        if (propHeader.isScalar())
+        else if (propHeader.isScalar())
         {
             stitchScalarProp(propHeader, iCompoundProps, oCompoundProp);
         }

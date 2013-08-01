@@ -35,9 +35,12 @@
 
 SET( FULL_ABC_LIBS
      AlembicAbcGeom
+     AlembicAbcCoreFactory
      AlembicAbc
      AlembicAbcCoreHDF5
+     AlembicAbcCoreOgawa
      AlembicAbcCoreAbstract
+     AlembicOgawa
      AlembicUtil
      ${ALEMBIC_HDF5_LIBS}
      ${ALEMBIC_ILMBASE_LIBS}
@@ -50,3 +53,6 @@ TARGET_LINK_LIBRARIES( abcecho ${FULL_ABC_LIBS} )
 
 ADD_EXECUTABLE( abcechobounds AbcBoundsEcho.cpp )
 TARGET_LINK_LIBRARIES( abcechobounds ${FULL_ABC_LIBS} )
+
+INSTALL( TARGETS abcecho abcechobounds
+         DESTINATION bin )

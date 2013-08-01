@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -37,9 +37,6 @@
 #ifndef _Alembic_AbcCoreAbstract_Tests_Assert_h_
 #define _Alembic_AbcCoreAbstract_Tests_Assert_h_
 
-#include <boost/format.hpp>
-#include <boost/preprocessor/stringize.hpp>
-
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -49,19 +46,29 @@
 #include <assert.h>
 #include <string.h>
 
+#include <ImathMath.h>
+#include <limits>
+
+//-*****************************************************************************
+static const double VAL_EPSILON =
+    std::numeric_limits<double>::epsilon() * 1024.0;
+
+bool almostEqual( const double &a, const double &b,
+                  const double &epsilon = VAL_EPSILON )
+{
+    return Imath::equalWithAbsError( a, b, epsilon );
+}
+
 //-*****************************************************************************
 #define TESTING_ASSERT( TEST )                                          \
 do                                                                      \
 {                                                                       \
     if ( !( TEST ) )                                                    \
     {                                                                   \
-        std::string failedTest = BOOST_PP_STRINGIZE( TEST );            \
-        throw std::runtime_error(                                       \
-            ( boost::format( "ERROR: Failed Test: %s, File: %d, Line: %d" ) \
-              % failedTest                                              \
-              % __FILE__                                                \
-              % __LINE__                                                \
-            ).str() );                                                  \
+        std::stringstream strm;                                         \
+        strm << "ERROR: Failed Test in File: " << __FILE__ << " Line: " \
+             << __LINE__;                                               \
+        throw std::runtime_error( strm.str() );                         \
     }                                                                   \
 }                                                                       \
 while( 0 )
@@ -72,13 +79,10 @@ while( 0 )
     {                                                                   \
         if ( !( TEST ) )                                                \
         {                                                               \
-            std::string failedTest = BOOST_PP_STRINGIZE( TEST );        \
-            throw std::runtime_error(                                   \
-                ( boost::format( "ERROR: Failed Test: %s, File: %d, Line: %d\n%s" ) \
-                  % failedTest                                          \
-                  % __FILE__                                            \
-                  % __LINE__                                            \
-                  % MSG ).str() );                                      \
+            std::stringstream strm;                                     \
+            strm << "ERROR: Failed Test in File: " << __FILE__          \
+                 << " Line: " << __LINE__ << " " << MSG;                \
+            throw std::runtime_error( strm.str() );                     \
         }                                                               \
     }                                                                   \
     while( 0 )
@@ -99,8 +103,10 @@ do                                                                      \
                                                                         \
     if ( !passed )                                                      \
     {                                                                   \
-        std::string failedTest = BOOST_PP_STRINGIZE( TEST );            \
-        throw std::runtime_error( "ERROR: Failed Throw: " + failedTest ); \
+        std::stringstream strm;                                         \
+        strm << "ERROR: Failed Throw in File: " << __FILE__             \
+             << " Line: " << __LINE__;                                  \
+        throw std::runtime_error( strm.str() );                         \
     }                                                                   \
 }                                                                       \
 while( 0 )

@@ -91,13 +91,13 @@ ADD_TEST( AbcGeom_SubDFaceSet_TEST AbcGeom_SubDFaceSetTest )
 
 ##-*****************************************************************************
 ADD_EXECUTABLE( AbcGeom_SchemaMatchingTest
-		SchemaMatchingTest.cpp )
+                SchemaMatchingTest.cpp )
 TARGET_LINK_LIBRARIES( AbcGeom_SchemaMatchingTest ${TEST_LIBS} )
 ADD_TEST( AbcGeom_SchemaMatching_TEST AbcGeom_SchemaMatchingTest )
 
 #-******************************************************************************
 ADD_EXECUTABLE( AbcGeom_XformTest
-		XformTests.cpp )
+                XformTests.cpp )
 TARGET_LINK_LIBRARIES( AbcGeom_XformTest  ${TEST_LIBS} )
 ADD_TEST( AbcGeom_Xform_TEST  AbcGeom_XformTest  )
 
@@ -136,6 +136,12 @@ ADD_EXECUTABLE( AbcGeom_CompileTest
                 CompileTest.cpp )
 TARGET_LINK_LIBRARIES( AbcGeom_CompileTest ${TEST_LIBS} )
 ADD_TEST( AbcGeom_CompileTest_TEST AbcGeom_CompileTest )
+
+#-******************************************************************************
+ADD_EXECUTABLE( AbcGeom_LightTest
+                LightTest.cpp )
+TARGET_LINK_LIBRARIES( AbcGeom_LightTest ${TEST_LIBS} )
+ADD_TEST( AbcGeom_LightTest_TEST AbcGeom_LightTest )
 
 ##-*****************************************************************************
 # playground is just something so that we, the Alembic devs, can noodle around

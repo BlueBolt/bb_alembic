@@ -203,10 +203,6 @@ public:
         void setSelfBounds( const Abc::Box3d &iBnds )
         { m_selfBounds = iBnds; }
 
-        const Abc::Box3d &getChildBounds() const { return m_childBounds; }
-        void setChildBounds( const Abc::Box3d &iBnds )
-        { m_childBounds = iBnds; }
-
         // velocities accessor
         const Abc::V3fArraySample &getVelocities() const { return m_velocities; }
         void setVelocities( const Abc::V3fArraySample &iVelocities )
@@ -241,7 +237,6 @@ public:
             m_velocities.reset();
 
             m_selfBounds.makeEmpty();
-            m_childBounds.makeEmpty();
 
             m_uvs.reset();
         }
@@ -274,7 +269,6 @@ public:
 
         // bounds
         Abc::Box3d m_selfBounds;
-        Abc::Box3d m_childBounds;
 
         Abc::V3fArraySample m_velocities;
 
@@ -313,8 +307,9 @@ public:
                      const Abc::Argument &iArg0 = Abc::Argument(),
                      const Abc::Argument &iArg1 = Abc::Argument(),
                      const Abc::Argument &iArg2 = Abc::Argument() )
-      : OGeomBaseSchema<SubDSchemaInfo>( iParent, iName,
-                                      iArg0, iArg1, iArg2 )
+      : OGeomBaseSchema<SubDSchemaInfo>(
+                        GetCompoundPropertyWriterPtr( iParent ),
+                        iName, iArg0, iArg1, iArg2 )
     {
 
         AbcA::TimeSamplingPtr tsPtr =
@@ -327,8 +322,8 @@ public:
         // 0 index
         if (tsPtr)
         {
-            tsIndex = iParent->getObject()->getArchive(
-                )->addTimeSampling(*tsPtr);
+            tsIndex = GetCompoundPropertyWriterPtr( iParent )
+                        ->getObject()->getArchive()->addTimeSampling(*tsPtr);
         }
 
         // Meta data and error handling are eaten up by
@@ -341,8 +336,9 @@ public:
                           const Abc::Argument &iArg0 = Abc::Argument(),
                           const Abc::Argument &iArg1 = Abc::Argument(),
                           const Abc::Argument &iArg2 = Abc::Argument() )
-      : OGeomBaseSchema<SubDSchemaInfo>( iParent,
-                                      iArg0, iArg1, iArg2 )
+      : OGeomBaseSchema<SubDSchemaInfo>(
+                            GetCompoundPropertyWriterPtr( iParent ),
+                            iArg0, iArg1, iArg2 )
     {
         AbcA::TimeSamplingPtr tsPtr =
             Abc::GetTimeSampling( iArg0, iArg1, iArg2 );
@@ -354,8 +350,8 @@ public:
         // 0 index
         if (tsPtr)
         {
-            tsIndex = iParent->getObject()->getArchive(
-                )->addTimeSampling(*tsPtr);
+            tsIndex = GetCompoundPropertyWriterPtr( iParent )->getObject(
+            )->getArchive()->addTimeSampling(*tsPtr);
         }
 
         // Meta data and error handling are eaten up by
@@ -387,7 +383,7 @@ public:
 
     //! Get number of samples written so far.
     //! ...
-    size_t getNumSamples()
+    size_t getNumSamples() const
     { return m_positionsProperty.getNumSamples(); }
 
     //! Set a sample! Sample zero has to have non-degenerate
@@ -403,7 +399,7 @@ public:
 
     //-*************************************************************************
     // ABC BASE MECHANISMS
-    // These functions are used by Abc to deal with errors, rewrapping,
+    // These functions are used by Abc to deal with errors, validity,
     // and so on.
     //-*************************************************************************
 
@@ -414,6 +410,10 @@ public:
         m_positionsProperty.reset();
         m_faceIndicesProperty.reset();
         m_faceCountsProperty.reset();
+
+        m_faceVaryingInterpolateBoundaryProperty.reset();
+        m_faceVaryingPropagateCornersProperty.reset();
+        m_interpolateBoundaryProperty.reset();
 
         m_creaseIndicesProperty.reset();
         m_creaseLengthsProperty.reset();
@@ -504,6 +504,8 @@ private:
 // SCHEMA OBJECT
 //-*****************************************************************************
 typedef Abc::OSchemaObject<OSubDSchema> OSubD;
+
+typedef Util::shared_ptr< OSubD > OSubDPtr;
 
 } // End namespace ALEMBIC_VERSION_NS
 

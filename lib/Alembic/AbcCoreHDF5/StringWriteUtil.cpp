@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -41,12 +41,6 @@
 namespace Alembic {
 namespace AbcCoreHDF5 {
 namespace ALEMBIC_VERSION_NS {
-
-//-*****************************************************************************
-BOOST_STATIC_ASSERT( sizeof( char ) == sizeof( int8_t ) );
-BOOST_STATIC_ASSERT( ( sizeof( wchar_t ) == sizeof( int8_t ) ) ||
-                     ( sizeof( wchar_t ) == sizeof( int16_t ) ) ||
-                     ( sizeof( wchar_t ) == sizeof( int32_t ) ) );
 
 //-*****************************************************************************
 template <class CharT>

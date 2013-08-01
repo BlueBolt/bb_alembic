@@ -93,16 +93,11 @@ public:
         void setSelfBounds( const Abc::Box3d &iBnds )
         { m_selfBounds = iBnds; }
 
-        const Abc::Box3d &getChildBounds() const { return m_childBounds; }
-        void setChildBounds( const Abc::Box3d &iBnds )
-        { m_childBounds = iBnds; }
-
         void reset()
         {
             m_faces.reset();
 
             m_selfBounds.makeEmpty();
-            m_childBounds.makeEmpty();
         }
 
     protected:
@@ -110,7 +105,6 @@ public:
 
         // bounds
         Abc::Box3d              m_selfBounds;
-        Abc::Box3d              m_childBounds;
     }; // end OFaceSetSchema::Sample
 
 
@@ -148,10 +142,12 @@ public:
                      const Abc::Argument &iArg0 = Abc::Argument(),
                      const Abc::Argument &iArg1 = Abc::Argument(),
                      const Abc::Argument &iArg2 = Abc::Argument() )
-      : OGeomBaseSchema<FaceSetSchemaInfo>( iParentCompound, iName,
-                                   iArg0, iArg1, iArg2 )
+      : OGeomBaseSchema<FaceSetSchemaInfo>(
+                    GetCompoundPropertyWriterPtr( iParentCompound ),
+                    iName, iArg0, iArg1, iArg2 )
     {
-        _initTimeSampling ( iParentCompound, iArg0, iArg1, iArg2 );
+        _initTimeSampling ( GetCompoundPropertyWriterPtr( iParentCompound ),
+                            iArg0, iArg1, iArg2 );
     }
 
     template <class CPROP_PTR>
@@ -182,10 +178,12 @@ public:
                               const Abc::Argument &iArg0 = Abc::Argument(),
                               const Abc::Argument &iArg1 = Abc::Argument(),
                               const Abc::Argument &iArg2 = Abc::Argument() )
-      : OGeomBaseSchema<FaceSetSchemaInfo>( iParentCompound,
-                                            iArg0, iArg1, iArg2 )
+      : OGeomBaseSchema<FaceSetSchemaInfo>(
+                            GetCompoundPropertyWriterPtr( iParentCompound ),
+                            iArg0, iArg1, iArg2 )
     {
-        _initTimeSampling ( iParentCompound, iArg0, iArg1, iArg2 );
+        _initTimeSampling ( GetCompoundPropertyWriterPtr( iParentCompound ),
+                            iArg0, iArg1, iArg2 );
     }
 
     //! Copy constructor.
@@ -207,7 +205,7 @@ public:
 
     //! Get number of samples written so far.
     //! ...
-    size_t getNumSamples()
+    size_t getNumSamples() const
     { return m_facesProperty.getNumSamples(); }
 
     //! Set a sample! First sample must have the list of faces in the faceset.
@@ -220,7 +218,7 @@ public:
     FaceSetExclusivity getFaceExclusivity() { return m_facesExclusive; }
     //-*************************************************************************
     // ABC BASE MECHANISMS
-    // These functions are used by Abc to deal with errors, rewrapping,
+    // These functions are used by Abc to deal with errors, validity,
     // and so on.
     //-*************************************************************************
 
@@ -228,8 +226,6 @@ public:
     //! state.
     void reset()
     {
-        m_selfBoundsProperty.reset();
-        m_childBoundsProperty.reset();
         m_facesProperty.reset();
 
         OGeomBaseSchema<FaceSetSchemaInfo>::reset();
@@ -266,6 +262,8 @@ protected:
 // Nice to use typedef for users of this class.
 //-*****************************************************************************
 typedef Abc::OSchemaObject<OFaceSetSchema> OFaceSet;
+
+typedef Util::shared_ptr< OFaceSet > OFaceSetPtr;
 
 Abc::Box3d computeBoundsFromPositionsByFaces (const Int32ArraySample & faces,
     const Int32ArraySample & meshFaceCounts,

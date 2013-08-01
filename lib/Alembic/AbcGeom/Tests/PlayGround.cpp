@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -37,32 +37,54 @@
 #include <Alembic/AbcGeom/All.h>
 #include <Alembic/AbcCoreHDF5/All.h>
 
-#include "Assert.h"
+#include <Alembic/AbcCoreAbstract/Tests/Assert.h>
+
+#include <memory.h>
 
 using namespace Alembic::AbcGeom;
 
 using Alembic::AbcCoreAbstract::chrono_t;
 using Alembic::AbcCoreAbstract::index_t;
-using Alembic::Util::uint32_t;
-using Alembic::Util::float32_t;
-using Alembic::Util::int32_t;
-
 
 //-*****************************************************************************
-Alembic::Abc::OObject subdCube( Alembic::Abc::OObject parent )
+Alembic::Util::shared_ptr< Alembic::Abc::OObject >
+makeXform( Alembic::Abc::OObject & parent )
 {
-    Alembic::AbcGeom::OSubD subdObj( parent, "mySubD",
-                                     Alembic::Abc::ErrorHandler::kNoisyNoopPolicy );
-    Alembic::AbcGeom::OSubDSchema &schema = subdObj.getSchema();
+    Alembic::Util::shared_ptr< Alembic::AbcGeom::OXform > xformObjPtr
+        ( new Alembic::AbcGeom::OXform( parent, "myXform" ) );
+
+    // add a couple of ops
+    XformOp transop( kTranslateOperation, kTranslateHint );
+    XformOp scaleop( kScaleOperation, kScaleHint );
+
+    XformSample samp;
+    samp.addOp( transop, V3d( 1.0, 2.0, 3.0 ) );
+    samp.addOp( scaleop, V3d( 2.0, 4.0, 6.0 ) );
+
+    Alembic::AbcGeom::OXformSchema &schema = xformObjPtr->getSchema();
+
+    schema.set( samp );
+
+    return xformObjPtr;
+}
+
+//-*****************************************************************************
+Alembic::Util::shared_ptr< Alembic::Abc::OObject >
+subdCube( Alembic::Abc::OObject & parent )
+{
+    Alembic::Util::shared_ptr< Alembic::AbcGeom::OSubD > subdObjPtr
+        ( new Alembic::AbcGeom::OSubD( parent, "mySubD" ) );
+
+    Alembic::AbcGeom::OSubDSchema &schema = subdObjPtr->getSchema();
 
     std::vector<V3f> verts( 8 );
-    std::vector<int32_t> indices( 8 );
+    std::vector<Alembic::Util::int32_t> indices( 8 );
 
     Alembic::AbcGeom::OSubDSchema::Sample sample( verts, indices, indices );
 
     schema.set( sample );
 
-    return subdObj;
+    return subdObjPtr;
 }
 
 //-*****************************************************************************
@@ -72,27 +94,53 @@ void OWrapExisting()
         Alembic::AbcCoreHDF5::WriteArchive(),
         "playground_owrap.abc"
                                   );
+
     Alembic::Abc::OObject archiveTop = archive.getTop();
 
-    Alembic::Abc::OObject obj = subdCube( archiveTop );
+    Alembic::Util::shared_ptr< Alembic::Abc::OObject > objAPtr =
+        makeXform( archiveTop );
+
+    Alembic::Util::shared_ptr< Alembic::Abc::OObject > objBPtr =
+        subdCube( *objAPtr );
 
     //
     // NOW THE FUN BEGINS
     //
-
-    if( Alembic::AbcGeom::OSubD::matches( obj.getHeader() ) )
+    TESTING_ASSERT( Alembic::AbcGeom::OSubD::matches( objBPtr->getHeader() ) );
     {
-        Alembic::AbcGeom::OSubD subdObj( obj, Alembic::Abc::kWrapExisting );
+        Alembic::Util::shared_ptr< Alembic::AbcGeom::OSubD > subdObjPtr =
+            Alembic::Util::dynamic_pointer_cast< Alembic::AbcGeom::OSubD >
+                ( objBPtr );
+        Alembic::AbcGeom::OSubD subdObj = *subdObjPtr;
 
         std::cout << "wrapped-existing subd has "
                   << subdObj.getSchema().getNumSamples() << " num samples."
                   << std::endl;
 
 
-        //Alembic::AbcGeom::OSubDSchema::Sample sample;
-        //sample.setPositions( Alembic::Abc::V3fArraySample( ( const Alembic::Abc::V3f* )g_verts,
-        //                                                   g_numVerts ) );
-        //schema().set( sample, Alembic::Abc::OSampleSelector( 1 ) );
+        std::vector<V3f> verts( 8, V3f(2.0, 2.0, 2.0 ) );
+        Alembic::AbcGeom::OSubDSchema::Sample sample;
+        sample.setPositions( Alembic::Abc::V3fArraySample( &(verts[0]),
+                                                           verts.size() ) );
+        subdObj.getSchema().set( sample );
+        TESTING_ASSERT( subdObj.getSchema().getNumSamples() == 2 );
+    }
+
+    TESTING_ASSERT( Alembic::AbcGeom::OXform::matches( objAPtr->getHeader() ) );
+    {
+        XformOp transop( kTranslateOperation, kTranslateHint );
+        XformOp scaleop( kScaleOperation, kScaleHint );
+
+        XformSample samp;
+        samp.addOp( transop, V3d( 4.0, 5.0, 6.0 ) );
+        samp.addOp( scaleop, V3d( 8.0, 10.0, 12.0 ) );
+
+        Alembic::Util::shared_ptr< Alembic::AbcGeom::OXform > xformObjPtr =
+            Alembic::Util::dynamic_pointer_cast< Alembic::AbcGeom::OXform >
+                ( objAPtr );
+        Alembic::AbcGeom::OXform xformObj = *xformObjPtr;
+        xformObj.getSchema().set( samp );
+        TESTING_ASSERT( xformObj.getSchema().getNumSamples() == 2 );
     }
 }
 
@@ -127,9 +175,9 @@ void PolyMorphicAbstractPtrs()
         awPtr = archiveTop.getProperties().getPtr()->createArrayProperty(
             "arrayprop", AbcA::MetaData(), dt, 0 );
 
-        uint32_t sval = 2;
-        std::vector<uint32_t> aval( 5, 3 );
-        std::vector<uint32_t> saval( 254, 2 );
+        Alembic::Util::uint32_t sval = 2;
+        std::vector<Alembic::Util::uint32_t> aval( 5, 3 );
+        std::vector<Alembic::Util::uint32_t> saval( 254, 2 );
 
         // use base type as scalar prop writer
         pwPtr = swPtr;
@@ -185,9 +233,9 @@ void StupidData()
 
         OInt32ArrayProperty intArrayProp( props, "intArrayProp" );
 
-        for ( int32_t i = 0 ; i < 10 ; ++i )
+        for ( Alembic::Util::int32_t i = 0 ; i < 10 ; ++i )
         {
-            std::vector<int32_t> v( i, i );
+            std::vector<Alembic::Util::int32_t> v( i, i );
             intArrayProp.set( v );
             TESTING_ASSERT( intArrayProp.getNumSamples() ==
                             ( size_t ) ( i + 1 ) );
@@ -222,7 +270,7 @@ void StupidData()
 
         for ( size_t i = 0 ; i < 10 ; ++i )
         {
-            std::vector<int32_t> v( i, i );
+            std::vector<Alembic::Util::int32_t> v( i, i );
             Int32ArraySamplePtr samp = intArrayProp.getValue( i );
             size_t numpoints = samp->size();
 
@@ -245,7 +293,7 @@ void StupidData()
 //-*****************************************************************************
 int main( int, char** )
 {
-    //OWrapExisting();
+    OWrapExisting();
     PolyMorphicAbstractPtrs();
     StupidData();
     return 0;

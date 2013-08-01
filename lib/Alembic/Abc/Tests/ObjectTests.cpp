@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -34,13 +34,15 @@
 //
 //-*****************************************************************************
 
+#include <Alembic/AbcCoreFactory/All.h>
 #include <Alembic/AbcCoreHDF5/All.h>
+#include <Alembic/AbcCoreOgawa/All.h>
 #include <Alembic/Abc/All.h>
-#include <boost/random.hpp>
-#include <boost/lexical_cast.hpp>
 
 namespace Abc = Alembic::Abc;
 using namespace Abc;
+
+namespace AbcF = Alembic::AbcCoreFactory;
 
 //
 // The tests in this file are intended to exercize the Abc
@@ -48,22 +50,32 @@ using namespace Abc;
 //  parent-child hierarchies.
 //
 
-void writeFlatHierarchy(const std::string &archiveName)
+void writeFlatHierarchy(const std::string &archiveName, bool useOgawa)
 {
     const int numChildren = 10;
 
     // Create an archive for writing. Indicate that we want Alembic to
     //   throw exceptions on errors.
-    OArchive archive( Alembic::AbcCoreHDF5::WriteArchive(),
-                      archiveName, ErrorHandler::kThrowPolicy );
+    OArchive archive;
+    if (useOgawa)
+    {
+        archive = OArchive( Alembic::AbcCoreOgawa::WriteArchive(),
+            archiveName, ErrorHandler::kThrowPolicy );
+    }
+    else
+    {
+        archive = OArchive( Alembic::AbcCoreHDF5::WriteArchive(),
+            archiveName, ErrorHandler::kThrowPolicy );
+    }
     OObject archiveTop = archive.getTop();
 
     for (int ii=0; ii<numChildren; ii++)
     {
         // Create 'numChildren' children, all parented under
         //  the archive
-        std::string name = "child_";
-        name.append( boost::lexical_cast<std::string>( ii ) );
+        std::ostringstream strm;
+        strm << "child_" << ii;
+        std::string name = strm.str();
         OObject child( archiveTop, name );
 
         // No properties.
@@ -77,8 +89,10 @@ void readFlatHierarchy(const std::string &archiveName)
 {
     // Open an existing archive for reading. Indicate that we want
     //   Alembic to throw exceptions on errors.
-    IArchive archive( Alembic::AbcCoreHDF5::ReadArchive(),
-                      archiveName, ErrorHandler::kThrowPolicy );
+    AbcF::IFactory factory;
+    factory.setPolicy(  ErrorHandler::kThrowPolicy );
+    AbcF::IFactory::CoreType coreType;
+    IArchive archive = factory.getArchive(archiveName, coreType);
     IObject archiveTop = archive.getTop();
 
     // Determine the number of (top level) children the archive has
@@ -99,7 +113,7 @@ void readFlatHierarchy(const std::string &archiveName)
         const unsigned int children = child.getNumChildren();
         std::cout << " has " << children << " children"
                   << std::endl;
-        
+
         ABCA_ASSERT( children == 0,
                      "Expected no children, found " << children );
 
@@ -121,10 +135,9 @@ void recursivelyAddChildren( OObject&           parent,
     d++;
     for (unsigned int ii=0; ii<numChildren; ii++)
     {
-        std::string name = "child_";
-        name.append( boost::lexical_cast<std::string>( d ) );
-        name += "_";
-        name.append( boost::lexical_cast<std::string>( ii ) );
+        std::ostringstream strm;
+        strm << "child_" << d << "_" << ii;
+        std::string name = strm.str();
         OObject child( parent, name );
 
         unsigned int dd = d;
@@ -136,15 +149,24 @@ void recursivelyAddChildren( OObject&           parent,
 }
 
 
-void writeThreeDeepHierarchy(const std::string &archiveName)
+void writeThreeDeepHierarchy(const std::string &archiveName, bool useOgawa)
 {
     const unsigned int numChildren = 2;
     const unsigned int depth = 2; // 1 level at the top
 
     // Create an archive for writing. Indicate that we want Alembic to
     //   throw exceptions on errors.
-    OArchive archive( Alembic::AbcCoreHDF5::WriteArchive(),
-                      archiveName, ErrorHandler::kThrowPolicy );
+    OArchive archive;
+    if (useOgawa)
+    {
+        archive = OArchive( Alembic::AbcCoreOgawa::WriteArchive(),
+            archiveName, ErrorHandler::kThrowPolicy );
+    }
+    else
+    {
+        archive = OArchive( Alembic::AbcCoreHDF5::WriteArchive(),
+            archiveName, ErrorHandler::kThrowPolicy );
+    }
     OObject archiveTop = archive.getTop();
 
     // Add children to the top ('archive') level, and then recurse
@@ -152,8 +174,9 @@ void writeThreeDeepHierarchy(const std::string &archiveName)
     for (unsigned int ii=0; ii<numChildren; ii++)
     {
         unsigned int d = 0;
-        std::string name = "child_0_";
-        name.append( boost::lexical_cast<std::string>( ii ) );
+        std::ostringstream strm;
+        strm << "child_0_" << ii;
+        std::string name = strm.str();
         OObject child( archiveTop, name );
 
         recursivelyAddChildren( child, depth, d, numChildren);
@@ -176,10 +199,10 @@ void recursivelyReadChildren( IObject& parent )
         IObject child = parent.getChild(ii);
         std::cout << "  " << child.getName();
 
-        unsigned int expectedChildren = 2; 
+        unsigned int expectedChildren = 2;
         if (child.getName().substr(6,1) == "2")
             // bottom of the hierarchy
-            expectedChildren = 0; 
+            expectedChildren = 0;
 
         unsigned int children = child.getNumChildren();
         ABCA_ASSERT( children == expectedChildren,
@@ -197,15 +220,17 @@ void readDeepHierarchy(const std::string &archiveName)
 {
     // Open an existing archive for reading. Indicate that we want
     //   Alembic to throw exceptions on errors.
-    IArchive archive( Alembic::AbcCoreHDF5::ReadArchive(),
-                      archiveName, ErrorHandler::kThrowPolicy );
+    AbcF::IFactory factory;
+    factory.setPolicy(  ErrorHandler::kThrowPolicy );
+    AbcF::IFactory::CoreType coreType;
+    IArchive archive = factory.getArchive(archiveName, coreType);
     IObject archiveTop = archive.getTop();
 
     // Determine the number of (top level) children the archive has
     const unsigned int numChildren = archiveTop.getNumChildren();
     std::cout << "The archive has " << numChildren << " children:"
               << std::endl;
-    
+
     ABCA_ASSERT( numChildren == 2,
                  "Expected 2 children, found " << numChildren );
 
@@ -220,7 +245,7 @@ void readDeepHierarchy(const std::string &archiveName)
 
 
     // do it again to make sure we clean up after ourselves properly
-    IArchive archive2( Alembic::AbcCoreHDF5::ReadArchive(), archiveName );
+    IArchive archive2 = factory.getArchive(archiveName, coreType);
     IObject archiveTop2 = archive2.getTop();
 
 
@@ -237,20 +262,98 @@ void readHierarchyMulti(const std::string &archiveName)
 
 }
 
+void errorHandlerTest(bool useOgawa)
+{
+
+    {
+        OArchive archive;
+        if (useOgawa)
+        {
+            archive = OArchive( Alembic::AbcCoreOgawa::WriteArchive(),
+                "throwTest.abc", ErrorHandler::kThrowPolicy );
+        }
+        else
+        {
+            archive = OArchive( Alembic::AbcCoreHDF5::WriteArchive(),
+                "throwTest.abc", ErrorHandler::kThrowPolicy );
+        }
+
+        OObject archiveTop = archive.getTop();
+        ABCA_ASSERT( archiveTop.getErrorHandler().getPolicy() ==
+            ErrorHandler::kThrowPolicy, "Error: Not kThrowPolicy" );
+        OObject childQuiet(archiveTop, "childQuiet",
+            ErrorHandler::kQuietNoopPolicy );
+        OObject childNoisy(archiveTop, "childNoisy",
+            ErrorHandler::kNoisyNoopPolicy );
+
+        OObject grandchildQuiet(childQuiet, "grandchildQuiet" );
+        OObject grandchildNoisy(childNoisy, "grandchildNoisy" );
+
+        ABCA_ASSERT( childQuiet.getErrorHandler().getPolicy() ==
+            ErrorHandler::kQuietNoopPolicy, "Error: Not kQuietNoopPolicy" );
+        ABCA_ASSERT( childNoisy.getErrorHandler().getPolicy() ==
+            ErrorHandler::kNoisyNoopPolicy, "Error: Not kNoisyNoopPolicy" );
+
+        ABCA_ASSERT( grandchildQuiet.getErrorHandler().getPolicy() ==
+            ErrorHandler::kQuietNoopPolicy, "Error: Not kQuietNoopPolicy" );
+        ABCA_ASSERT( grandchildNoisy.getErrorHandler().getPolicy() ==
+            ErrorHandler::kNoisyNoopPolicy, "Error: Not kNoisyNoopPolicy" );
+    }
+
+    {
+        AbcF::IFactory factory;
+        factory.setPolicy(  ErrorHandler::kThrowPolicy );
+        AbcF::IFactory::CoreType coreType;
+        IArchive archive = factory.getArchive("throwTest.abc", coreType);
+        IObject archiveTop = archive.getTop();
+
+        ABCA_ASSERT( archiveTop.getErrorHandler().getPolicy() ==
+            ErrorHandler::kThrowPolicy, "Error: Not kThrowPolicy" );
+        IObject childQuiet(archiveTop, "childQuiet",
+            ErrorHandler::kQuietNoopPolicy );
+        IObject childNoisy(archiveTop, "childNoisy",
+            ErrorHandler::kNoisyNoopPolicy );
+        IObject grandchildQuiet(childQuiet, "grandchildQuiet" );
+        IObject grandchildNoisy(childNoisy, "grandchildNoisy" );
+        ABCA_ASSERT( childQuiet.getErrorHandler().getPolicy() ==
+            ErrorHandler::kQuietNoopPolicy, "Error: Not kQuietNoopPolicy" );
+        ABCA_ASSERT( childNoisy.getErrorHandler().getPolicy() ==
+            ErrorHandler::kNoisyNoopPolicy, "Error: Not kNoisyNoopPolicy" );
+
+        ABCA_ASSERT( grandchildQuiet.getErrorHandler().getPolicy() ==
+            ErrorHandler::kQuietNoopPolicy, "Error: Not kQuietNoopPolicy" );
+        ABCA_ASSERT( grandchildNoisy.getErrorHandler().getPolicy() ==
+            ErrorHandler::kNoisyNoopPolicy, "Error: Not kNoisyNoopPolicy" );
+    }
+}
+
 int main( int argc, char *argv[] )
 {
     // Write and read a simple archive: ten children, with no
     //  properties
+    bool useOgawa = true;
     try
     {
         std::string archiveName("flatHierarchy.abc");
-        writeFlatHierarchy ( archiveName );
+        useOgawa = true;
+        writeFlatHierarchy ( archiveName, useOgawa );
+        readFlatHierarchy  ( archiveName );
+        useOgawa = false;
+        writeFlatHierarchy ( archiveName, useOgawa );
         readFlatHierarchy  ( archiveName );
     }
     catch (char * str )
     {
         std::cout << "Exception raised: " << str;
-        std::cout << " during *FlatHierarchy tests" << std::endl;
+        std::cout << " during *FlatHierarchy tests ";
+        if (useOgawa)
+        {
+            std::cout << "use Ogawa" << std::endl;
+        }
+        else
+        {
+            std::cout << "use HDF5" << std::endl;
+        }
         return 1;
     }
 
@@ -261,7 +364,12 @@ int main( int argc, char *argv[] )
     try
     {
         std::string archiveName("threeDeepHierarchy.abc");
-        writeThreeDeepHierarchy ( archiveName );
+        useOgawa = true;
+        writeThreeDeepHierarchy ( archiveName, useOgawa );
+        readDeepHierarchy  ( archiveName );
+
+        useOgawa = false;
+        writeThreeDeepHierarchy ( archiveName, useOgawa );
         readDeepHierarchy  ( archiveName );
     }
     catch (char * str )
@@ -275,6 +383,9 @@ int main( int argc, char *argv[] )
         std::string archiveName("threeDeepHierarchy.abc");
         readHierarchyMulti(archiveName);
     }
+
+    errorHandlerTest(false);
+    errorHandlerTest(true);
 
     return 0;
 }

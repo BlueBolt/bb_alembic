@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -53,10 +53,8 @@ MayaCameraWriter::MayaCameraWriter(MDagPath & iDag,
     }
 
     MString name = cam.name();
-    if (iArgs.stripNamespace)
-    {
-        name = util::stripNamespaces(name);
-    }
+    name = util::stripNamespaces(name, iArgs.stripNamespace);
+
     Alembic::AbcGeom::OCamera obj(iParent, name.asChar(), iTimeIndex);
     mSchema = obj.getSchema();
 
@@ -81,19 +79,21 @@ MayaCameraWriter::MayaCameraWriter(MDagPath & iDag,
 
             mUseRenderShutter = true;
             plug = dep.findPlug("motionBlurShutterOpen");
-            mShutterOpen = plug.asDouble() * val;
+            mShutterOpen = plug.asDouble() / val;
             plug = dep.findPlug("motionBlurShutterClose");
-            mShutterClose = plug.asDouble() * val;
+            mShutterClose = plug.asDouble() / val;
         }
     }
 
     Alembic::Abc::OCompoundProperty cp;
+    Alembic::Abc::OCompoundProperty up;
     if (AttributesWriter::hasAnyAttr(cam, iArgs))
     {
         cp = mSchema.getArbGeomParams();
+        up = mSchema.getUserProperties();
     }
 
-    mAttrs = AttributesWriterPtr(new AttributesWriter(cp, obj, cam,
+    mAttrs = AttributesWriterPtr(new AttributesWriter(cp, up, obj, cam,
         iTimeIndex, iArgs));
 
     write();
@@ -130,9 +130,9 @@ void MayaCameraWriter::write()
     {
         MTime sec(1.0, MTime::kSeconds);
         mSamp.setShutterOpen(0.0);
-        mSamp.setShutterClose(sec.as(MTime::uiUnit()) *
+        mSamp.setShutterClose(
             Alembic::AbcGeom::RadiansToDegrees(mfnCamera.shutterAngle()) /
-            360.0 );
+            ( 360.0 * sec.as(MTime::uiUnit()) ));
     }
 
     // build up the film fit and post projection matrix
@@ -293,14 +293,14 @@ void MayaCameraWriter::write()
         break;
     }
 
-    mSamp[filmBackIndex].setChannelValue(0, mfnCamera.preScale());
-    mSamp[filmBackIndex].setChannelValue(1, mfnCamera.preScale());
+    mSamp[filmBackIndex].setChannelValue(0, 1.0/mfnCamera.preScale());
+    mSamp[filmBackIndex].setChannelValue(1, 1.0/mfnCamera.preScale());
 
     mSamp[filmBackIndex+1].setChannelValue(0, mfnCamera.filmTranslateH());
     mSamp[filmBackIndex+1].setChannelValue(1, mfnCamera.filmTranslateV());
 
-    mSamp[filmBackIndex+2].setChannelValue(0, mfnCamera.postScale());
-    mSamp[filmBackIndex+2].setChannelValue(1, mfnCamera.postScale());
+    mSamp[filmBackIndex+2].setChannelValue(0, 1.0/mfnCamera.postScale());
+    mSamp[filmBackIndex+2].setChannelValue(1, 1.0/mfnCamera.postScale());
 
     mSamp[filmBackIndex+3].setChannelValue(0, mfnCamera.cameraScale());
     mSamp[filmBackIndex+3].setChannelValue(1, mfnCamera.cameraScale());

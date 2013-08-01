@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -38,21 +38,16 @@
 #define _Alembic_Util_Digest_h_
 
 #include <Alembic/Util/Foundation.h>
-#include <boost/format.hpp>
-#include <boost/cstdint.hpp>
+#include <Alembic/Util/PlainOldDataType.h>
 
 namespace Alembic {
 namespace Util {
 namespace ALEMBIC_VERSION_NS {
 
-using boost::uint8_t;
-using boost::uint64_t;
-
 //-*************************************************************************
 // Digest class. This is a 128 bit hash key produced by our hashing algorithm.
-// It is totally ordered, by way of the boost::totally_ordered
-// operator template.
-struct Digest : public boost::totally_ordered<Digest>
+// It is totally ordered, by way of the totally_ordered operator template.
+struct Digest : public Alembic::Util::totally_ordered<Digest>
 {
     union
     {
@@ -81,7 +76,8 @@ struct Digest : public boost::totally_ordered<Digest>
     {
         for ( int i = 0; i < 16; ++i )
         {
-            ostr << ( boost::format( "%02x" ) % ( int )(d[i]) );
+            ostr << std::setfill( '0' ) << std::setw( 2 ) <<
+                std::hex << std::noshowbase << ( int ) d[i];
         }
     }
 

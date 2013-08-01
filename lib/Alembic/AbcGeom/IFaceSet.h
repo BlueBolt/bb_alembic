@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -67,11 +67,10 @@ public:
 
         // bounds
         Abc::Box3d getSelfBounds() const { return m_selfBounds; }
-        Abc::Box3d getChildBounds() const { return m_childBounds; }
 
         bool valid() const
         {
-            return m_faces;
+            return m_faces.get() != 0;
         }
 
         void reset()
@@ -79,7 +78,6 @@ public:
             m_faces.reset();
 
             m_selfBounds.makeEmpty();
-            m_childBounds.makeEmpty();
         }
 
         ALEMBIC_OPERATOR_BOOL( valid() );
@@ -92,7 +90,6 @@ public:
 
         // bounds
         Abc::Box3d m_selfBounds;
-        Abc::Box3d m_childBounds;
 
     }; // end IFaceSetSchema::Sample
 
@@ -170,7 +167,7 @@ public:
 
 
     //! if isConstant() is true, the mesh contains no time-varying values
-    bool isConstant() { return (m_facesProperty.isConstant ()); }
+    bool isConstant() const { return (m_facesProperty.isConstant ()); }
 
     //-*************************************************************************
     // SAMPLE STUFF
@@ -178,10 +175,10 @@ public:
 
     //! Get number of samples written so far.
     //! ...
-    size_t getNumSamples();
+    size_t getNumSamples() const;
 
     //! Return the time sampling
-    AbcA::TimeSamplingPtr getTimeSampling()
+    AbcA::TimeSamplingPtr getTimeSampling() const
     {
         if ( m_facesProperty.valid() )
             return m_facesProperty.getTimeSampling();
@@ -189,16 +186,16 @@ public:
     }
 
     void get( Sample &iSamp,
-              const Abc::ISampleSelector &iSS = Abc::ISampleSelector() );
+              const Abc::ISampleSelector &iSS = Abc::ISampleSelector() ) const;
 
-    Sample getValue( const Abc::ISampleSelector &iSS = Abc::ISampleSelector() )
+    Sample getValue( const Abc::ISampleSelector &iSS = Abc::ISampleSelector() ) const
     {
         Sample smp;
         get( smp, iSS );
         return smp;
     }
 
-    FaceSetExclusivity getFaceExclusivity();
+    FaceSetExclusivity getFaceExclusivity() const;
 
     //-*************************************************************************
     // ABC BASE MECHANISMS
@@ -237,6 +234,8 @@ protected:
 // SCHEMA OBJECT
 //-*****************************************************************************
 typedef Abc::ISchemaObject<IFaceSetSchema> IFaceSet;
+
+typedef Util::shared_ptr< IFaceSet > IFaceSetPtr;
 
 } // End namespace ALEMBIC_VERSION_NS
 

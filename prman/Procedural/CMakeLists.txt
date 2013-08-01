@@ -1,6 +1,6 @@
 ##-*****************************************************************************
 ##
-## Copyright (c) 2009-2011,
+## Copyright (c) 2009-2013,
 ##  Sony Pictures Imageworks Inc. and
 ##  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 ##
@@ -45,6 +45,7 @@ SET( H_FILES
   SampleUtil.h
   SubDTags.h
   WriteGeo.h
+  WriteMaterial.h
   )
 
 SET( CXX_FILES
@@ -55,14 +56,20 @@ SET( CXX_FILES
   SampleUtil.cpp
   SubDTags.cpp
   WriteGeo.cpp
+  WriteMaterial.cpp
 )
 
 SET( CORE_LIBS
+  AlembicAbcMaterial
   AlembicAbcGeom
+  AlembicAbcCoreFactory
   AlembicAbc
   AlembicAbcCoreHDF5
+  AlembicAbcCoreOgawa
   AlembicAbcCoreAbstract
-  AlembicUtil )
+  AlembicOgawa
+  AlembicUtil
+  )
 
 ADD_PRMAN_CXX_PLUGIN( AlembicRiProcedural ProcMain.cpp ${H_FILES} ${CXX_FILES} )
 TARGET_LINK_LIBRARIES( AlembicRiProcedural
@@ -73,10 +80,10 @@ TARGET_LINK_LIBRARIES( AlembicRiProcedural
   ${ZLIB_LIBRARIES}
 )
 
-
-INSTALL( TARGETS AlembicRiProcedural
-         DESTINATION prman )
-
-
+INSTALL ( TARGETS
+  AlembicRiProcedural
+  DESTINATION
+  prman/procedurals
+)
 
 ENDIF()

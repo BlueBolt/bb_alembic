@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -63,7 +63,6 @@ public:
     //-*************************************************************************
 
     typedef INFO info_type;
-    typedef OSchema<INFO> this_type;
 
 
     //-*************************************************************************
@@ -82,7 +81,7 @@ public:
              const Argument &iArg0 = Argument(),
              const Argument &iArg1 = Argument(),
              const Argument &iArg2 = Argument() )
-       : OSchema<info_type>( iParentCompound, iName, iArg0, iArg1, iArg2 )
+       : Abc::OSchema<info_type>( iParentCompound, iName, iArg0, iArg1, iArg2 )
     {
         AbcA::TimeSamplingPtr tsPtr =
             Abc::GetTimeSampling( iArg0, iArg1, iArg2 );
@@ -93,8 +92,8 @@ public:
         // index otherwise use the default index of 0 - uniform.
         if ( tsPtr )
         {
-            tsIndex = iParentCompound->getObject()->getArchive(
-                )->addTimeSampling(*tsPtr);
+            tsIndex = GetCompoundPropertyWriterPtr(iParentCompound)->getObject(
+                        )->getArchive()->addTimeSampling(*tsPtr);
         }
 
         // Create our always present property
@@ -106,7 +105,7 @@ public:
                       const Argument &iArg0 = Argument(),
                       const Argument &iArg1 = Argument(),
                       const Argument &iArg2 = Argument() )
-      : OSchema<info_type>( iParentCompound, iArg0, iArg1, iArg2 )
+      : Abc::OSchema<info_type>( iParentCompound, iArg0, iArg1, iArg2 )
     {
         AbcA::TimeSamplingPtr tsPtr =
             Abc::GetTimeSampling( iArg0, iArg1, iArg2 );
@@ -118,15 +117,20 @@ public:
         // 0 index
         if ( tsPtr )
         {
-            tsIndex = iParentCompound->getObject()->getArchive(
-                )->addTimeSampling(*tsPtr);
+            tsIndex = GetCompoundPropertyWriterPtr(iParentCompound)->getObject(
+                        )->getArchive()->addTimeSampling(*tsPtr);
         }
 
         // Create our always present property
         init( tsIndex );
     }
 
-    // kWrap existing ctor will be provided by OSchema
+    //! Copy constructor
+    OGeomBaseSchema( const OGeomBaseSchema& iCopy )
+      : Abc::OSchema<info_type>()
+    {
+        *this = iCopy;
+    }
 
     void init( uint32_t iTsHandle)
     {
@@ -160,7 +164,7 @@ public:
 
     Abc::OCompoundProperty getArbGeomParams()
     {
-        // Accessing the ArbGeomParams will create its compound 
+        // Accessing the ArbGeomParams will create its compound
         // property if needed.
         ALEMBIC_ABC_SAFE_CALL_BEGIN( "OGeomBaseSchema::getArbGeomParams()" );
 
@@ -180,7 +184,7 @@ public:
 
     Abc::OCompoundProperty getUserProperties()
     {
-        // Accessing UserProperties will create its compound 
+        // Accessing UserProperties will create its compound
         // property if needed.
         ALEMBIC_ABC_SAFE_CALL_BEGIN( "OGeomBaseSchema::getUserProperties()" );
 
@@ -196,6 +200,28 @@ public:
 
         Abc::OCompoundProperty ret;
         return ret;
+    }
+
+    Abc::OBox3dProperty getChildBoundsProperty()
+    {
+        // Accessing Child Bounds Property will create it if needed
+        ALEMBIC_ABC_SAFE_CALL_BEGIN(
+            "OGeomBaseSchema::getChildBoundsProperty()" );
+
+        if ( ! m_childBoundsProperty )
+        {
+            AbcA::CompoundPropertyWriterPtr _this = this->getPtr();
+
+            // for now, use the self bounds time sampling, this
+            // can and should be changed depending on how the children
+            // are sampled
+            m_childBoundsProperty = Abc::OBox3dProperty( _this,
+                ".childBnds", m_selfBoundsProperty.getTimeSampling() );
+
+        }
+
+        ALEMBIC_ABC_SAFE_CALL_END();
+        return m_childBoundsProperty;
     }
 
 protected:

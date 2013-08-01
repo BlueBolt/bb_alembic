@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -37,7 +37,7 @@
 #include <Alembic/AbcGeom/All.h>
 #include <Alembic/AbcCoreHDF5/All.h>
 
-#include "Assert.h"
+#include <Alembic/AbcCoreAbstract/Tests/Assert.h>
 
 using namespace Alembic::AbcGeom;
 
@@ -45,10 +45,11 @@ using namespace Alembic::AbcGeom;
 void recurseCreateXform(OObject & iParent, int children, int level,
                         std::vector<OXform> & oCreated)
 {
-    std::string levelName = boost::lexical_cast<std::string>( level );
     for (int i = 0; i < children; ++i)
     {
-        std::string xformName = levelName + "_" + boost::lexical_cast<std::string>( i );
+        std::ostringstream strm;
+        strm << "level" << "_" << i;
+        std::string xformName = strm.str();
         OXform xform( iParent, xformName );
         XformSample samp;
         XformOp transop( kTranslateOperation, kTranslateHint );
@@ -114,15 +115,21 @@ void xformOut()
 
     TESTING_ASSERT( a.getSchema().getNumSamples() == 0 );
 
+    OBox3dProperty childBounds = a.getSchema().getChildBoundsProperty();
+
     XformSample asamp;
     for ( size_t i = 0; i < 20; ++i )
     {
         asamp.addOp( transop, V3d( 12.0, i + 42.0, 20.0 ) );
 
-        if ( i == 18 )
+        if ( i >= 18 )
         {
-            asamp.setChildBounds( Abc::Box3d( V3d( -1.0, -1.0, -1.0 ),
-                                              V3d( 1.0, 1.0, 1.0 ) ) );
+            childBounds.set( Abc::Box3d( V3d( -1.0, -1.0, -1.0 ),
+                                         V3d( 1.0, 1.0, 1.0 ) ) );
+        }
+        else
+        {
+            childBounds.set( Abc::Box3d() );
         }
 
         a.getSchema().set( asamp );

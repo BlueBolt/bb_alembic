@@ -35,9 +35,12 @@
 
 SET( FULL_ABC_LIBS
      AlembicAbcGeom
+     AlembicAbcCoreFactory
      AlembicAbc
      AlembicAbcCoreHDF5
+     AlembicAbcCoreOgawa
      AlembicAbcCoreAbstract
+     AlembicOgawa
      AlembicUtil
      ${ALEMBIC_HDF5_LIBS}
      ${ALEMBIC_ILMBASE_LIBS}
@@ -48,3 +51,5 @@ SET( FULL_ABC_LIBS
 ADD_EXECUTABLE( abcstitcher AbcStitcher.cpp util.cpp)
 TARGET_LINK_LIBRARIES( abcstitcher ${FULL_ABC_LIBS} )
 
+INSTALL( TARGETS abcstitcher
+         DESTINATION bin )

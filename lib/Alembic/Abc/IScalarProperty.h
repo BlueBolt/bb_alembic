@@ -90,8 +90,9 @@ public:
 
         //! Optional error handling policy
         //! ...
-        ErrorHandler::Policy iPolicy = ErrorHandler::kThrowPolicy )
-      : IBasePropertyT<AbcA::ScalarPropertyReaderPtr>( iPtr, iWrapFlag, iPolicy )
+        const Argument &iArg0 = Argument() )
+      : IBasePropertyT<AbcA::ScalarPropertyReaderPtr>( iPtr, iWrapFlag,
+            GetErrorHandlerPolicy( iPtr, iArg0 ) )
     {}
 
     //! Default copy constructor used
@@ -122,11 +123,11 @@ public:
     //! Get a sample into the address of a datum.
     //! ...
     void get( void *oSample,
-              const ISampleSelector &iSS = ISampleSelector() );
+              const ISampleSelector &iSS = ISampleSelector() ) const;
 
     //! Return the parent compound property, handily wrapped in a
     //! ICompoundProperty wrapper.
-    ICompoundProperty getParent();
+    ICompoundProperty getParent() const;
 
 private:
     void init( AbcA::CompoundPropertyReaderPtr iParentObject,

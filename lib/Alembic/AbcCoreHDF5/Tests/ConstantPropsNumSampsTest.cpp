@@ -38,7 +38,7 @@
 #include <Alembic/AbcCoreHDF5/All.h>
 #include <Alembic/Util/All.h>
 
-#include <Alembic/AbcCoreHDF5/Tests/Assert.h>
+#include <Alembic/AbcCoreAbstract/Tests/Assert.h>
 
 //-*****************************************************************************
 namespace A5 = Alembic::AbcCoreHDF5;
@@ -50,7 +50,7 @@ using namespace AbcA;
 //-*****************************************************************************
 void testProps()
 {
-    int32_t intVal = 15;
+    Alembic::Util::int32_t intVal = 15;
 
     float32_t f0 = 67.3f;
 
