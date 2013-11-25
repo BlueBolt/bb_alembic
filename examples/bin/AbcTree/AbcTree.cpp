@@ -48,7 +48,7 @@
 #include <sstream>
 #include <sys/stat.h>
 
-namespace Abc  = ::Alembic::Abc;;
+namespace Abc  = ::Alembic::Abc;
 namespace AbcA = ::Alembic::AbcCoreAbstract;
 namespace AbcF = ::Alembic::AbcCoreFactory;
 namespace AbcG = ::Alembic::AbcGeom;

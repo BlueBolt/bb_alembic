@@ -1,6 +1,6 @@
 ##-*****************************************************************************
 ##
-## Copyright (c) 2009-2011,
+## Copyright (c) 2013,
 ##  Sony Pictures Imageworks Inc. and
 ##  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 ##
@@ -15,10 +15,9 @@
 ## copyright notice, this list of conditions and the following disclaimer
 ## in the documentation and/or other materials provided with the
 ## distribution.
-## *       Neither the name of Sony Pictures Imageworks, nor
-## Industrial Light & Magic, nor the names of their contributors may be used
-## to endorse or promote products derived from this software without specific
-## prior written permission.
+## *       Neither the name of Industrial Light & Magic nor the names of
+## its contributors may be used to endorse or promote products derived
+## from this software without specific prior written permission.
 ##
 ## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 ## "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -34,64 +33,24 @@
 ##
 ##-*****************************************************************************
 
-PROJECT( ABC_IMPORT_MAYA_MODULE )
+SET( FULL_ABC_LIBS
+     AlembicAbcGeom
+     AlembicAbcCoreFactory
+     AlembicAbcCollection
+     AlembicAbc
+     AlembicAbcCoreOgawa
+     AlembicAbcCoreHDF5
+     AlembicAbcCoreAbstract
+     AlembicOgawa
+     AlembicUtil
+     ${ALEMBIC_HDF5_LIBS}
+     ${ALEMBIC_ILMBASE_LIBS}
+     ${CMAKE_THREAD_LIBS_INIT}
+     ${ZLIB_LIBRARIES} ${EXTERNAL_MATH_LIBS} )
 
-SET( H_FILES
-  AbcImport.h
-  AlembicImportFileTranslator.h
-  AlembicNode.h
-  CameraHelper.h
-  CreateSceneHelper.h
-  LocatorHelper.h
-  MeshHelper.h
-  NodeIteratorVisitorHelper.h
-  NurbsCurveHelper.h
-  NurbsSurfaceHelper.h
-  PointHelper.h
-  util.h
-  XformHelper.h
-)
+#-******************************************************************************
+ADD_EXECUTABLE( abcwalk Main.cpp )
+TARGET_LINK_LIBRARIES( abcwalk ${FULL_ABC_LIBS} )
 
-SET( CXX_FILES
-  AbcImport.cpp
-  AlembicImportFileTranslator.cpp
-  AlembicNode.cpp
-  CameraHelper.cpp
-  CreateSceneHelper.cpp
-  main.cpp
-  LocatorHelper.cpp
-  MeshHelper.cpp
-  NurbsCurveHelper.cpp
-  NurbsSurfaceHelper.cpp
-  NodeIteratorVisitorHelper.cpp
-  PointHelper.cpp
-  util.cpp
-  XformHelper.cpp
-)
-
-SET( SOURCE_FILES ${CXX_FILES} ${H_FILES} )
-
-SET( CORE_LIBS
-  AlembicAbcGeom
-  AlembicAbcCoreFactory
-  AlembicAbc
-  AlembicAbcCoreHDF5
-  AlembicAbcCoreOgawa
-  AlembicAbcCoreAbstract
-  AlembicOgawa
-  AlembicUtil )
-
-INCLUDE_DIRECTORIES( ${ALEMBIC_HDF5_INCLUDE_PATH} )
-INCLUDE_DIRECTORIES( ".." )
-
-ADD_MAYA_CXX_PLUGIN( AbcImport ${SOURCE_FILES} )
-TARGET_LINK_LIBRARIES( AbcImport
-  ${MAYA_LIBRARIES}
-  ${CORE_LIBS}
-  ${ALEMBIC_HDF5_LIBS}
-  ${ALEMBIC_ILMBASE_LIBS}
-  ${CMAKE_THREAD_LIBS_INIT}
-  ${ZLIB_LIBRARIES} ${EXTERNAL_MATH_LIBS} )
-
-INSTALL( TARGETS AbcImport
-         DESTINATION maya/$ENV{MAYA_VERSION}/plug-ins )
+INSTALL( TARGETS abcwalk
+         DESTINATION bin )
