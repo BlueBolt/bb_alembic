@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -42,23 +42,30 @@ namespace AbcGeom {
 namespace ALEMBIC_VERSION_NS {
 
 //-*****************************************************************************
-void IXformSchema::init( Abc::SchemaInterpMatching iMatching )
+void IXformSchema::init( const Abc::Argument &iArg0,
+                         const Abc::Argument &iArg1 )
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "IXformSchema::init()" );
+
+    Abc::Arguments args;
+    iArg0.setInto( args );
+    iArg1.setInto( args );
 
     AbcA::CompoundPropertyReaderPtr ptr = this->getPtr();
 
     if ( ptr->getPropertyHeader( ".childBnds" ) )
     {
-        m_childBoundsProperty = Abc::IBox3dProperty( ptr, ".childBnds", iMatching );
+        m_childBoundsProperty = Abc::IBox3dProperty( ptr, ".childBnds",
+                                                     iArg0, iArg1 );
     }
 
     if ( ptr->getPropertyHeader( ".inherits" ) )
     {
-        m_inheritsProperty = Abc::IBoolProperty( ptr, ".inherits", iMatching );
+        m_inheritsProperty = Abc::IBoolProperty( ptr, ".inherits",
+                                                 iArg0, iArg1 );
     }
 
-    AbcA::ScalarPropertyReaderPtr ops = ptr->getScalarProperty(  ".ops" );
+    AbcA::ScalarPropertyReaderPtr ops = ptr->getScalarProperty( ".ops" );
 
     m_useArrayProp = false;
 
@@ -95,7 +102,8 @@ void IXformSchema::init( Abc::SchemaInterpMatching iMatching )
         { m_isConstant = m_valsProperty->asScalarPtr()->isConstant(); }
     }
 
-    m_isConstant = m_isConstant && m_inheritsProperty.isConstant();
+    m_isConstant = m_isConstant && ( !m_inheritsProperty ||
+        m_inheritsProperty.isConstant() );
 
     std::set < Alembic::Util::uint32_t > animChannels;
 
@@ -170,21 +178,21 @@ void IXformSchema::init( Abc::SchemaInterpMatching iMatching )
     if ( ptr->getPropertyHeader( ".arbGeomParams" ) != NULL )
     {
         m_arbGeomParams = Abc::ICompoundProperty( ptr, ".arbGeomParams",
-                                                  getErrorHandlerPolicy()
+                                                  args.getErrorHandlerPolicy()
                                                 );
     }
 
     if ( ptr->getPropertyHeader( ".userProperties" ) != NULL )
     {
         m_userProperties = Abc::ICompoundProperty( ptr, ".userProperties",
-                                                  getErrorHandlerPolicy()
+                                                   args.getErrorHandlerPolicy()
                                                 );
     }
     ALEMBIC_ABC_SAFE_CALL_END_RESET();
 }
 
 //-*****************************************************************************
-AbcA::TimeSamplingPtr IXformSchema::getTimeSampling()
+AbcA::TimeSamplingPtr IXformSchema::getTimeSampling() const
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "IXformSchema::getTimeSampling()" );
 
@@ -194,8 +202,7 @@ AbcA::TimeSamplingPtr IXformSchema::getTimeSampling()
     }
     else
     {
-        AbcA::TimeSamplingPtr ret;
-        return ret;
+        return AbcA::TimeSamplingPtr( new AbcA::TimeSampling() );
     }
 
     ALEMBIC_ABC_SAFE_CALL_END();
@@ -205,7 +212,7 @@ AbcA::TimeSamplingPtr IXformSchema::getTimeSampling()
 }
 
 //-*****************************************************************************
-std::size_t IXformSchema::getNumSamples()
+std::size_t IXformSchema::getNumSamples() const
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "IXformSchema::getNumSamples()" );
 
@@ -222,7 +229,7 @@ std::size_t IXformSchema::getNumSamples()
 
 //-*****************************************************************************
 void IXformSchema::getChannelValues( const AbcA::index_t iSampleIndex,
-    XformSample & oSamp )
+    XformSample & oSamp ) const
 {
     std::vector<Alembic::Util::float64_t> dataVec;
 
@@ -257,7 +264,7 @@ void IXformSchema::getChannelValues( const AbcA::index_t iSampleIndex,
 }
 
 //-*****************************************************************************
-void IXformSchema::get( XformSample &oSamp, const Abc::ISampleSelector &iSS )
+void IXformSchema::get( XformSample &oSamp, const Abc::ISampleSelector &iSS ) const
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "IXformSchema::get()" );
 
@@ -267,14 +274,9 @@ void IXformSchema::get( XformSample &oSamp, const Abc::ISampleSelector &iSS )
 
     oSamp = m_sample;
 
-    if ( m_inheritsProperty.getNumSamples() )
+    if ( m_inheritsProperty && m_inheritsProperty.getNumSamples() > 0 )
     {
         oSamp.setInheritsXforms( m_inheritsProperty.getValue( iSS ) );
-    }
-
-    if ( m_childBoundsProperty && m_childBoundsProperty.getNumSamples() > 0 )
-    {
-        oSamp.setChildBounds( m_childBoundsProperty.getValue( iSS ) );
     }
 
     if ( ! m_valsProperty ) { return; }
@@ -302,7 +304,7 @@ void IXformSchema::get( XformSample &oSamp, const Abc::ISampleSelector &iSS )
 }
 
 //-*****************************************************************************
-XformSample IXformSchema::getValue( const Abc::ISampleSelector &iSS )
+XformSample IXformSchema::getValue( const Abc::ISampleSelector &iSS ) const
 {
     XformSample ret;
     this->get( ret, iSS );

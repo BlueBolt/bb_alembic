@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -102,25 +102,25 @@ public:
     //! Default assignment operator used.
 
     //! Return the time sampling.
-    AbcA::TimeSamplingPtr getTimeSampling()
+    AbcA::TimeSamplingPtr getTimeSampling() const
     { return m_coreProperties.getTimeSampling(); }
 
     //! Return the number of samples contained in the property.
     //! This can be any number, including zero.
     //! This returns the number of samples that were written, independently
     //! of whether or not they were constant.
-    size_t getNumSamples()
+    size_t getNumSamples() const
     { return m_coreProperties.getNumSamples(); }
 
     //! Ask if we're constant - no change in value amongst samples,
     //! regardless of the time sampling.
-    bool isConstant() { return m_coreProperties.isConstant(); }
+    bool isConstant() const;
 
     void get( CameraSample &oSample,
-              const Abc::ISampleSelector &iSS = Abc::ISampleSelector() );
+              const Abc::ISampleSelector &iSS = Abc::ISampleSelector() ) const;
 
     CameraSample getValue(
-        const Abc::ISampleSelector &iSS = Abc::ISampleSelector() )
+        const Abc::ISampleSelector &iSS = Abc::ISampleSelector() ) const
     {
         CameraSample smp;
         get( smp, iSS );
@@ -129,15 +129,17 @@ public:
 
     // compound property to use as parent for any arbitrary GeomParams
     // underneath it
-    ICompoundProperty getArbGeomParams() { return m_arbGeomParams; }
-    ICompoundProperty getUserProperties() { return m_userProperties; }
+    ICompoundProperty getArbGeomParams() const { return m_arbGeomParams; }
+    ICompoundProperty getUserProperties() const { return m_userProperties; }
+
+    Abc::IBox3dProperty getChildBoundsProperty() const { return m_childBoundsProperty; }
 
     //! Reset returns this function set to an empty, default
     //! state.
     void reset()
     {
         m_coreProperties.reset();
-        m_childBounds.reset();
+        m_childBoundsProperty.reset();
         m_arbGeomParams.reset();
         m_userProperties.reset();
         m_ops.clear();
@@ -161,7 +163,7 @@ protected:
 
     Abc::IScalarProperty m_coreProperties;
 
-    Abc::IBox3dProperty m_childBounds;
+    Abc::IBox3dProperty m_childBoundsProperty;
 
     Abc::ICompoundProperty m_arbGeomParams;
     Abc::ICompoundProperty m_userProperties;
@@ -178,6 +180,8 @@ private:
 // SCHEMA OBJECT
 //-*****************************************************************************
 typedef Abc::ISchemaObject<ICameraSchema> ICamera;
+
+typedef Util::shared_ptr< ICamera > ICameraPtr;
 
 } // End namespace ALEMBIC_VERSION_NS
 

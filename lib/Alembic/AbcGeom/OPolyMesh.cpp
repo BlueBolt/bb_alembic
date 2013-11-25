@@ -46,35 +46,95 @@ void OPolyMeshSchema::set( const Sample &iSamp )
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "OPolyMeshSchema::set()" );
 
-    // do we need to create child bounds?
-    if ( iSamp.getChildBounds().hasVolume() && !m_childBoundsProperty )
-    {
-        m_childBoundsProperty = Abc::OBox3dProperty( this->getPtr(), ".childBnds",
-                                             m_positionsProperty.getTimeSampling() );
-
-        Abc::Box3d emptyBox;
-        emptyBox.makeEmpty();
-
-        size_t numSamples = m_positionsProperty.getNumSamples();
-
-        // set all the missing samples
-        for ( size_t i = 0; i < numSamples; ++i )
-        {
-            m_childBoundsProperty.set( emptyBox );
-        }
-    }
-
     // do we need to create velocities prop?
     if ( iSamp.getVelocities() && !m_velocitiesProperty )
     {
         m_velocitiesProperty = Abc::OV3fArrayProperty( this->getPtr(), ".velocities",
                                                m_positionsProperty.getTimeSampling() );
 
-        const V3fArraySample empty;
+        std::vector<V3f> emptyVec;
+        const V3fArraySample empty( emptyVec );
         const size_t numSamps = m_positionsProperty.getNumSamples();
         for ( size_t i = 0 ; i < numSamps ; ++i )
         {
             m_velocitiesProperty.set( empty );
+        }
+    }
+
+    // do we need to create uvs?
+    if ( iSamp.getUVs() && !m_uvsParam )
+    {
+        std::vector<V2f> emptyVals;
+        std::vector<Util::uint32_t> emptyIndices;
+
+        OV2fGeomParam::Sample empty;
+
+        if ( iSamp.getUVs().getIndices() )
+        {
+            empty = OV2fGeomParam::Sample( Abc::V2fArraySample( emptyVals ),
+                Abc::UInt32ArraySample( emptyIndices ),
+                iSamp.getUVs().getScope() );
+
+            // UVs are indexed
+            m_uvsParam = OV2fGeomParam( this->getPtr(), "uv", true,
+                                   empty.getScope(), 1,
+                                   this->getTimeSampling() );
+        }
+        else
+        {
+            empty = OV2fGeomParam::Sample( Abc::V2fArraySample( emptyVals ),
+                                           iSamp.getUVs().getScope() );
+
+            // UVs are not indexed
+            m_uvsParam = OV2fGeomParam( this->getPtr(), "uv", false,
+                                   empty.getScope(), 1,
+                                   this->getTimeSampling() );
+        }
+
+        size_t numSamples = m_positionsProperty.getNumSamples();
+
+        // set all the missing samples
+        for ( size_t i = 0; i < numSamples; ++i )
+        {
+            m_uvsParam.set( empty );
+        }
+    }
+
+    // do we need to create normals?
+    if ( iSamp.getNormals() && !m_normalsParam )
+    {
+        std::vector<V3f> emptyVals;
+        std::vector<Util::uint32_t> emptyIndices;
+
+        ON3fGeomParam::Sample empty;
+
+        if ( iSamp.getNormals().getIndices() )
+        {
+            empty = ON3fGeomParam::Sample( Abc::V3fArraySample( emptyVals ),
+                Abc::UInt32ArraySample( emptyIndices ),
+                iSamp.getNormals().getScope() );
+
+            // normals are indexed
+            m_normalsParam = ON3fGeomParam( this->getPtr(), "N", true,
+                empty.getScope(), 1, this->getTimeSampling() );
+        }
+        else
+        {
+            empty = ON3fGeomParam::Sample( Abc::V3fArraySample( emptyVals ),
+                                           iSamp.getNormals().getScope() );
+
+            // normals are not indexed
+            m_normalsParam = ON3fGeomParam( this->getPtr(), "N", false,
+                                        empty.getScope(), 1,
+                                        this->getTimeSampling() );
+        }
+
+        size_t numSamples = m_positionsProperty.getNumSamples();
+
+        // set all the missing samples
+        for ( size_t i = 0; i < numSamples; ++i )
+        {
+            m_normalsParam.set( empty );
         }
     }
 
@@ -91,9 +151,6 @@ void OPolyMeshSchema::set( const Sample &iSamp )
         m_indicesProperty.set( iSamp.getFaceIndices() );
         m_countsProperty.set( iSamp.getFaceCounts() );
 
-        if (m_childBoundsProperty)
-        { m_childBoundsProperty.set( iSamp.getChildBounds() ); }
-
         if ( m_velocitiesProperty )
         { SetPropUsePrevIfNull( m_velocitiesProperty, iSamp.getVelocities() ); }
 
@@ -109,40 +166,10 @@ void OPolyMeshSchema::set( const Sample &iSamp )
 
         if ( iSamp.getUVs().getVals() )
         {
-            if ( iSamp.getUVs().getIndices() )
-            {
-                // UVs are indexed
-                m_uvsParam = OV2fGeomParam( this->getPtr(), "uv", true,
-                                       iSamp.getUVs().getScope(), 1,
-                                       this->getTimeSampling() );
-            }
-            else
-            {
-                // UVs are not indexed
-                m_uvsParam = OV2fGeomParam( this->getPtr(), "uv", false,
-                                       iSamp.getUVs().getScope(), 1,
-                                       this->getTimeSampling() );
-            }
-
             m_uvsParam.set( iSamp.getUVs() );
         }
         if ( iSamp.getNormals().getVals() )
         {
-            if ( iSamp.getNormals().getIndices() )
-            {
-                // normals are indexed
-                m_normalsParam = ON3fGeomParam( this->getPtr(), "N", true,
-                                           iSamp.getNormals().getScope(),
-                                           1, this->getTimeSampling() );
-            }
-            else
-            {
-                // normals are not indexed
-                m_normalsParam = ON3fGeomParam( this->getPtr(), "N", false,
-                                           iSamp.getNormals().getScope(), 1,
-                                           this->getTimeSampling() );
-            }
-
             m_normalsParam.set( iSamp.getNormals() );
         }
     }
@@ -151,11 +178,6 @@ void OPolyMeshSchema::set( const Sample &iSamp )
         SetPropUsePrevIfNull( m_positionsProperty, iSamp.getPositions() );
         SetPropUsePrevIfNull( m_indicesProperty, iSamp.getFaceIndices() );
         SetPropUsePrevIfNull( m_countsProperty, iSamp.getFaceCounts() );
-
-        if ( m_childBoundsProperty )
-        {
-            SetPropUsePrevIfNull( m_childBoundsProperty, iSamp.getChildBounds() );
-        }
 
         if ( m_velocitiesProperty )
         {
@@ -196,7 +218,6 @@ void OPolyMeshSchema::setFromPrevious()
 
     m_selfBoundsProperty.setFromPrevious();
 
-    if ( m_childBoundsProperty ) { m_childBoundsProperty.setFromPrevious(); }
     if ( m_velocitiesProperty ) { m_velocitiesProperty.setFromPrevious(); }
     if ( m_uvsParam ) { m_uvsParam.setFromPrevious(); }
     if ( m_normalsParam ) { m_normalsParam.setFromPrevious(); }
@@ -214,11 +235,6 @@ void OPolyMeshSchema::setTimeSampling( uint32_t iIndex )
     m_indicesProperty.setTimeSampling( iIndex );
     m_countsProperty.setTimeSampling( iIndex );
     m_selfBoundsProperty.setTimeSampling( iIndex );
-
-    if ( m_childBoundsProperty )
-    {
-        m_childBoundsProperty.setTimeSampling( iIndex );
-    }
 
     if ( m_velocitiesProperty )
     {
@@ -297,8 +313,7 @@ OPolyMeshSchema::createFaceSet( const std::string &iFaceSetName )
     ABCA_ASSERT( m_faceSets.find (iFaceSetName) == m_faceSets.end (),
                  "faceSet has already been created in polymesh." );
 
-    m_faceSets[iFaceSetName] = OFaceSet( this->getParent().getObject(),
-                                          iFaceSetName );
+    m_faceSets[iFaceSetName] = OFaceSet( getObject(), iFaceSetName );
 
     return m_faceSets[iFaceSetName];
 

@@ -1,6 +1,6 @@
 ##-*****************************************************************************
 ##
-## Copyright (c) 2009-2011,
+## Copyright (c) 2009-2013,
 ##  Sony Pictures Imageworks Inc. and
 ##  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 ##
@@ -39,25 +39,22 @@ IF(NOT DEFINED MAYA_ROOT)
     IF( ${DARWIN} )
       # TODO: set to default install path when shipping out
       # SET( ALEMBIC_MAYA_ROOT NOTFOUND )
-      SET( ALEMBIC_MAYA_ROOT "/Applications/Autodesk/maya2011" )
-      SET( ALEMBIC_MAYA_INC_ROOT "/Applications/Autodesk/maya2011/devkit/include" )
-      SET( ALEMBIC_MAYA_LIB_ROOT "/Applications/Autodesk/maya2011/Maya.app/Contents/MacOS" )
+      SET( ALEMBIC_MAYA_ROOT "/Applications/Autodesk/maya2012" )
+      SET( ALEMBIC_MAYA_INC_ROOT "/Applications/Autodesk/maya2012/include" )
+      SET( ALEMBIC_MAYA_LIB_ROOT "/Applications/Autodesk/maya2012/Maya.app/Contents/MacOS" )
     ELSE()
-      # TODO: set to default install path when shipping out
-      # SET( ALEMBIC_MAYA_ROOT "/usr/autodesk/maya2010-x64" )
-      SET( ALEMBIC_MAYA_ROOT "/sww/tools/autodesk/maya2010" )
+      SET( ALEMBIC_MAYA_ROOT "/usr/autodesk/maya2012-x64" )
     ENDIF()
   ELSE()
     IF ( ${WINDOWS} )
-      # TODO: set to 32-bit or 64-bit path
-      # SET( ALEMBIC_MAYA_ROOT "C:/Program Files (x86)/Autodesk/Maya2010" )
-      SET( ALEMBIC_MAYA_ROOT "C:/Program Files/Autodesk/Maya2011" )
+      SET( ALEMBIC_MAYA_ROOT "C:/Program Files/Autodesk/Maya2012" )
     ELSE()
       SET( ALEMBIC_MAYA_ROOT NOTFOUND )
     ENDIF()
   ENDIF()
 ELSE()
   # Prefer MAYA_ROOT set from the CMakeCache'd variable than default paths
+  MESSAGE( STATUS "Using MAYA_ROOT ${MAYA_ROOT}" )
   SET( ALEMBIC_MAYA_ROOT ${MAYA_ROOT})
 ENDIF()
 
@@ -67,26 +64,29 @@ IF(NOT $ENV{MAYA_ROOT}x STREQUAL "x")
 ENDIF()
 
 IF( NOT DEFINED ALEMBIC_MAYA_INC_ROOT )
-  SET( ALEMBIC_MAYA_INC_ROOT "${ALEMBIC_MAYA_ROOT}/devkit/include" )
+  SET( ALEMBIC_MAYA_INC_ROOT "${ALEMBIC_MAYA_ROOT}/include" )
 ENDIF()
 
 IF( NOT DEFINED ALEMBIC_MAYA_LIB_ROOT )
   IF ( ${DARWIN} )
     SET( ALEMBIC_MAYA_LIB_ROOT "${ALEMBIC_MAYA_ROOT}/Maya.app/Contents/MacOS" )
   ELSE()
-    SET( ALEMBIC_MAYA_LIB_ROOT "${ALEMBIC_MAYA_ROOT}/devkit/lib" )
+    SET( ALEMBIC_MAYA_LIB_ROOT "${ALEMBIC_MAYA_ROOT}/lib" )
   ENDIF()
 ENDIF()
 
 MESSAGE( STATUS "Maya lib root: ${ALEMBIC_MAYA_LIB_ROOT}" )
 
 # Just start with forcing it to ILM's location
+SET( MAYA_INCLUDE_PATH MAYA_INCLUDE_PATH-NOTFOUND )
 FIND_PATH( MAYA_INCLUDE_PATH maya/MTypes.h
   PATHS
   "${ALEMBIC_MAYA_INC_ROOT}"
   "${ALEMBIC_MAYA_ROOT}/include"
+  "${ALEMBIC_MAYA_ROOT}/devkit/include"
   DOC "The directory where MTypes.h resides" )
 
+SET( MAYA_FOUNDATION_LIBRARY MAYA_FOUNDATION_LIBRARY-NOTFOUND )
 FIND_LIBRARY( MAYA_FOUNDATION_LIBRARY Foundation
   PATHS
   "${ALEMBIC_MAYA_LIB_ROOT}"
@@ -94,30 +94,35 @@ FIND_LIBRARY( MAYA_FOUNDATION_LIBRARY Foundation
   DOC "The directory where Foundation.lib resides"
   NO_DEFAULT_PATH )
 
+SET( MAYA_OPENMAYA_LIBRARY MAYA_OPENMAYA_LIBRARY-NOTFOUND )
 FIND_LIBRARY( MAYA_OPENMAYA_LIBRARY OpenMaya
   PATHS
   "${ALEMBIC_MAYA_LIB_ROOT}"
   "${ALEMBIC_MAYA_ROOT}/lib"
   DOC "The directory where OpenMaya.lib resides" )
 
+SET( MAYA_OPENMAYAANIM_LIBRARY MAYA_OPENMAYAANIM_LIBRARY-NOTFOUND )
 FIND_LIBRARY( MAYA_OPENMAYAANIM_LIBRARY OpenMayaAnim
   PATHS
   "${ALEMBIC_MAYA_LIB_ROOT}"
   "${ALEMBIC_MAYA_ROOT}/lib"
   DOC "The directory where OpenMayaAnim.lib resides" )
 
+SET( MAYA_OPENMAYAFX_LIBRARY MAYA_OPENMAYAFX_LIBRARY-NOTFOUND )
 FIND_LIBRARY( MAYA_OPENMAYAFX_LIBRARY OpenMayaFX
   PATHS
   "${ALEMBIC_MAYA_LIB_ROOT}"
   "${ALEMBIC_MAYA_ROOT}/lib"
   DOC "The directory where OpenMayaFX.lib resides" )
 
+SET( MAYA_OPENMAYARENDER_LIBRARY MAYA_OPENMAYARENDER_LIBRARY-NOTFOUND )
 FIND_LIBRARY( MAYA_OPENMAYARENDER_LIBRARY OpenMayaRender
   PATHS
   "${ALEMBIC_MAYA_LIB_ROOT}"
   "${ALEMBIC_MAYA_ROOT}/lib"
   DOC "The directory where OpenMayaRender.lib resides" )
 
+SET( MAYA_OPENMAYAUI_LIBRARY MAYA_OPENMAYAUI_LIBRARY-NOTFOUND )
 FIND_LIBRARY( MAYA_OPENMAYAUI_LIBRARY OpenMayaUI
   PATHS
   "${ALEMBIC_MAYA_LIB_ROOT}"
@@ -136,7 +141,7 @@ IF ( NOT WINDOWS )
   IF ( NOT DARWIN )
     SET ( MAYA_EXTENSION ".so" )
     SET( MAYA_COMPILE_FLAGS
-      "-m64 -g -pthread -pipe -D_BOOL -DLINUX -DLINUX_64 -D_LINUX -DREQUIRE_IOSTREAM -fPIC -Wno-deprecated -fno-gnu-keywords" )
+      "-m64 -g -pthread -pipe -D_BOOL -DLINUX -DLINUX_64 -DREQUIRE_IOSTREAM -fPIC -Wno-deprecated -fno-gnu-keywords" )
 
     SET( MAYA_LINK_FLAGS
       "-shared -m64 -g -pthread -pipe -D_BOOL -DLINUX -DLINUX_64 -DREQUIRE_IOSTREAM -fPIC -Wno-deprecated -fno-gnu-keywords -Wl,-Bsymbolic" )
@@ -156,7 +161,7 @@ IF ( NOT WINDOWS )
   ENDIF()
 ELSE()
   SET( MAYA_EXTENSION ".mll" )
-  SET( MAYA_COMPILE_FLAGS "/MT /D \"NT_PLUGIN\" /D \"REQUIRE_IOSTREAM\" /D \"_BOOL\"" )
+  SET( MAYA_COMPILE_FLAGS "/MD /D \"NT_PLUGIN\" /D \"REQUIRE_IOSTREAM\" /D \"_BOOL\"" )
   SET( MAYA_LINK_FLAGS " /export:initializePlugin /export:uninitializePlugin " )
 ENDIF()
 
@@ -168,10 +173,10 @@ ENDIF()
 IF( MAYA_INCLUDE_PATH )
   #  SET( MAYA_FOUND 1 CACHE STRING "Set to 1 if Maya is found, 0 otherwise" )
   SET( MAYA_FOUND 1 )
-  MESSAGE( STATUS "Found Maya $ENV{MAYA_VERSION}!" )
+  MESSAGE( STATUS "Found Maya!" )
 ELSE( MAYA_INCLUDE_PATH )
   SET( MAYA_FOUND 0 CACHE STRING "Set to 1 if Maya is found, 0 otherwise" )
-  MESSAGE( STATUS "Could not find Maya2011. :(" )
+  MESSAGE( STATUS "Could not find Maya." )
 ENDIF( MAYA_INCLUDE_PATH )
 
 #MARK_AS_ADVANCED( MAYA_FOUND )
@@ -184,7 +189,7 @@ ENDIF( MAYA_INCLUDE_PATH )
 MACRO(ADD_MAYA_CXX_PLUGIN PluginName SourceFile1 )
 
   IF( NOT ${MAYA_FOUND} )
-    MESSAGE( FATAL_ERROR "Could not find Maya2010. :(" )
+    MESSAGE( FATAL_ERROR "Could not find Maya. " )
   ENDIF()
 
   # Get various filename permutations
@@ -199,12 +204,7 @@ MACRO(ADD_MAYA_CXX_PLUGIN PluginName SourceFile1 )
   INCLUDE_DIRECTORIES( ${MAYA_INCLUDE_PATH} )
 
   # Add the target
-  IF( NOT DARWIN )
-    ADD_LIBRARY( ${PluginName} MODULE ${TMP_SOURCES} )
-  ELSE()
-    ADD_EXECUTABLE( ${PluginName} MACOSX_BUNDLE ${TMP_SOURCES} )
-  ENDIF()
-
+  ADD_LIBRARY( ${PluginName} MODULE ${TMP_SOURCES} )
 
   # Compile and linker flags
   SET_TARGET_PROPERTIES( ${PluginName}

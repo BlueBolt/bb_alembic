@@ -1,6 +1,6 @@
 ##-*****************************************************************************
 ##
-## Copyright (c) 2009-2011,
+## Copyright (c) 2009-2012,
 ##  Sony Pictures Imageworks Inc. and
 ##  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 ##
@@ -33,4 +33,6 @@
 ##
 ##-*****************************************************************************
 
-ADD_SUBDIRECTORY( alembic )
+ADD_SUBDIRECTORY( PyAlembic )
+ADD_SUBDIRECTORY( PyAbcOpenGL )
+ADD_SUBDIRECTORY( examples )

@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -44,16 +44,14 @@ namespace ALEMBIC_VERSION_NS {
 void ErrorHandler::operator()( std::exception &iExc,
                                const std::string &iMsg )
 {
-    handleIt( ( iMsg + "\nERROR: EXCEPTION:\n" ) + iExc.what()
-              /*+ "\n" + boost::diagnostic_information( iExc )*/ );
+    handleIt( ( iMsg + "\nERROR: EXCEPTION:\n" ) + iExc.what() );
 }
 
 //-*****************************************************************************
 void ErrorHandler::operator()( const std::string &iErr,
                                const std::string &iMsg )
 {
-    handleIt( ( iMsg + "\nERROR:\n" ) + iErr
-              /*+ "\n" */ );
+    handleIt( ( iMsg + "\nERROR:\n" ) + iErr );
 }
 
 //-*****************************************************************************

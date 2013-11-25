@@ -33,23 +33,26 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 //-*****************************************************************************
-//
-// -subd flag added by Ashley Retallack @ BlueBolt ltd
-//
-//-*****************************************************************************
 
 #ifndef _Alembic_Prman_ProcArgs_h_
 #define _Alembic_Prman_ProcArgs_h_
 
+#define PRMAN_USE_ABCMATERIAL
+
+
 #include <string>
+#include <map>
+#include <vector>
 
 #include <ri.h>
+
+#include <boost/shared_ptr.hpp>
 
 //-*****************************************************************************
 struct ProcArgs
 {
     //constructor parses
-    ProcArgs( RtString paramStr );
+    ProcArgs( RtString paramStr, bool fromReference = false );
 
     //copy constructor
     ProcArgs( const ProcArgs &rhs )
@@ -61,7 +64,15 @@ struct ProcArgs
     , shutterClose( rhs.shutterClose )
     , excludeXform( false )
     , flipv ( false )
-    , subd ( false )
+    
+    , filename_defined(false)
+    , objectpath_defined(false)
+    , frame_defined(false)
+    , fps_defined(false)
+    , shutterOpen_defined(false)
+    , shutterClose_defined(false)
+    , excludeXform_defined(false)
+    , flipv_defined(false)
     {}
     
     void usage();
@@ -73,10 +84,32 @@ struct ProcArgs
     double fps;
     double shutterOpen;
     double shutterClose;
-
     bool excludeXform;
     bool flipv;
-    bool subd;
+    
+    std::string getResource( const std::string & name );
+    
+private:
+    
+    void applyArgs(ProcArgs & args);
+    
+    
+    bool filename_defined;
+    bool objectpath_defined;
+    bool frame_defined;
+    bool fps_defined;
+    bool shutterOpen_defined;
+    bool shutterClose_defined;
+    bool excludeXform_defined;
+    bool flipv_defined;
+    
+    typedef std::map<std::string, std::string> StringMap;
+    typedef boost::shared_ptr<StringMap> StringMapRefPtr;
+    typedef std::vector<StringMapRefPtr> StringMapRefPtrVector;
+    
+    StringMapRefPtrVector resourceSearchPath;
+    
+    
 };
 
 #endif

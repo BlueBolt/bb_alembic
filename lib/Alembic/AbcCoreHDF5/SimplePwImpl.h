@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2013,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -60,7 +60,7 @@ namespace ALEMBIC_VERSION_NS {
 //
 // It is assumed that the IMPL class will provide a mechanism for constructing
 // a KEY from a SAMPLE.
-// 
+//
 // The IMPL class is assumed to have the following functions:
 // KEY  computeSampleKey( SAMPLE iSamp ) const;
 // bool sameAsPreviousSample( SAMPLE iSamp, const KEY &iKey ) const;
@@ -82,11 +82,11 @@ protected:
 
 public:
     virtual ~SimplePwImpl();
-    
+
     //-*************************************************************************
     // FROM ABSTRACT
     //-*************************************************************************
-    
+
     virtual const AbcA::PropertyHeader & getHeader() const;
 
     virtual AbcA::ObjectWriterPtr getObject();
@@ -109,7 +109,7 @@ public:
 protected:
     // The parent compound property writer.
     AbcA::CompoundPropertyWriterPtr m_parent;
-    
+
     // The parent group. We need to keep this around because we
     // don't create our group until we need to. This is guaranteed to
     // exist because our parent (or object) is guaranteed to exist.
@@ -178,6 +178,9 @@ SimplePwImpl<ABSTRACT,IMPL,SAMPLE,KEY>::SimplePwImpl
     // Check the validity of all inputs.
     ABCA_ASSERT( m_parent, "Invalid parent" );
 
+    ABCA_ASSERT( iName != "" && iName.find('/') == std::string::npos,
+                 "Invalid name" );
+
     // will assert if TimeSamplingPtr not found
     AbcA::TimeSamplingPtr ts =
         m_parent->getObject()->getArchive()->getTimeSampling(
@@ -190,7 +193,7 @@ SimplePwImpl<ABSTRACT,IMPL,SAMPLE,KEY>::SimplePwImpl
     ABCA_ASSERT( m_parentGroup >= 0, "Invalid parent group" );
     ABCA_ASSERT( m_header->getDataType().getExtent() > 0,
         "Invalid DatatType extent");
- 
+
     // Get data types
     PlainOldDataType POD = m_header->getDataType().getPod();
     if ( POD != kStringPOD && POD != kWstringPOD )
@@ -199,13 +202,10 @@ SimplePwImpl<ABSTRACT,IMPL,SAMPLE,KEY>::SimplePwImpl
                                      m_cleanFileDataType );
         m_nativeDataType = GetNativeH5T( m_header->getDataType(),
                                          m_cleanNativeDataType );
-        
+
         ABCA_ASSERT( m_fileDataType >= 0, "Couldn't get file datatype" );
         ABCA_ASSERT( m_nativeDataType >= 0, "Couldn't get native datatype" );
     }
-
-    WriteMetaData( m_parentGroup, m_header->getName() + ".meta",
-        m_header->getMetaData() );
 }
 
 //-*****************************************************************************
@@ -254,10 +254,10 @@ hid_t SimplePwImpl<ABSTRACT,IMPL,SAMPLE,KEY>::getSampleIGroup()
                  "can't create sampleI group before numSamples > 1" );
 
     const std::string groupName = m_header->getName() + ".smpi";
-    
+
     hid_t copl = CreationOrderPlist();
     PlistCloser plistCloser( copl );
-    
+
     m_sampleIGroup = H5Gcreate2( m_parentGroup,
                                  groupName.c_str(),
                                  H5P_DEFAULT,
@@ -266,7 +266,7 @@ hid_t SimplePwImpl<ABSTRACT,IMPL,SAMPLE,KEY>::getSampleIGroup()
     ABCA_ASSERT( m_sampleIGroup >= 0,
                  "Could not create simple samples group named: "
                  << groupName );
-    
+
     return m_sampleIGroup;
 }
 
@@ -279,7 +279,7 @@ void SimplePwImpl<ABSTRACT,IMPL,SAMPLE,KEY>::setSample
     // This applies to acyclic sampling only
     ABCA_ASSERT(
         !m_header->getTimeSampling()->getTimeSamplingType().isAcyclic() ||
-        m_header->getTimeSampling()->getNumStoredTimes() > 
+        m_header->getTimeSampling()->getNumStoredTimes() >
         m_nextSampleIndex,
         "Can not write more samples than we have times for when using "
         "Acyclic sampling." );
@@ -365,7 +365,7 @@ void SimplePwImpl<ABSTRACT,IMPL,SAMPLE,KEY>::setTimeSamplingIndex
             iIndex );
 
     ABCA_ASSERT( !ts->getTimeSamplingType().isAcyclic() ||
-        ts->getNumStoredTimes() > m_nextSampleIndex,
+        ts->getNumStoredTimes() >= m_nextSampleIndex,
         "Already have written more samples than we have times for when using "
         "Acyclic sampling." );
 
@@ -398,6 +398,27 @@ SimplePwImpl<ABSTRACT,IMPL,SAMPLE,KEY>::~SimplePwImpl()
             H5Gclose( m_sampleIGroup );
             m_sampleIGroup = -1;
         }
+
+
+        AbcA::ArchiveWriterPtr archive = m_parent->getObject()->getArchive();
+
+        index_t maxSamples = archive->getMaxNumSamplesForTimeSamplingIndex(
+            m_timeSamplingIndex );
+
+        uint32_t numSamples = m_nextSampleIndex;
+
+        // a constant property, we wrote the same sample over and over
+        if ( m_lastChangedIndex == 0 && m_nextSampleIndex > 0 )
+        {
+            numSamples = 1;
+        }
+
+        if ( maxSamples < numSamples )
+        {
+            archive->setMaxNumSamplesForTimeSamplingIndex( m_timeSamplingIndex,
+                                                           numSamples );
+        }
+
     }
     catch ( std::exception & exc )
     {

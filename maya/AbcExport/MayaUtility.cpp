@@ -259,7 +259,7 @@ bool util::isAnimated(MObject & object, bool checkParent)
     MItDependencyGraph iter(object, MFn::kInvalid,
         MItDependencyGraph::kUpstream,
         MItDependencyGraph::kDepthFirst,
-        MItDependencyGraph::kPlugLevel,
+        MItDependencyGraph::kNodeLevel,
         &stat);
 
     if (stat!= MS::kSuccess)
@@ -267,23 +267,17 @@ bool util::isAnimated(MObject & object, bool checkParent)
         MGlobal::displayError("Unable to create DG iterator ");
     }
 
+    // MAnimUtil::isAnimated(node) will search the history of the node
+    // for any animation curve nodes. It will return true for those nodes
+    // that have animation curve in their history.
+    // The average time complexity is O(n^2) where n is the number of history
+    // nodes. But we can improve the best case by split the loop into two.
+    std::vector<MObject> nodesToCheckAnimCurve;
+
     for (; !iter.isDone(); iter.next())
     {
         MObject node = iter.thisNode();
-        MPlug plug = iter.thisPlug();
 
-        if (node.hasFn(MFn::kExpression))
-        {
-            MFnExpression fn(node, &stat);
-            if (stat == MS::kSuccess && fn.isAnimated())
-            {
-                return true;
-            }
-        }
-        if (MAnimUtil::isAnimated(node, checkParent))
-        {
-            return true;
-        }
         if (node.hasFn(MFn::kPluginDependNode) ||
                 node.hasFn( MFn::kConstraint ) ||
                 node.hasFn(MFn::kPointConstraint) ||
@@ -303,8 +297,27 @@ bool util::isAnimated(MObject & object, bool checkParent)
                 node.hasFn(MFn::kPolyTweak) ||
                 node.hasFn(MFn::kSubdTweak) ||
                 node.hasFn(MFn::kCluster) ||
-                node.hasFn(MFn::kFluid) || 
+                node.hasFn(MFn::kFluid) ||
                 node.hasFn(MFn::kPolyBoolOp))
+        {
+            return true;
+        }
+
+        if (node.hasFn(MFn::kExpression))
+        {
+            MFnExpression fn(node, &stat);
+            if (stat == MS::kSuccess && fn.isAnimated())
+            {
+                return true;
+            }
+        }
+
+        nodesToCheckAnimCurve.push_back(node);
+    }
+
+    for (size_t i = 0; i < nodesToCheckAnimCurve.size(); i++)
+    {
+        if (MAnimUtil::isAnimated(nodesToCheckAnimCurve[i], checkParent))
         {
             return true;
         }
@@ -338,22 +351,65 @@ bool util::isRenderable(const MObject & object)
     // visibility or lodVisibility off?  return false
     plug = mFn.findPlug("visibility", false, &stat);
     if (stat == MS::kSuccess && !plug.asBool())
-        return false;
+    {
+        // the value is off. let's check if it has any in-connection,
+        // otherwise, it means it is not animated.
+        MPlugArray arrayIn;
+        plug.connectedTo(arrayIn, true, false, &stat);
+
+        if (stat == MS::kSuccess && arrayIn.length() == 0)
+        {
+            return false;
+        }
+    }
 
     plug = mFn.findPlug("lodVisibility", false, &stat);
     if (stat == MS::kSuccess && !plug.asBool())
-        return false;
+    {
+        MPlugArray arrayIn;
+        plug.connectedTo(arrayIn, true, false, &stat);
+
+        if (stat == MS::kSuccess && arrayIn.length() == 0)
+        {
+            return false;
+        }
+    }
 
     // this shape is renderable
     return true;
 }
 
-MString util::stripNamespaces(const MString & iNodeName)
+MString util::stripNamespaces(const MString & iNodeName, unsigned int iDepth)
 {
-    int lastNamespace = iNodeName.rindex(':');
-    if (lastNamespace != -1)
+    if (iDepth == 0)
     {
-        return iNodeName.substring(lastNamespace + 1, iNodeName.length() - 1);
+        return iNodeName;
+    }
+
+    MStringArray strArray;
+    if (iNodeName.split(':', strArray) == MS::kSuccess)
+    {
+        unsigned int len = strArray.length();
+
+        // we want to strip off more namespaces than what we have
+        // so we just return the last name
+        if (len == 0)
+        {
+            return iNodeName;
+        }
+        else if (len <= iDepth + 1)
+        {
+            return strArray[len-1];
+        }
+
+        MString name;
+        for (unsigned int i = iDepth; i < len - 1; ++i)
+        {
+            name += strArray[i];
+            name += ":";
+        }
+        name += strArray[len-1];
+        return name;
     }
 
     return iNodeName;
@@ -386,11 +442,19 @@ MString util::getHelpText()
 "-jobArg flags:\n"
 "\n"
 "-a / -attr string\n"
-"A specific attribute to write out.  This flag may occur more than once.\n"
+"A specific geometric attribute to write out.\n"
+"This flag may occur more than once.\n"
+"\n"
+"-df / -dataFormat string\n"
+"The data format to use to write the file.  Can be either HDF or Ogawa.\n"
+"The default is HDF.\n"
 "\n"
 "-atp / -attrPrefix string (default ABC_)\n"
-"Prefix filter for determining which attributes to write out.\n"
+"Prefix filter for determining which geometric attributes to write out.\n"
 "This flag may occur more than once.\n"
+"\n"
+"-ef / -eulerFilter\n"
+"If this flag is present, apply Euler filter while sampling rotations.\n"
 "\n"
 "-f / -file string REQUIRED\n"
 "File location to write the Alembic data.\n"
@@ -423,11 +487,21 @@ MString util::getHelpText()
 "If this flag is present, write out all all selected nodes from the active\n"
 "selection list that are descendents of the roots specified with -root.\n"
 "\n"
-"-sn / -stripNamespaces\n"
+"-sn / -stripNamespaces (optional int)\n"
 "If this flag is present all namespaces will be stripped off of the node before\n"
-"being written to Alembic.  Be careful that the new stripped name does not\n"
-"collide with other sibling node names.\n"
-"Example:  taco:foo:bar would be written as just bar.\n"
+"being written to Alembic.  If an optional int is specified after the flag\n"
+"then that many namespaces will be stripped off of the node name. Be careful\n"
+"that the new stripped name does not collide with other sibling node names.\n\n"
+"Examples: \n"
+"taco:foo:bar would be written as just bar with -sn\n"
+"taco:foo:bar would be written as foo:bar with -sn 1\n"
+"\n"
+"-u / -userAttr string\n"
+"A specific user attribute to write out.  This flag may occur more than once.\n"
+"\n"
+"-uatp / -userAttrPrefix string\n"
+"Prefix filter for determining which user attributes to write out.\n"
+"This flag may occur more than once.\n"
 "\n"
 "-uv / -uvWrite\n"
 "If this flag is present, uv data for PolyMesh and SubD shapes will be written to\n"
@@ -436,6 +510,9 @@ MString util::getHelpText()
 "-wcs / -writeColorSets\n"
 "Write all color sets on MFnMeshes as color 3 or color 4 indexed geometry \n"
 "parameters with face varying scope.\n"
+"\n"
+"-wfs / -writeFaceSets\n"
+"Write all Face sets on MFnMeshes.\n"
 "\n"
 "-wfg / -wholeFrameGeo\n"
 "If this flag is present data for geometry will only be written out on whole\n"

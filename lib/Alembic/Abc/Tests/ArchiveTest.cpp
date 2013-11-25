@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2013,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -34,14 +34,17 @@
 //
 //-*****************************************************************************
 
+#include <Alembic/AbcCoreFactory/All.h>
 #include <Alembic/AbcCoreHDF5/All.h>
+#include <Alembic/AbcCoreOgawa/All.h>
 #include <Alembic/Abc/All.h>
-#include "Assert.h"
+#include <Alembic/AbcCoreAbstract/Tests/Assert.h>
 
 namespace Abc = Alembic::Abc;
+namespace AbcF = Alembic::AbcCoreFactory;
 using namespace Abc;
 
-void archiveInfoTest()
+void archiveInfoTest(bool useOgawa)
 {
     std::string appWriter = "Alembic unit tests";
     std::string userStr = "abcdefg";
@@ -49,16 +52,30 @@ void archiveInfoTest()
         Alembic::AbcCoreAbstract::MetaData md;
         md.set("potato", "salad");
         md.set("taco", "bar");
-        OArchive archive = CreateArchiveWithInfo(
-            Alembic::AbcCoreHDF5::WriteArchive(), "archiveInfo.abc",
-            appWriter, userStr, md );
+        OArchive archive;
+        if (useOgawa)
+        {
+            archive = CreateArchiveWithInfo(
+                Alembic::AbcCoreOgawa::WriteArchive(), "archiveInfo.abc",
+                appWriter, userStr, md );
+        }
+        else
+        {
+            archive = CreateArchiveWithInfo(
+                Alembic::AbcCoreHDF5::WriteArchive(), "archiveInfo.abc",
+                appWriter, userStr, md );
+        }
 
         TESTING_ASSERT( archive.getPtr()->getMetaData().get("taco") == "bar" );
     }
 
     {
-        IArchive archive( Alembic::AbcCoreHDF5::ReadArchive(),
-            "archiveInfo.abc" );
+        AbcF::IFactory factory;
+        AbcF::IFactory::CoreType coreType;
+        IArchive archive = factory.getArchive("archiveInfo.abc", coreType);
+        TESTING_ASSERT( (useOgawa && coreType == AbcF::IFactory::kOgawa) ||
+                        (!useOgawa && coreType == AbcF::IFactory::kHDF5) );
+
         TESTING_ASSERT( archive.getPtr()->getMetaData().get("taco") == "bar" );
         TESTING_ASSERT( archive.getPtr()->getMetaData().get("potato") ==
             "salad" );
@@ -79,11 +96,77 @@ void archiveInfoTest()
         std::cout << "Date written: " << dateWritten << std::endl;
         TESTING_ASSERT( dateWritten != "" );
         TESTING_ASSERT( abcVersionStr != "" );
+
+        double start, end;
+        GetArchiveStartAndEndTime( archive, start, end );
+        TESTING_ASSERT( start == DBL_MAX && end == -DBL_MAX );
+    }
+}
+
+void scopingTest(bool useOgawa)
+{
+    {
+        OObject top;
+        {
+            OArchive archive;
+            if (useOgawa)
+            {
+                archive = CreateArchiveWithInfo(
+                    Alembic::AbcCoreOgawa::WriteArchive(),
+                    "archiveScopeTest.abc",
+                    "Alembic test", "", MetaData() );
+            }
+            else
+            {
+                archive = CreateArchiveWithInfo(
+                    Alembic::AbcCoreHDF5::WriteArchive(),
+                    "archiveScopeTest.abc",
+                    "Alembic test", "", MetaData() );
+            }
+            top = archive.getTop();
+        }
+        OObject childA( top, "a");
+        OObject childB( top, "b");
+        ODoubleProperty prop(top.getProperties(), "prop", 0);
+        TESTING_ASSERT(prop.getObject().getArchive().getName() ==
+            "archiveScopeTest.abc");
+    }
+
+    {
+        IObject top;
+        {
+            AbcF::IFactory factory;
+            AbcF::IFactory::CoreType coreType;
+            IArchive archive = factory.getArchive("archiveScopeTest.abc",
+                                                  coreType);
+
+           TESTING_ASSERT( (useOgawa && coreType == AbcF::IFactory::kOgawa) ||
+                           (!useOgawa && coreType == AbcF::IFactory::kHDF5) );
+
+            top = archive.getTop();
+
+            double start, end;
+            GetArchiveStartAndEndTime( archive, start, end );
+            TESTING_ASSERT( start == DBL_MAX && end == -DBL_MAX );
+        }
+        TESTING_ASSERT(top.getNumChildren() == 2 );
+        TESTING_ASSERT(top.getChildHeader("a") != NULL);
+        TESTING_ASSERT(top.getChildHeader("b") != NULL);
+        TESTING_ASSERT( ! top.getParent().valid() );
+        TESTING_ASSERT( top.getArchive().getName() ==
+            "archiveScopeTest.abc");
+        IScalarProperty prop(top.getProperties(), "prop");
+        TESTING_ASSERT(prop.valid());
+        TESTING_ASSERT(prop.getObject().getArchive().getName() ==
+            "archiveScopeTest.abc");
     }
 }
 
 int main( int argc, char *argv[] )
 {
-    archiveInfoTest();
+    archiveInfoTest(false);
+    archiveInfoTest(true);
+    scopingTest(false);
+    scopingTest(true);
     return 0;
 }

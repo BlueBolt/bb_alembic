@@ -118,7 +118,7 @@ void read(double iFrame, Alembic::AbcGeom::ICamera & iCamera,
             ceilSamp.getShutterOpen());
         MTime sec(1.0, MTime::kSeconds);
         oArray[11] =
-            360.0 * (shutterClose - shutterOpen) / sec.as(MTime::uiUnit());
+            360.0 * (shutterClose - shutterOpen) * sec.as(MTime::uiUnit());
 
         std::size_t numOps = samp.getNumOps();
         for (std::size_t i = 0; i < numOps; ++i)
@@ -151,7 +151,7 @@ void read(double iFrame, Alembic::AbcGeom::ICamera & iCamera,
             }
             else if (op.getHint() == "preScale")
             {
-                oArray[13] = simpleLerp<double>(alpha,
+                oArray[13] = 1.0 / simpleLerp<double>(alpha,
                     op.getChannelValue(0), ceilOp.getChannelValue(0));
             }
             else if (op.getHint() == "filmTranslate")
@@ -164,7 +164,7 @@ void read(double iFrame, Alembic::AbcGeom::ICamera & iCamera,
             }
             else if (op.getHint() == "postScale")
             {
-                oArray[16] = simpleLerp<double>(alpha,
+                oArray[16] = 1.0 / simpleLerp<double>(alpha,
                     op.getChannelValue(0), ceilOp.getChannelValue(0));
             }
             else if (op.getHint() == "cameraScale")
@@ -203,7 +203,7 @@ void read(double iFrame, Alembic::AbcGeom::ICamera & iCamera,
         oArray[10] = samp.getFocusDistance();
 
         MTime sec(1.0, MTime::kSeconds);
-        oArray[11] = 360.0 * (samp.getShutterClose()-samp.getShutterOpen()) /
+        oArray[11] = 360.0 * (samp.getShutterClose()-samp.getShutterOpen()) *
             sec.as(MTime::uiUnit());
 
         // prescale, film translate H, V, roll pivot H,V, film roll value
@@ -227,7 +227,7 @@ void read(double iFrame, Alembic::AbcGeom::ICamera & iCamera,
             }
             else if (op.getHint() == "preScale")
             {
-                oArray[13] = op.getChannelValue(0);
+                oArray[13] = 1.0 / op.getChannelValue(0);
             }
             else if (op.getHint() == "filmTranslate")
             {
@@ -237,7 +237,7 @@ void read(double iFrame, Alembic::AbcGeom::ICamera & iCamera,
             }
             else if (op.getHint() == "postScale")
             {
-                oArray[16] = op.getChannelValue(0);
+                oArray[16] = 1.0 / op.getChannelValue(0);
             }
             else if (op.getHint() == "cameraScale")
             {
@@ -282,7 +282,7 @@ MObject create(Alembic::AbcGeom::ICamera & iNode, MObject & iParent)
         }
     }
 
-    if (schema.getNumSamples() == 1)
+    if (schema.isConstant())
     {
 
         // no center of interest
@@ -322,7 +322,7 @@ MObject create(Alembic::AbcGeom::ICamera & iNode, MObject & iParent)
 
         MTime sec(1.0, MTime::kSeconds);
         fnCamera.setShutterAngle(Alembic::AbcGeom::DegreesToRadians(
-            360.0 * (samp.getShutterClose()-samp.getShutterOpen()) /
+            360.0 * (samp.getShutterClose()-samp.getShutterOpen()) *
             sec.as(MTime::uiUnit()) ));
 
         for (std::size_t i = 0; i < numOps; ++i)
@@ -345,7 +345,7 @@ MObject create(Alembic::AbcGeom::ICamera & iNode, MObject & iParent)
             }
             else if (op.getHint() == "preScale")
             {
-                fnCamera.setPreScale(op.getChannelValue(0));
+                fnCamera.setPreScale(1.0/op.getChannelValue(0));
             }
             else if (op.getHint() == "filmTranslate")
             {
@@ -354,7 +354,7 @@ MObject create(Alembic::AbcGeom::ICamera & iNode, MObject & iParent)
             }
             else if (op.getHint() == "postScale")
             {
-                fnCamera.setPostScale(op.getChannelValue(0));
+                fnCamera.setPostScale(1.0/op.getChannelValue(0));
             }
             else if (op.getHint() == "cameraScale")
             {

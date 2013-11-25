@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2013,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -47,10 +47,15 @@ ObjectReader::~ObjectReader()
 }
 
 //-*****************************************************************************
-ObjectReaderPtr ObjectReader::getChild( size_t i )
+bool ObjectReader::getPropertiesHash( Util::Digest & oDigest )
 {
-    const ObjectHeader &header = getChildHeader( i );
-    return getChild( header.getName() );
+    return false;
+}
+
+//-*****************************************************************************
+bool ObjectReader::getChildrenHash( Util::Digest & oDigest )
+{
+    return false;
 }
 
 } // End namespace ALEMBIC_VERSION_NS

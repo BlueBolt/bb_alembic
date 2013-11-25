@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -36,6 +36,8 @@
 
 #ifndef _Alembic_AbcGeom_SchemaInfoDeclarations_h_
 #define _Alembic_AbcGeom_SchemaInfoDeclarations_h_
+
+#include <Alembic/Util/Foundation.h>
 
 namespace Alembic {
 namespace AbcGeom {
@@ -154,13 +156,22 @@ ALEMBIC_ABCGEOM_DECLARE_SCHEMA_INFO( "AbcGeom_Curve_v2",
                                      CurvesSchemaInfo );
 
 //-*****************************************************************************
-// IGeomBase
+// GeomBase
 ALEMBIC_ABCGEOM_DECLARE_SCHEMA_INFO( "AbcGeom_GeomBase_v1",
                                      "",
                                      ".geom",
                                      GeomBaseSchemaInfo );
 
 #define ALEMBIC_ABCGEOM_CURVE_SCHEMA (CurvesSchemaInfo::title())
+
+//-*****************************************************************************
+// Light
+ALEMBIC_ABCGEOM_DECLARE_SCHEMA_INFO( "AbcGeom_Light_v1",
+                                     "",
+                                     ".geom",
+                                     LightSchemaInfo );
+
+#define ALEMBIC_ABCGEOM_LIGHT_SCHEMA (LightSchemaInfo::title())
 
 } // End namespace ALEMBIC_VERSION_NS
 

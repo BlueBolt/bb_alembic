@@ -53,6 +53,36 @@ namespace ALEMBIC_VERSION_NS {
 
 //-*****************************************************************************
 void
+ReadReferences ( hid_t iParent,
+                 const std::string& iRefName,
+                 std::vector<hobj_ref_t>& oRefs )
+{
+    ABCA_ASSERT( iParent >= 0, "Invalid parent" );
+
+    hid_t dsetId = H5Dopen( iParent, iRefName.c_str(), H5P_DEFAULT );
+    DsetCloser dsetCloser( dsetId );
+
+    hid_t dspaceId = H5Dget_space( dsetId );
+    DspaceCloser dspaceCloser( dspaceId );
+
+    hsize_t dim;
+    herr_t status = H5Sget_simple_extent_dims( dspaceId, &dim, NULL );
+
+    ABCA_ASSERT( dim > 0,
+                 "Degenerate dims in Dataset read" );
+
+    if ( dim > 0 )
+    {
+        oRefs.resize( dim );
+        status = H5Dread( dsetId, H5T_STD_REF_OBJ, H5S_ALL, H5S_ALL,
+                          H5P_DEFAULT, &oRefs.front() );
+        ABCA_ASSERT( status >= 0, 
+                     "H5Dread failed: " << iRefName );
+    }
+}
+
+//-*****************************************************************************
+void
 ReadScalar( hid_t iParent,
             const std::string &iAttrName,
             hid_t iFileType,
@@ -235,22 +265,46 @@ ReadKey( hid_t iParent,
 
 //-*****************************************************************************
 bool
-ReadMetaData( hid_t iParent,
+ReadMetaData( H5Node & iParent,
               const std::string &iMetaDataName,
               AbcA::MetaData &oMetaData )
 {
-    std::string str;
-    ABCA_ASSERT( iParent >= 0, "Invalid parent in ReadMetaData" );
-    if ( H5Aexists( iParent, iMetaDataName.c_str() ) > 0 )
+    ABCA_ASSERT( iParent.isValidObject(), "Invalid parent in ReadMetaData" );
+
+    HDF5Hierarchy* H5HPtr = iParent.getH5HPtr();
+
+    if ( H5HPtr )
     {
-        ReadString( iParent, iMetaDataName, str );
-        oMetaData.deserialize( str );
-        return true;
+        std::string str;
+        H5HPtr->readMetaDataString( iParent.getRef(), iMetaDataName, str );
+
+        if ( str.length() > 0 )
+        {
+            oMetaData.deserialize( str );
+            return true;
+        }
+        else
+        {
+            oMetaData = AbcA::MetaData();
+            return false;
+        }
     }
     else
     {
-        oMetaData = AbcA::MetaData();
-        return false;
+        hid_t iParentObject = iParent.getObject();
+
+        if ( H5Aexists( iParentObject, iMetaDataName.c_str() ) > 0 )
+        {
+            std::string str;
+            ReadString( iParentObject, iMetaDataName, str );
+            oMetaData.deserialize( str );
+            return true;
+        }
+        else
+        {
+            oMetaData = AbcA::MetaData();
+            return false;
+        }
     }
 }
 
@@ -332,7 +386,7 @@ ReadTimeSamplingType( hid_t iParent,
 
 //-*****************************************************************************
 void
-ReadPropertyHeader( hid_t iParent,
+ReadPropertyHeader( H5Node & iParent,
                     const std::string & iPropName,
                     AbcA::PropertyHeader & oHeader,
                     bool & oIsScalarLike,
@@ -342,26 +396,25 @@ ReadPropertyHeader( hid_t iParent,
                     uint32_t & oTimeSamplingIndex )
 {
     uint32_t info[5] = {0, 0, 0, 0, 0};
-
-    static const uint32_t ptypeMask = ( uint32_t )BOOST_BINARY (
-        0000 0000 0000 0000 0000 0000 0000 0011 );
-
-    static const uint32_t podMask = ( uint32_t )BOOST_BINARY (
-        0000 0000 0000 0000 0000 0000 0011 1100 );
-
-    static const uint32_t hasTsidxMask = ( uint32_t )BOOST_BINARY (
-        0000 0000 0000 0000 0000 0000 0100 0000 );
-
-    static const uint32_t noRepeatsMask = ( uint32_t )BOOST_BINARY (
-        0000 0000 0000 0000 0000 0000 1000 0000 );
-
-    static const uint32_t extentMask = ( uint32_t )BOOST_BINARY(
-        0000 0000 0000 0000 1111 1111 0000 0000 );
-
     size_t numFields = 0;
     size_t fieldsUsed = 1;
 
-    ReadSmallArray(iParent, iPropName + ".info", H5T_STD_U32LE,
+    // 0000 0000 0000 0000 0000 0000 0000 0011
+    static const uint32_t ptypeMask = 0x0003;
+
+    // 0000 0000 0000 0000 0000 0000 0011 1100
+    static const uint32_t podMask = 0x003c;
+
+    // 0000 0000 0000 0000 0000 0000 0100 0000
+    static const uint32_t hasTsidxMask = 0x0040;
+
+    // 0000 0000 0000 0000 0000 0000 1000 0000
+    static const uint32_t noRepeatsMask = 0x0080;
+
+    // 0000 0000 0000 0000 1111 1111 0000 0000
+    static const uint32_t extentMask = 0xff00;
+
+    ReadSmallArray(iParent.getObject(), iPropName + ".info", H5T_STD_U32LE,
                    H5T_NATIVE_UINT32, 5, numFields, (void *) info );
 
     AbcA::MetaData metaData;
@@ -462,12 +515,12 @@ ReadPropertyHeader( hid_t iParent,
             // if smp0 exists then we have 1 sample
             std::string smpName = iPropName + ".smp0";
             if ( oHeader.getPropertyType() == AbcA::kArrayProperty &&
-                 H5Lexists( iParent, smpName.c_str(), H5P_DEFAULT ) > 0)
+                 ObjectExists( iParent, smpName ) )
             {
                 oNumSamples = 1;
             }
             else if ( oHeader.getPropertyType() == AbcA::kScalarProperty &&
-                      H5Aexists( iParent, smpName.c_str() ) > 0)
+                      AttrExists( iParent, smpName ) )
             {
                 oNumSamples = 1;
             }

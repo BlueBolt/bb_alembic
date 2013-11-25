@@ -33,15 +33,72 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 //-*****************************************************************************
-//
-// -subd flag added by Ashley Retallack @ BlueBolt ltd
-//
-//-*****************************************************************************
 #include <ri.h>
 #include "WriteGeo.h"
 #include "SampleUtil.h"
 #include "ArbAttrUtil.h"
 #include "SubDTags.h"
+
+#ifdef PRMAN_USE_ABCMATERIAL
+#include "WriteMaterial.h"
+#endif
+//-*****************************************************************************
+
+
+
+void RestoreResource( const std::string & resourceName )
+{
+    ParamListBuilder paramListBuilder;
+    paramListBuilder.addStringValue("restore", true);
+    paramListBuilder.add( "string operation",
+            paramListBuilder.finishStringVector() );
+
+    paramListBuilder.addStringValue("shading", true);
+    paramListBuilder.add( "string subset",
+            paramListBuilder.finishStringVector() );
+
+    RiResourceV(
+            const_cast<char *>( resourceName.c_str() ),
+            const_cast<char *>( "attributes" ),
+            paramListBuilder.n(),
+            paramListBuilder.nms(),
+            paramListBuilder.vals());
+}
+
+void SaveResource( const std::string & resourceName )
+{
+    ParamListBuilder paramListBuilder;
+    paramListBuilder.addStringValue("save", true);
+    paramListBuilder.add( "string operation",
+            paramListBuilder.finishStringVector() );
+    
+    RiResourceV(
+            const_cast<char *>( resourceName.c_str() ),
+            const_cast<char *>( "attributes" ),
+            paramListBuilder.n(),
+            paramListBuilder.nms(),
+            paramListBuilder.vals());
+}
+
+
+void ApplyResources( IObject object, ProcArgs &args )
+{
+    std::string resourceName;
+    
+    //first check full name...
+    resourceName = args.getResource( object.getFullName() );
+    
+    if ( resourceName.empty() )
+    {
+        //...and then base name
+        resourceName = args.getResource( object.getName() );
+    }
+    
+    if ( !resourceName.empty() )
+    {
+        RestoreResource(resourceName);
+    }
+}
 
 //-*****************************************************************************
 void ProcessXform( IXform &xform, ProcArgs &args )
@@ -68,6 +125,11 @@ void ProcessXform( IXform &xform, ProcArgs &args )
         ISampleSelector sampleSelector( *I );
 
         xs.get( sampleVectors[sampleTimeIndex], sampleSelector );
+    }
+
+    if (xs.getInheritsXforms () == false)
+    {
+        RiIdentity ();
     }
 
     //loop through the operators individually since a MotionBegin block
@@ -119,11 +181,7 @@ void ProcessXform( IXform &xform, ProcArgs &args )
 //-*****************************************************************************
 void ProcessPolyMesh( IPolyMesh &polymesh, ProcArgs &args )
 {
-
-
-
-
-	IPolyMeshSchema &ps = polymesh.getSchema();
+    IPolyMeshSchema &ps = polymesh.getSchema();
 
     TimeSamplingPtr ts = ps.getTimeSampling();
 
@@ -135,113 +193,80 @@ void ProcessPolyMesh( IPolyMesh &polymesh, ProcArgs &args )
     if ( multiSample ) { WriteMotionBegin( args, sampleTimes ); }
 
 
-	for ( SampleTimeSet::iterator iter = sampleTimes.begin();
-		  iter != sampleTimes.end(); ++ iter )
-	{
+    for ( SampleTimeSet::iterator iter = sampleTimes.begin();
+          iter != sampleTimes.end(); ++ iter )
+    {
 
-			ISampleSelector sampleSelector( *iter );
+        ISampleSelector sampleSelector( *iter );
 
-			IPolyMeshSchema::Sample sample = ps.getValue( sampleSelector );
+        IPolyMeshSchema::Sample sample = ps.getValue( sampleSelector );
 
-			RtInt npolys = (RtInt) sample.getFaceCounts()->size();
+        RtInt npolys = (RtInt) sample.getFaceCounts()->size();
 
-			ParamListBuilder paramListBuilder;
+        ParamListBuilder paramListBuilder;
 
-			paramListBuilder.add( "P", (RtPointer)sample.getPositions()->get() );
+        paramListBuilder.add( "P", (RtPointer)sample.getPositions()->get() );
 
-			IV2fGeomParam uvParam = ps.getUVsParam();
-			if ( uvParam.valid() )
-			{
-				ICompoundProperty parent = uvParam.getParent();
+        IV2fGeomParam uvParam = ps.getUVsParam();
+        if ( uvParam.valid() )
+        {
+            ICompoundProperty parent = uvParam.getParent();
+            
+            
+            if ( !args.flipv )
+            {
+                AddGeomParamToParamListBuilder<IV2fGeomParam>(
+                    parent,
+                    uvParam.getHeader(),
+                    sampleSelector,
+                    "float",
+                    paramListBuilder,
+                    2,
+                    "st");
+            }
+            else if ( std::vector<float> * values =
+                    AddGeomParamToParamListBuilderAsFloat<IV2fGeomParam, float>(
+                        parent,
+                        uvParam.getHeader(),
+                        sampleSelector,
+                        "float",
+                        paramListBuilder,
+                        "st") )
+            {
+                for ( size_t i = 1, e = values->size(); i < e; i += 2 )
+                {
+                    (*values)[i] = 1.0 - (*values)[i];
+                }
+            }
+        }
+        IN3fGeomParam nParam = ps.getNormalsParam();
+        if ( nParam.valid() )
+        {
+            ICompoundProperty parent = nParam.getParent();
+            
+            AddGeomParamToParamListBuilder<IN3fGeomParam>(
+                parent,
+                nParam.getHeader(),
+                sampleSelector,
+                "normal",
+                paramListBuilder);
 
-
-				if ( !args.flipv )
-				{
-					AddGeomParamToParamListBuilder<IV2fGeomParam>(
-						parent,
-						uvParam.getHeader(),
-						sampleSelector,
-						"float",
-						paramListBuilder,
-						2,
-						"st");
-				}
-				else if ( std::vector<float> * values =
-						AddGeomParamToParamListBuilderAsFloat<IV2fGeomParam, float>(
-							parent,
-							uvParam.getHeader(),
-							sampleSelector,
-							"float",
-							paramListBuilder,
-							2,
-							"st") )
-				{
-					for ( size_t i = 1, e = values->size(); i < e; i += 2 )
-					{
-						(*values)[i] = 1.0 - (*values)[i];
-					}
-				}
-			}
-
-			ICompoundProperty arbGeomParams = ps.getArbGeomParams();
-			AddArbitraryGeomParams( arbGeomParams,
-						sampleSelector, paramListBuilder );
-
-			if (!args.subd){
-
-				IN3fGeomParam nParam = ps.getNormalsParam();
-				if ( nParam.valid() )
-				{
-					ICompoundProperty parent = nParam.getParent();
-
-					AddGeomParamToParamListBuilder<IN3fGeomParam>(
-						parent,
-						nParam.getHeader(),
-						sampleSelector,
-						"normal",
-						paramListBuilder);
-
-				}
-
-			RiPointsPolygonsV(
-				npolys,
-				(RtInt*) sample.getFaceCounts()->get(),
-				(RtInt*) sample.getFaceIndices()->get(),
-				paramListBuilder.n(),
-				paramListBuilder.nms(),
-				paramListBuilder.vals() );
-
-			} else {
-
-		        SubDTagBuilder tags;
-
-		        tags.add( "facevaryinginterpolateboundary" );
-		        tags.addIntArg( (RtInt) 1 );
-
-		        tags.add( "interpolateboundary" );
-		        tags.addIntArg( RtInt(1) );
-
-		        tags.add( "facevaryingpropagatecorners" );
-		        tags.addIntArg( RtInt(0) );
-
-	            RiSubdivisionMeshV(
-	                "catmull-clark",
-	                npolys,
-	                (RtInt*) sample.getFaceCounts()->get(),
-	                (RtInt*) sample.getFaceIndices()->get(),
-	                tags.nt(),
-	                tags.tags(),
-	                tags.nargs( false ),
-	                tags.intargs(),
-	                tags.floatargs(),
-	                paramListBuilder.n(),
-	                paramListBuilder.nms(),
-	                paramListBuilder.vals());
+        }
 
 
-			}
-	}
 
+        ICompoundProperty arbGeomParams = ps.getArbGeomParams();
+        AddArbitraryGeomParams( arbGeomParams,
+                    sampleSelector, paramListBuilder );
+
+        RiPointsPolygonsV(
+            npolys,
+            (RtInt*) sample.getFaceCounts()->get(),
+            (RtInt*) sample.getFaceIndices()->get(),
+            paramListBuilder.n(),
+            paramListBuilder.nms(),
+            paramListBuilder.vals() );
+    }
 
     if (multiSample) RiMotionEnd();
 
@@ -261,12 +286,91 @@ void ProcessSubD( ISubD &subd, ProcArgs &args, const std::string & facesetName )
 
     //include this code path for future expansion
     bool isHierarchicalSubD = false;
+    bool hasLocalResources = false;
+    
+    
+    
+    std::vector<IFaceSet> faceSets;
+    std::vector<std::string> faceSetResourceNames;
+    if ( facesetName.empty() )
+    {
+        std::vector <std::string> childFaceSetNames;
+        ss.getFaceSetNames(childFaceSetNames);
+        
+        faceSets.reserve(childFaceSetNames.size());
+        faceSetResourceNames.reserve(childFaceSetNames.size());
+        
+        for (size_t i = 0; i < childFaceSetNames.size(); ++i)
+        {
+            faceSets.push_back(ss.getFaceSet(childFaceSetNames[i]));
+            
+            IFaceSet & faceSet = faceSets.back();
+            
+            std::string resourceName = args.getResource(
+                    faceSet.getFullName() );
+            
+            if ( resourceName.empty() )
+            {
+                resourceName = args.getResource( faceSet.getName() );
+            }
+            
+#ifdef PRMAN_USE_ABCMATERIAL
+                
+                Mat::MaterialFlatten mafla(faceSet);
+                
+                if (!mafla.empty())
+                {
+                    if (!hasLocalResources)
+                    {
+                        RiResourceBegin();
+                        hasLocalResources = true;
+                    }
+                    
+                    RiAttributeBegin();
+                    
+                    if ( !resourceName.empty() )
+                    {
+                        //restore existing resource state here
+                        RestoreResource( resourceName );
+                    }
+                    
+                    
+                    WriteMaterial( mafla, args );
+                    
+                    resourceName = faceSet.getFullName();
+                    SaveResource( resourceName );
+                    
+                    RiAttributeEnd();
+                }
+#endif
+            faceSetResourceNames.push_back(resourceName);
+            
+        }
+    }
+#ifdef PRMAN_USE_ABCMATERIAL    
+    else
+    {
+        //handle single faceset material directly
+        if ( ss.hasFaceSet( facesetName ) )
+        {
+            IFaceSet faceSet = ss.getFaceSet( facesetName );
+            ApplyObjectMaterial(faceSet, args);
+            
+        }
+    }
+#endif
+    
+    
+    
+    
+    
 
     if ( multiSample ) { WriteMotionBegin( args, sampleTimes ); }
 
     for ( SampleTimeSet::iterator iter = sampleTimes.begin();
           iter != sampleTimes.end(); ++iter )
     {
+        
         ISampleSelector sampleSelector( *iter );
 
         ISubDSchema::Sample sample = ss.getValue( sampleSelector );
@@ -300,7 +404,6 @@ void ProcessSubD( ISubD &subd, ProcArgs &args, const std::string & facesetName )
                         sampleSelector,
                         "float",
                         paramListBuilder,
-                        2,
                         "st") )
             {
                 for ( size_t i = 1, e = values->size(); i < e; i += 2 )
@@ -331,6 +434,12 @@ void ProcessSubD( ISubD &subd, ProcArgs &args, const std::string & facesetName )
             if ( ss.hasFaceSet( facesetName ) )
             {
                 IFaceSet faceSet = ss.getFaceSet( facesetName );
+                
+                ApplyResources( faceSet, args );
+                
+                // TODO, move the hold test outside of MotionBegin
+                // as it's not meaningful to change per sample
+                
                 IFaceSetSchema::Sample faceSetSample = 
                         faceSet.getSchema().getValue( sampleSelector );
                 
@@ -347,6 +456,40 @@ void ProcessSubD( ISubD &subd, ProcArgs &args, const std::string & facesetName )
                         tags.add( "hole" );
                         tags.addIntArg( i );
                     }
+                }
+            }
+        }
+        else
+        {
+            //loop through the facesets and determine whether there are any
+            //resources assigned to each
+            
+            for (size_t i = 0; i < faceSetResourceNames.size(); ++i)
+            {
+                const std::string & resourceName = faceSetResourceNames[i];
+                
+                //TODO, visibility?
+                
+                if ( !resourceName.empty() )
+                {
+                    IFaceSet & faceSet = faceSets[i];
+                    
+                    isHierarchicalSubD = true;
+                    
+                    tags.add("faceedit");
+                    
+                    Int32ArraySamplePtr faces = faceSet.getSchema().getValue(
+                            sampleSelector ).getFaces();
+                    
+                    for (size_t j = 0, e = faces->size(); j < e; ++j)
+                    {
+                        tags.addIntArg(1); //yep, every face gets a 1 in front of it too
+                        tags.addIntArg( (int) faces->get()[j]);
+                    }
+                    
+                    tags.addStringArg( "attributes" );
+                    tags.addStringArg( resourceName );
+                    tags.addStringArg( "shading" );
                 }
             }
         }
@@ -390,6 +533,8 @@ void ProcessSubD( ISubD &subd, ProcArgs &args, const std::string & facesetName )
     }
 
     if ( multiSample ) { RiMotionEnd(); }
+    
+    if ( hasLocalResources ) { RiResourceEnd(); }
 }
 
 //-*****************************************************************************

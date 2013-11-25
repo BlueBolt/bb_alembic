@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -46,30 +46,14 @@ void OPointsSchema::set( const Sample &iSamp )
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "OPointsSchema::set()" );
 
-    // do we need to create child bounds?
-    if ( iSamp.getChildBounds().hasVolume() && !m_childBoundsProperty)
-    {
-        m_childBoundsProperty = Abc::OBox3dProperty( *this, ".childBnds",
-                                             m_positionsProperty.getTimeSampling() );
-        Abc::Box3d emptyBox;
-        emptyBox.makeEmpty();
-
-        size_t numSamples = m_positionsProperty.getNumSamples();
-
-        // set all the missing samples
-        for ( size_t i = 0; i < numSamples; ++i )
-        {
-            m_childBoundsProperty.set( emptyBox );
-        }
-    }
-
     // do we need to create velocities prop?
     if ( iSamp.getVelocities() && !m_velocitiesProperty )
     {
         m_velocitiesProperty = Abc::OV3fArrayProperty( this->getPtr(), ".velocities",
                                                m_positionsProperty.getTimeSampling() );
 
-        const V3fArraySample empty;
+        std::vector<V3f> emptyVec;
+        const V3fArraySample empty( emptyVec );
         const size_t numSamps = m_positionsProperty.getNumSamples();
         for ( size_t i = 0 ; i < numSamps ; ++i )
         {
@@ -80,8 +64,16 @@ void OPointsSchema::set( const Sample &iSamp )
     // do we need to create widths prop?
     if ( iSamp.getWidths() && !m_widthsParam )
     {
+        std::vector<float> emptyVals;
+        std::vector<Util::uint32_t> emptyIndices;
+        OFloatGeomParam::Sample empty;
+
         if ( iSamp.getWidths().getIndices() )
         {
+            empty = OFloatGeomParam::Sample( Abc::FloatArraySample( emptyVals ),
+                Abc::UInt32ArraySample( emptyIndices ),
+                iSamp.getWidths().getScope() );
+
             // widths are indexed which is wasteful, but technically ok
             m_widthsParam = OFloatGeomParam( this->getPtr(), ".widths", true,
                                              iSamp.getWidths().getScope(),
@@ -89,13 +81,14 @@ void OPointsSchema::set( const Sample &iSamp )
         }
         else
         {
+            empty = OFloatGeomParam::Sample( Abc::FloatArraySample( emptyVals ),
+                                             iSamp.getWidths().getScope() );
+
             // widths are not indexed
             m_widthsParam = OFloatGeomParam( this->getPtr(), ".widths", false,
                                              iSamp.getWidths().getScope(), 1,
                                              this->getTimeSampling() );
         }
-
-        OFloatGeomParam::Sample empty;
 
         size_t numSamples = m_positionsProperty.getNumSamples();
 
@@ -122,9 +115,6 @@ void OPointsSchema::set( const Sample &iSamp )
         if ( m_widthsParam )
         { m_widthsParam.set( iSamp.getWidths() ); }
 
-        if ( m_childBoundsProperty )
-        { m_childBoundsProperty.set( iSamp.getChildBounds() ); }
-
         if ( iSamp.getSelfBounds().isEmpty() )
         {
             // OTypedScalarProperty::set() is not referentially transparent,
@@ -140,11 +130,6 @@ void OPointsSchema::set( const Sample &iSamp )
         SetPropUsePrevIfNull( m_positionsProperty, iSamp.getPositions() );
         SetPropUsePrevIfNull( m_idsProperty, iSamp.getIds() );
         SetPropUsePrevIfNull( m_velocitiesProperty, iSamp.getVelocities() );
-
-        if ( m_childBoundsProperty )
-        {
-            SetPropUsePrevIfNull( m_childBoundsProperty, iSamp.getChildBounds() );
-        }
 
         if ( iSamp.getSelfBounds().hasVolume() )
         {
@@ -178,11 +163,6 @@ void OPointsSchema::setFromPrevious()
 
     m_selfBoundsProperty.setFromPrevious();
 
-    if ( m_childBoundsProperty )
-    {
-        m_childBoundsProperty.setFromPrevious();
-    }
-
     if ( m_widthsParam )
     {
         m_widthsParam.setFromPrevious();
@@ -200,11 +180,6 @@ void OPointsSchema::setTimeSampling( uint32_t iIndex )
     m_positionsProperty.setTimeSampling( iIndex );
     m_idsProperty.setTimeSampling( iIndex );
     m_selfBoundsProperty.setTimeSampling( iIndex );
-
-    if ( m_childBoundsProperty )
-    {
-        m_childBoundsProperty.setTimeSampling( iIndex );
-    }
 
     if ( m_widthsParam )
     {

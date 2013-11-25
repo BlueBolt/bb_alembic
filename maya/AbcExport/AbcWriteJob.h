@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -49,17 +49,17 @@
 
 #include "MayaUtility.h"
 
-typedef boost::shared_ptr < MayaMeshWriter >
+typedef Alembic::Util::shared_ptr < MayaMeshWriter >
     MayaMeshWriterPtr;
-typedef boost::shared_ptr < MayaNurbsCurveWriter >
+typedef Alembic::Util::shared_ptr < MayaNurbsCurveWriter >
     MayaNurbsCurveWriterPtr;
-typedef boost::shared_ptr < MayaCameraWriter >
+typedef Alembic::Util::shared_ptr < MayaCameraWriter >
     MayaCameraWriterPtr;
-typedef boost::shared_ptr < MayaLocatorWriter >
+typedef Alembic::Util::shared_ptr < MayaLocatorWriter >
     MayaLocatorWriterPtr;
-typedef boost::shared_ptr < MayaPointPrimitiveWriter >
+typedef Alembic::Util::shared_ptr < MayaPointPrimitiveWriter >
     MayaPointPrimitiveWriterPtr;
-typedef boost::shared_ptr < MayaNurbsSurfaceWriter >
+typedef Alembic::Util::shared_ptr < MayaNurbsSurfaceWriter >
     MayaNurbsSurfaceWriterPtr;
 
 struct AbcWriteJobStatistics
@@ -153,7 +153,7 @@ class AbcWriteJob
 {
   public:
 
-    AbcWriteJob(const char * iFileName,
+    AbcWriteJob(const char * iFileName, bool asOgawa,
         std::set<double> & iTransFrames,
         Alembic::AbcCoreAbstract::TimeSamplingPtr iTransTime,
         std::set<double> & iShapeFrames,
@@ -166,19 +166,13 @@ class AbcWriteJob
     bool eval(double iFrame);
 
   private:
-    typedef boost::variant<
-        MayaCameraWriterPtr,
-        MayaMeshWriterPtr,
-        MayaNurbsCurveWriterPtr,
-        MayaNurbsSurfaceWriterPtr,
-        MayaLocatorWriterPtr,
-        MayaPointPrimitiveWriterPtr > MayaNodePtr;
 
     void perFrameCallback(double iFrame);
     void postCallback(double iFrame);
 
-    void getBoundingBox(const MMatrix & eMInvMat);
-    void setup(double iFrame, MayaTransformWriterPtr iParent);
+    MBoundingBox getBoundingBox(double iFrame, const MMatrix & eMInvMat);
+    void setup(double iFrame, MayaTransformWriterPtr iParent,
+               GetMembersMap& gmMap);
 
     // Currently Arnold and Renderman can not handle curve groups where the
     // degrees and closed status are different per curve.
@@ -189,11 +183,16 @@ class AbcWriteJob
     std::vector< MayaTransformWriterPtr > mTransList;
     std::vector< AttributesWriterPtr > mTransAttrList;
 
-    std::vector< MayaNodePtr > mShapeList;
+    std::vector< MayaCameraWriterPtr > mCameraList;
+    std::vector< MayaMeshWriterPtr > mMeshList;
+    std::vector< MayaNurbsCurveWriterPtr > mCurveList;
+    std::vector< MayaNurbsSurfaceWriterPtr > mNurbsList;
+    std::vector< MayaLocatorWriterPtr > mLocatorList;
+    std::vector< MayaPointPrimitiveWriterPtr > mPointList;
     std::vector< AttributesWriterPtr > mShapeAttrList;
 
-    // helper bounding box for recursive calculation
-    MBoundingBox mCurBBox;
+    // helper dag path map for bounding box calculation
+    std::map< MDagPath, util::ShapeSet, util::cmpDag > mBBoxShapeMap;
 
     // helper dag path for recursive calculations
     MDagPath mCurDag;
@@ -202,6 +201,7 @@ class AbcWriteJob
     Alembic::Abc::OArchive mRoot;
 
     std::string mFileName;
+    bool mAsOgawa;
 
     MSelectionList mSList;
     std::set<double> mShapeFrames;
@@ -229,6 +229,6 @@ class AbcWriteJob
     JobArgs mArgs;
 };
 
-typedef boost::shared_ptr < AbcWriteJob > AbcWriteJobPtr;
+typedef Alembic::Util::shared_ptr < AbcWriteJob > AbcWriteJobPtr;
 
 #endif  // _AbcExport_AbcWriteJob_h_

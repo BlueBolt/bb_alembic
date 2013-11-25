@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2013,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -33,20 +33,22 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 //-*****************************************************************************
-//
-// -subd flag added by Ashley Retallack @ BlueBolt ltd
-//
-//-*****************************************************************************
 #include <iostream>
 #include <set>
 #include <ri.h>
 
 #include <Alembic/AbcGeom/All.h>
 #include <Alembic/AbcCoreHDF5/All.h>
+#include <Alembic/AbcCoreOgawa/All.h>
+#include <Alembic/AbcCoreFactory/All.h>
 
 #include "ProcArgs.h"
 #include "PathUtil.h"
 #include "WriteGeo.h"
+
+#ifdef PRMAN_USE_ABCMATERIAL
+#include "WriteMaterial.h"
+#endif
 
 #include <memory>
 
@@ -62,18 +64,22 @@ public:
         RiAttributeBegin();
         WriteIdentifier( ohead );
     }
-    
+
     ~AttributeBlockHelper()
     {
         RiAttributeEnd();
     }
 };
 
+
+
+
 typedef std::auto_ptr<AttributeBlockHelper> AttributeBlockHelperAutoPtr;
 
 //-*****************************************************************************
 void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
-                 PathList::const_iterator I, PathList::const_iterator E )
+                 PathList::const_iterator I, PathList::const_iterator E,
+                 bool visible=true)
 {
     // Only add an enclosing AttributeBegin/name/AttributeEnd if we're
     // not excluding xforms. If we're not adding it here, we're adding for
@@ -83,9 +89,26 @@ void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
     {
         blockHelper.reset( new AttributeBlockHelper( ohead ) );
     }
-    
+
     //set this if we should continue traversing
     IObject nextParentObject;
+
+    //construct the baseObject first so that we can perform visibility
+    //testing on it.
+    IObject baseObject( parent, ohead.getName() );
+    switch( GetVisibility(baseObject,
+            ISampleSelector(args.frame / args.fps ) ) )
+    {
+    case kVisibilityVisible:
+        visible = true;
+        break;
+    case kVisibilityHidden:
+        visible = false;
+        break;
+    default:
+        break;
+    }
+
 
     if ( IXform::matches( ohead ) )
     {
@@ -95,10 +118,17 @@ void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
         }
         else
         {
-            IXform xform( parent, ohead.getName() );
+            IXform xform( baseObject, kWrapExisting );
             ProcessXform( xform, args );
-            
+
             nextParentObject = xform;
+
+            ApplyResources( nextParentObject, args );
+
+#ifdef PRMAN_USE_ABCMATERIAL
+            ApplyObjectMaterial(nextParentObject, args );
+#endif
+
         }
     }
     else if ( ISubD::matches( ohead ) )
@@ -107,12 +137,12 @@ void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
         {
             blockHelper.reset( new AttributeBlockHelper( ohead ) );
         }
-        
-        
+
+
         std::string faceSetName;
-        
-        ISubD subd( parent, ohead.getName() );
-        
+
+        ISubD subd( baseObject, kWrapExisting );
+
         //if we haven't reached the end of a specified -objectpath,
         //check to see if the next token is a faceset name.
         //If it is, send the name to ProcessSubD for addition of
@@ -125,7 +155,16 @@ void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
             }
         }
 
-        ProcessSubD( subd, args, faceSetName );
+        ApplyResources( subd, args );
+
+#ifdef PRMAN_USE_ABCMATERIAL
+            ApplyObjectMaterial(subd, args );
+#endif
+
+        if ( visible )
+        {
+            ProcessSubD( subd, args, faceSetName );
+        }
 
         //if we found a matching faceset, don't traverse below
         if ( faceSetName.empty() )
@@ -139,12 +178,16 @@ void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
         {
             blockHelper.reset( new AttributeBlockHelper( ohead ) );
         }
-        
-		IPolyMesh polymesh( parent, ohead.getName() );
-		ProcessPolyMesh( polymesh, args );
 
-		nextParentObject = polymesh;
+        IPolyMesh polymesh( baseObject, kWrapExisting );
+        ApplyResources( polymesh, args );
 
+#ifdef PRMAN_USE_ABCMATERIAL
+            ApplyObjectMaterial(polymesh, args );
+#endif
+        ProcessPolyMesh( polymesh, args );
+
+        nextParentObject = polymesh;
     }
     else if ( INuPatch::matches( ohead ) )
     {
@@ -152,10 +195,17 @@ void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
         {
             blockHelper.reset( new AttributeBlockHelper( ohead ) );
         }
-        
-        INuPatch patch( parent, ohead.getName() );
-        ProcessNuPatch( patch, args );
-        
+
+        INuPatch patch( baseObject, kWrapExisting );
+        ApplyResources( patch, args );
+#ifdef PRMAN_USE_ABCMATERIAL
+            ApplyObjectMaterial(patch, args );
+#endif
+        if ( visible )
+        {
+            ProcessNuPatch( patch, args );
+        }
+
         nextParentObject = patch;
     }
     else if ( IPoints::matches( ohead ) )
@@ -164,10 +214,18 @@ void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
         {
             blockHelper.reset( new AttributeBlockHelper( ohead ) );
         }
-        
-        IPoints points( parent, ohead.getName() );
-        ProcessPoints( points, args );
-        
+
+        IPoints points( baseObject, kWrapExisting );
+#ifdef PRMAN_USE_ABCMATERIAL
+            ApplyObjectMaterial(points, args );
+#endif
+        ApplyResources( points, args );
+
+        if ( visible )
+        {
+            ProcessPoints( points, args );
+        }
+
         nextParentObject = points;
     }
     else if ( ICurves::matches( ohead ) )
@@ -176,10 +234,18 @@ void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
         {
             blockHelper.reset( new AttributeBlockHelper( ohead ) );
         }
-        
-        ICurves curves( parent, ohead.getName() );
-        ProcessCurves( curves, args );
-        
+
+        ICurves curves( baseObject, kWrapExisting );
+        ApplyResources( curves, args );
+
+#ifdef PRMAN_USE_ABCMATERIAL
+            ApplyObjectMaterial( curves, args );
+#endif
+        if ( visible )
+        {
+            ProcessCurves( curves, args );
+        }
+
         nextParentObject = curves;
     }
     else if ( IFaceSet::matches( ohead ) )
@@ -188,11 +254,7 @@ void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
     }
     else
     {
-        std::cerr << "could not determine type of " << ohead.getName()
-                  << std::endl;
-
-        std::cerr << ohead.getName() << " has MetaData: "
-                  << ohead.getMetaData().serialize() << std::endl;
+        //Don't complain but don't walk beneath other types
     }
 
     if ( nextParentObject.valid() )
@@ -203,7 +265,7 @@ void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
             {
                 WalkObject( nextParentObject,
                             nextParentObject.getChildHeader( i ),
-                            args, I, E );
+                            args, I, E, visible);
             }
         }
         else
@@ -213,23 +275,31 @@ void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
 
             if ( nextChildHeader != NULL )
             {
-                WalkObject( nextParentObject, *nextChildHeader, args, I+1, E );
+                WalkObject( nextParentObject, *nextChildHeader, args, I+1, E,
+                        visible);
             }
         }
     }
-    
+
     // RiAttributeEnd will be called by blockHelper falling out of scope
     // if set.
 }
 
+
+#ifdef _MSC_VER
+#define RIPROC_DLL_EXPORT __declspec(dllexport)
+#else
+#define RIPROC_DLL_EXPORT
+#endif
+
+
 //-*****************************************************************************
-extern "C" RtPointer
+extern "C" RIPROC_DLL_EXPORT RtPointer
 ConvertParameters( RtString paramstr )
 {
     try
     {
         return (RtPointer) new ProcArgs(paramstr);
-        std::cout << "\"" << paramstr << "\""<< std::endl;
     }
     catch (const std::exception & e)
     {
@@ -241,14 +311,14 @@ ConvertParameters( RtString paramstr )
 }
 
 //-*****************************************************************************
-extern "C" RtVoid
+extern "C" RIPROC_DLL_EXPORT RtVoid
 Free( RtPointer data )
 {
     delete reinterpret_cast<ProcArgs*>( data );
 }
 
 //-*****************************************************************************
-extern "C" RtVoid
+extern "C" RIPROC_DLL_EXPORT RtVoid
 Subdivide( RtPointer data, RtFloat detail )
 {
     ProcArgs *args = reinterpret_cast<ProcArgs*>( data );
@@ -256,7 +326,7 @@ Subdivide( RtPointer data, RtFloat detail )
     {
         return;
     }
-    
+
     if ( args->filename.empty() )
     {
         return;
@@ -264,8 +334,8 @@ Subdivide( RtPointer data, RtFloat detail )
 
     try
     {
-        IArchive archive( ::Alembic::AbcCoreHDF5::ReadArchive(),
-                          args->filename );
+        ::Alembic::AbcCoreFactory::IFactory factory;
+        IArchive archive = factory.getArchive( args->filename );
 
         IObject root = archive.getTop();
 

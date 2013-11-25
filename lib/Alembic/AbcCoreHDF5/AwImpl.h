@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -46,17 +46,18 @@ namespace AbcCoreHDF5 {
 namespace ALEMBIC_VERSION_NS {
 
 //-*****************************************************************************
-class TopOwImpl;
+class OwData;
 
 //-*****************************************************************************
 class AwImpl : public AbcA::ArchiveWriter
-             , public boost::enable_shared_from_this<AwImpl>
+             , public Alembic::Util::enable_shared_from_this<AwImpl>
 {
 private:
-    friend struct WriteArchive;
+    friend class WriteArchive;
 
     AwImpl( const std::string &iFileName,
-            const AbcA::MetaData &iMetaData );
+            const AbcA::MetaData &iMetaData,
+            bool iCacheHistory );
 
 public:
     virtual ~AwImpl();
@@ -86,17 +87,24 @@ public:
 
     virtual uint32_t getNumTimeSamplings() { return m_timeSamples.size(); }
 
+    virtual AbcA::index_t getMaxNumSamplesForTimeSamplingIndex(
+        uint32_t iIndex );
+
+    virtual void setMaxNumSamplesForTimeSamplingIndex( uint32_t iIndex,
+                                                      AbcA::index_t iMaxIndex );
+
 private:
     std::string m_fileName;
     AbcA::MetaData m_metaData;
     hid_t m_file;
+    bool m_cacheHierarchy;
 
-    // This won't create a circular reference because the
-    // TopObjectWriter we create is special and doesn't like back up
-    // like a normal object writer would.
-    TopOwImpl *m_top;
+    Alembic::Util::weak_ptr< AbcA::ObjectWriter > m_top;
+    Alembic::Util::shared_ptr < OwData > m_data;
 
     std::vector < AbcA::TimeSamplingPtr > m_timeSamples;
+
+    std::vector < AbcA::index_t > m_maxSamples;
 
     WrittenArraySampleMap m_writtenArraySampleMap;
 };

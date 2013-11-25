@@ -65,7 +65,6 @@ public:
     //-*************************************************************************
 
     typedef INFO info_type;
-    typedef ISchema<INFO> this_type;
 
 
     //-*************************************************************************
@@ -84,8 +83,7 @@ public:
 
              const Argument &iArg0 = Argument(),
              const Argument &iArg1 = Argument() )
-       : ISchema<info_type>( iParentCompound, iName,
-                              iArg0, iArg1 )
+       : Abc::ISchema<info_type>( iParentCompound, iName, iArg0, iArg1 )
     {
         init( iArg0, iArg1 );
     }
@@ -95,8 +93,7 @@ public:
 
                       const Argument &iArg0 = Argument(),
                       const Argument &iArg1 = Argument() )
-      : ISchema<info_type>( iParentCompound,
-                            iArg0, iArg1 )
+      : Abc::ISchema<info_type>( iParentCompound, iArg0, iArg1 )
     {
         init( iArg0, iArg1 );
     }
@@ -110,6 +107,13 @@ public:
       : Abc::ISchema<info_type>( iThis, iFlag, iArg0, iArg1 )
     {
         init( iArg0, iArg1 );
+    }
+
+    //! Copy constructor
+    IGeomBaseSchema( const IGeomBaseSchema& iCopy )
+      : Abc::ISchema<info_type>()
+    {
+        *this = iCopy;
     }
 
     void init( const Abc::Argument &iArg0, const Abc::Argument &iArg1 )
@@ -160,23 +164,23 @@ public:
                 m_selfBoundsProperty.valid() );
     }
 
-    Abc::IBox3dProperty getSelfBoundsProperty()
+    Abc::IBox3dProperty getSelfBoundsProperty() const
     {
         return m_selfBoundsProperty;
     }
 
-    Abc::IBox3dProperty getChildBoundsProperty()
+    Abc::IBox3dProperty getChildBoundsProperty() const
     {
         return m_childBoundsProperty;
     }
 
     // compound property to use as parent for any arbitrary GeomParams
     // underneath it
-    ICompoundProperty getArbGeomParams() { return m_arbGeomParams; }
+    ICompoundProperty getArbGeomParams() const { return m_arbGeomParams; }
 
     // compound property to use as parent for any user workflow specific
     // properties
-    ICompoundProperty getUserProperties() { return m_userProperties; }
+    ICompoundProperty getUserProperties() const { return m_userProperties; }
 
 protected:
     // Only selfBounds is required, all others are optional
@@ -217,18 +221,15 @@ public:
         Sample() { reset(); }
 
         Abc::Box3d getSelfBounds() const { return m_selfBounds; }
-        Abc::Box3d getChildBounds() const { return m_childBounds; }
 
         void reset()
         {
             m_selfBounds.makeEmpty();
-            m_childBounds.makeEmpty();
         }
 
     protected:
         friend class IGeomBase;
         Abc::Box3d m_selfBounds;
-        Abc::Box3d m_childBounds;
     };
 
 public:
@@ -305,7 +306,7 @@ public:
 
     //! Time sampling Information.
     //!
-    AbcA::TimeSamplingPtr getTimeSampling()
+    AbcA::TimeSamplingPtr getTimeSampling() const
     {
         if ( m_selfBoundsProperty.valid() )
         {
@@ -319,23 +320,17 @@ public:
 
     //-*************************************************************************
     void get( Sample &oSample,
-              const Abc::ISampleSelector &iSS = Abc::ISampleSelector() )
+              const Abc::ISampleSelector &iSS = Abc::ISampleSelector() ) const
     {
         ALEMBIC_ABC_SAFE_CALL_BEGIN( "IGeomBase::get()" );
 
         m_selfBoundsProperty.get( oSample.m_selfBounds, iSS );
 
-        if ( m_childBoundsProperty &&
-             m_childBoundsProperty.getNumSamples() > 0 )
-        {
-            m_childBoundsProperty.get( oSample.m_childBounds, iSS );
-        }
-
         ALEMBIC_ABC_SAFE_CALL_END();
     }
 
     //-*************************************************************************
-    Sample getValue( const Abc::ISampleSelector &iSS = Abc::ISampleSelector() )
+    Sample getValue( const Abc::ISampleSelector &iSS = Abc::ISampleSelector() ) const
     {
         Sample smp;
         get( smp, iSS );

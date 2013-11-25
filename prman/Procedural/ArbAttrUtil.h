@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -39,7 +39,7 @@
 #include <ri.h>
 
 #include <Alembic/AbcGeom/All.h>
-
+#include <boost/smart_ptr.hpp>
 #include <set>
 
 using namespace Alembic::AbcGeom;
@@ -60,7 +60,11 @@ public:
     // starting with float data, this can be usful if you need to manipulate
     // the values after-the-fact.
     template <typename T>
-    std::vector<float> * addAsFloat( const std::string & declaration, const T * length,
+    std::vector<RtFloat> * addAsFloat( const std::string & declaration, const T * length,
+            size_t numValues );
+    
+    template <typename T>
+    std::vector<RtInt> * addAsInt( const std::string & declaration, const T * length,
             size_t numValues );
     
     //returns the start of the current vector and pushes a new one
@@ -88,12 +92,16 @@ private:
     
     typedef boost::shared_ptr<std::vector<RtFloat> > SharedRtFloatVector;
     std::vector<SharedRtFloatVector> m_convertedFloatVectors;
+    
+    typedef boost::shared_ptr<std::vector<RtInt> > SharedRtIntVector;
+    std::vector<SharedRtIntVector> m_convertedIntVectors;
+    
 };
 
 //-*****************************************************************************
 
 template <typename T>
-std::vector<float> * ParamListBuilder::addAsFloat( const std::string & declaration,
+std::vector<RtFloat> * ParamListBuilder::addAsFloat( const std::string & declaration,
         const T * value, size_t length)
 {
     SharedRtFloatVector convertedValues( new std::vector<RtFloat> );
@@ -101,6 +109,23 @@ std::vector<float> * ParamListBuilder::addAsFloat( const std::string & declarati
     
     convertedValues->insert( convertedValues->end(), value, value + length );
     m_convertedFloatVectors.push_back( convertedValues );
+    
+    add( declaration, &( ( *convertedValues )[0] ) );
+    
+    return &(*convertedValues);
+}
+
+//-*****************************************************************************
+
+template <typename T>
+std::vector<RtInt> * ParamListBuilder::addAsInt( const std::string & declaration,
+        const T * value, size_t length)
+{
+    SharedRtIntVector convertedValues( new std::vector<RtInt> );
+    convertedValues->reserve( length );
+    
+    convertedValues->insert( convertedValues->end(), value, value + length );
+    m_convertedIntVectors.push_back( convertedValues );
     
     add( declaration, &( ( *convertedValues )[0] ) );
     
@@ -166,12 +191,11 @@ void AddGeomParamToParamListBuilder( ICompoundProperty & parent,
 // normally avoids a copy of the data as the GeomParam samples can be handed
 // to RenderMan directly. 
 template <typename T, typename podT>
-std::vector<float> * AddGeomParamToParamListBuilderAsFloat( ICompoundProperty & parent,
+std::vector<RtFloat> * AddGeomParamToParamListBuilderAsFloat( ICompoundProperty & parent,
                                              const PropertyHeader &propHeader,
                                              ISampleSelector &sampleSelector,
                                              const std::string &rmanBaseType,
                                              ParamListBuilder &ParamListBuilder,
-                                             size_t baseArrayExtent = 1,
                                              const std::string & overrideName = ""
                                            )
 {
@@ -186,7 +210,15 @@ std::vector<float> * AddGeomParamToParamListBuilderAsFloat( ICompoundProperty & 
     std::string rmanType = GetPrmanScopeString( param.getScope() ) + " ";
 
     rmanType += rmanBaseType;
-
+    
+    size_t dataTypeExtent = T::prop_type::traits_type::dataType().getExtent();
+    
+    // If rmanBaseType is something other than float, the assumption is that the
+    // specified rman type is in agreement with the dataTypeExtent -- i.e. color = 3
+    // If it's just float, we want to make sure that our data footprint matches
+    // that of the incoming type in RenderMan terms.
+    size_t baseArrayExtent = (rmanBaseType == "float") ? dataTypeExtent: 1;
+    
     size_t arrayExtent = baseArrayExtent * param.getArrayExtent();
     if (arrayExtent > 1)
     {
@@ -203,10 +235,8 @@ std::vector<float> * AddGeomParamToParamListBuilderAsFloat( ICompoundProperty & 
             param.getExpandedValue( sampleSelector ).getVals();
     
     
-    int rawExtent =
-            T::prop_type::traits_type::dataType().getExtent() * arrayExtent;
-
-    
+    //always grab the natural extent of the incoming data for the internal copy
+    int rawExtent = dataTypeExtent * param.getArrayExtent();
     
     return ParamListBuilder.addAsFloat( rmanType,
             reinterpret_cast<const podT *>( valueSample->get() ),
@@ -216,10 +246,258 @@ std::vector<float> * AddGeomParamToParamListBuilderAsFloat( ICompoundProperty & 
 
 //-*****************************************************************************
 
+// NOTE: In addition to performing the conversion, this also makes and
+// returns an internal copy of the data. Even in cases in which you're
+// starting with int data, this can be usful if you need to manipulate
+// the values after-the-fact. The AddGeomParamToParamListBuilder codepath 
+// normally avoids a copy of the data as the GeomParam samples can be handed
+// to RenderMan directly. 
+template <typename T, typename podT>
+std::vector<RtInt> * AddGeomParamToParamListBuilderAsInt( ICompoundProperty & parent,
+                                             const PropertyHeader &propHeader,
+                                             ISampleSelector &sampleSelector,
+                                             ParamListBuilder &ParamListBuilder,
+                                             const std::string & overrideName = ""
+                                           )
+{
+    T param( parent, propHeader.getName() );
+
+    if ( !param.valid() )
+    {
+        //TODO error message?
+        return 0;
+    }
+    
+    //Unlike RtFloat, "int" is the only RenderMan type that takes something
+    //compatible with RtInt. We can assume anything sent here is intended to be
+    //written to RenderMan as int[n].
+    const std::string rmanBaseType("int");
+    
+    std::string rmanType = GetPrmanScopeString( param.getScope() ) + " ";
+
+    rmanType += rmanBaseType;
+    
+    size_t dataTypeExtent = T::prop_type::traits_type::dataType().getExtent();
+    
+    
+
+    size_t arrayExtent = dataTypeExtent * param.getArrayExtent();
+    if (arrayExtent > 1)
+    {
+        std::ostringstream buffer;
+        buffer << "[" << arrayExtent << "]";
+        rmanType += buffer.str();
+    }
+
+    rmanType += " " + (
+            overrideName.empty() ? propHeader.getName() : overrideName );
+
+
+    typename T::prop_type::sample_ptr_type valueSample =
+            param.getExpandedValue( sampleSelector ).getVals();
+    
+    
+    return ParamListBuilder.addAsInt( rmanType,
+            reinterpret_cast<const podT *>( valueSample->get() ),
+                    valueSample->size() * arrayExtent );
+
+}
+
+
+
+
+
+//-*****************************************************************************
+
 void AddArbitraryGeomParams( ICompoundProperty &parent,
                              ISampleSelector &sampleSelector,
                              ParamListBuilder &ParamListBuilder,
                              const std::set<std::string> * excludeNames = NULL
                            );
+
+
+//-*****************************************************************************
+
+
+//[array, scalar], [as float, as int, as string];
+
+
+template <typename propT, typename podT>
+void AddArrayPropertyAsFloatToParamListBuilder(
+        ICompoundProperty & parent, 
+        const PropertyHeader &propHeader,
+        ISampleSelector &sampleSelector,
+        const std::string & name,
+        const std::string & rmanBaseType,
+        ParamListBuilder & paramListBuilder)
+{
+    propT prop(parent, propHeader.getName());
+    
+    size_t dataTypeExtent = propT::traits_type::dataType().getExtent();
+    
+    typename propT::sample_ptr_type sample = prop.getValue(sampleSelector);
+    
+    std::ostringstream buffer;
+    buffer << rmanBaseType;
+    
+    size_t baseArrayExtent = (rmanBaseType == "float") ? dataTypeExtent: 1;
+    size_t arrayExtent = baseArrayExtent * sample->size();
+    if (arrayExtent > 1)
+    {
+        buffer << "[" << arrayExtent << "]";
+    }
+    
+    buffer << " " << name;
+    
+    paramListBuilder.addAsFloat<podT>(
+            buffer.str(), reinterpret_cast<const podT *>( sample->get() ),
+                    sample->size() * dataTypeExtent);
+}
+
+
+template <typename propT, typename podT>
+void AddScalarPropertyAsFloatToParamListBuilder(
+        ICompoundProperty & parent, 
+        const PropertyHeader &propHeader,
+        ISampleSelector &sampleSelector,
+        const std::string & name,
+        const std::string & rmanBaseType,
+        ParamListBuilder &paramListBuilder)
+{
+    propT prop(parent, propHeader.getName());
+    
+    typename propT::value_type scalarValue;
+    prop.get(scalarValue, sampleSelector);
+    
+    std::ostringstream buffer;
+    buffer << rmanBaseType;
+    
+    size_t dataTypeExtent =
+            propT::traits_type::dataType().getExtent();
+    
+    if (rmanBaseType == "float" && dataTypeExtent > 1)
+    {
+        buffer << "[" << dataTypeExtent << "] ";
+    }
+    buffer << " " << name;
+    
+    paramListBuilder.addAsFloat<podT>(
+            buffer.str(), reinterpret_cast<const podT *>(&scalarValue),
+                    dataTypeExtent);
+}
+
+
+// template <typename propT, typename podT>
+// void AddArrayPropertyAsIntToParamListBuilder(
+//         ICompoundProperty & parent, 
+//         const PropertyHeader &propHeader,
+//         ISampleSelector &sampleSelector,
+//         const std::string & name,
+//         ParamListBuilder &ParamListBuilder);
+
+template <typename propT, typename podT>
+void AddScalarPropertyAsIntToParamListBuilder(
+        ICompoundProperty & parent, 
+        const PropertyHeader &propHeader,
+        ISampleSelector &sampleSelector,
+        const std::string & name,
+        ParamListBuilder &paramListBuilder)
+{
+    propT prop(parent, propHeader.getName());
+    
+    
+    typename propT::value_type scalarValue;
+    prop.get(scalarValue, sampleSelector);
+    
+    std::ostringstream buffer;
+    buffer << "int";
+    
+    size_t dataTypeExtent =
+            propT::traits_type::dataType().getExtent();
+    
+    if (dataTypeExtent > 1)
+    {
+        buffer << "[" << dataTypeExtent << "]";
+    }
+    buffer << " " << name;
+    
+    paramListBuilder.addAsInt<podT>(
+            buffer.str(), reinterpret_cast<const podT *>(&scalarValue),
+                    dataTypeExtent);
+}
+
+template <typename propT>
+void AddArrayPropertyAsStringToParamListBuilder(
+        ICompoundProperty & parent, 
+        const PropertyHeader &propHeader,
+        ISampleSelector &sampleSelector,
+        const std::string & name,
+        ParamListBuilder &paramListBuilder)
+{
+    propT prop(parent, propHeader.getName());
+    
+    
+    StringArraySamplePtr valueSample = prop.getValue(sampleSelector);
+    
+    std::ostringstream buffer;
+    buffer << "string";
+    
+    if (valueSample->size() > 1)
+    {
+        buffer << "[" << valueSample->size() << "]";
+    }
+    
+    buffer << " " << name;
+    
+    for ( size_t i = 0; i < valueSample->size(); ++i )
+    {
+        paramListBuilder.addStringValue( (*valueSample)[i] );
+    }
+    
+    RtPointer dataStart = paramListBuilder.finishStringVector();
+    
+    paramListBuilder.add(buffer.str(), dataStart, valueSample);
+}
+
+
+
+template <typename propT>
+void AddScalarPropertyAsStringToParamListBuilder(
+        ICompoundProperty & parent, 
+        const PropertyHeader &propHeader,
+        ISampleSelector &sampleSelector,
+        const std::string & name,
+        ParamListBuilder &paramListBuilder)
+{
+    propT prop(parent, propHeader.getName());
+    
+    typename propT::value_type scalarValue;
+    prop.get(scalarValue, sampleSelector);
+    
+    std::ostringstream buffer;
+    buffer << "string";
+    
+    size_t dataTypeExtent =
+            propT::traits_type::dataType().getExtent();
+    
+    if (dataTypeExtent > 1)
+    {
+        buffer << "[" << dataTypeExtent << "]";
+    }
+    buffer << " " << name;
+    
+    
+    for (size_t i = 0; i < dataTypeExtent; ++i)
+    {
+        paramListBuilder.addStringValue(
+                reinterpret_cast<std::string*>(&scalarValue)[i], true);
+    }
+    
+    paramListBuilder.add(buffer.str(),
+            paramListBuilder.finishStringVector());
+}
+
+
+
 
 #endif

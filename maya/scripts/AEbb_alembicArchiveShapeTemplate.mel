@@ -1,0 +1,143 @@
+/**
+(c)2011 Bluebolt Ltd.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+* Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+* Neither the name of BlueBolt nor the names of
+its contributors may be used to endorse or promote products derived
+from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Author: Ashley Retallack - ashley-r@blue-bolt.com
+
+File:AEbb_alembicArchiveshapeTemplate.mel
+
+
+**/
+
+
+
+global proc AEbb_alembicArchiveShapeTemplate (string $nodeName) {
+
+	
+	
+	
+	editorTemplate -beginScrollLayout;
+	
+	editorTemplate -cl 0 -beginLayout   "Main";
+	
+		editorTemplate -addControl "abcFile";	
+		editorTemplate -addControl "objectPath";
+		editorTemplate -addControl "showProxy";
+		editorTemplate -addControl "proxyPath";	
+		editorTemplate -addControl "time";	
+		editorTemplate -addControl "timeOffset";	
+		editorTemplate -addControl "shutterOpen";		
+		editorTemplate -addControl "shutterClose";		
+		editorTemplate -addControl "furLOD";			
+		editorTemplate -addControl "furBbPad";	
+		editorTemplate -addControl "showBoundingBox";			
+		editorTemplate -addControl "flipV";			
+		editorTemplate -addControl "polyAsSubD";	
+		editorTemplate -addControl "ai_subDIterations";
+		editorTemplate -addControl "ai_subDUVSmoothing";		
+		
+	editorTemplate -endLayout;
+	
+	editorTemplate -addExtraControls;	
+	
+	// supressed attributes
+	editorTemplate -suppress "furBoundingBox" ;
+	editorTemplate -suppress "furBbMin" ;
+	editorTemplate -suppress "furBbMax" ;
+	editorTemplate -suppress "furBbSize" ;
+	editorTemplate -suppress "bbCenter" ;
+	editorTemplate -suppress "outFps" ;
+	editorTemplate -suppress "outFrame" ;
+	
+	
+	//editorTemplate -suppress "geoBoundingBox" ;
+	//editorTemplate -suppress "geoBbMin" ;
+	//editorTemplate -suppress "geoBbMax" ;
+	//editorTemplate -suppress "geoBbSize" ;
+	
+	//hide the maya defaults
+	
+	editorTemplate -suppress "rmbCommand" ;
+	editorTemplate -suppress "templateName" ;
+	editorTemplate -suppress "templatePath" ;
+	editorTemplate -suppress "viewName" ;
+	editorTemplate -suppress "iconName" ;
+	editorTemplate -suppress "viewMode" ;
+	editorTemplate -suppress "templateVersion" ;
+	editorTemplate -suppress "uiTreatment" ;
+	editorTemplate -suppress "customTreatment" ;
+	editorTemplate -suppress "creator" ;
+	editorTemplate -suppress "creationDate" ;
+	editorTemplate -suppress "containerType" ;
+	
+	editorTemplate -suppress "blackBox" ;
+	
+	editorTemplate -suppress "useObjectColor" ;
+	editorTemplate -suppress "objectColor" ;
+	editorTemplate -suppress "nodeState"; 
+	//editorTemplate -suppress "visibility"; 
+	editorTemplate -suppress "intermediateObject"; 
+	editorTemplate -suppress "lodVisibility"; 
+	editorTemplate -suppress "instObjGroups";  
+	editorTemplate -suppress "compInstObjGroups"; 
+	
+	editorTemplate -suppress "caching";
+	editorTemplate -suppress "template";
+	editorTemplate -suppress "drawOverride" ;
+	editorTemplate -suppress "renderInfo" ;
+	//editorTemplate -suppress "motionBlur" ;
+	//editorTemplate -suppress "visibleInReflections" ;
+	//editorTemplate -suppress "visibleInRefractions" ; 
+	//editorTemplate -suppress "castsShadows" ;
+	editorTemplate -suppress "maxVisibilitySamplesOverride";
+	editorTemplate -suppress "maxVisibilitySamples";
+	editorTemplate -suppress "geometryAntialiasingOverride";
+	editorTemplate -suppress "antialiasingLevel";
+	editorTemplate -suppress "shadingSamplesOverride";
+	editorTemplate -suppress "shadingSamples";
+	editorTemplate -suppress "maxShadingSamples";
+	editorTemplate -suppress "volumeSamplesOverride";
+	editorTemplate -suppress "volumeSamples";
+
+	editorTemplate -suppress "ghosting";
+	editorTemplate -suppress "ghostDriver";
+	editorTemplate -suppress "ghostingControl";
+	editorTemplate -suppress "renderLayerInfo";
+	editorTemplate -suppress "ghostCustomSteps";
+	editorTemplate -suppress "ghostFrames";
+	editorTemplate -suppress "ghostRangeStart";
+	editorTemplate -suppress "ghostRangeEnd";
+	//editorTemplate -suppress "receiveShadows";
+	editorTemplate -suppress "depthJitter";
+	editorTemplate -suppress "ignoreSelfShadowing";
+	editorTemplate -suppress "localScale";
+	
+	editorTemplate -suppress "localPosition";
+	
+	
+
+}

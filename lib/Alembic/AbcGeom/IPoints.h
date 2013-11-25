@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -63,7 +63,6 @@ public:
         Abc::V3fArraySamplePtr getVelocities() const { return m_velocities; }
 
         Abc::Box3d getSelfBounds() const { return m_selfBounds; }
-        Abc::Box3d getChildBounds() const { return m_childBounds; }
 
         bool valid() const
         {
@@ -75,9 +74,7 @@ public:
             m_positions.reset();
             m_velocities.reset();
             m_ids.reset();
-
             m_selfBounds.makeEmpty();
-            m_childBounds.makeEmpty();
         }
 
         ALEMBIC_OPERATOR_BOOL( valid() );
@@ -89,7 +86,6 @@ public:
         Abc::V3fArraySamplePtr m_velocities;
 
         Abc::Box3d m_selfBounds;
-        Abc::Box3d m_childBounds;
     };
 
     //-*************************************************************************
@@ -156,17 +152,17 @@ public:
     //! This can be any number, including zero.
     //! This returns the number of samples that were written, independently
     //! of whether or not they were constant.
-    size_t getNumSamples()
+    size_t getNumSamples() const
     { return std::max( m_positionsProperty.getNumSamples(),
                        m_idsProperty.getNumSamples() ); }
 
     //! Ask if we're constant - no change in value amongst samples,
     //! regardless of the time sampling.
-    bool isConstant() { return m_positionsProperty.isConstant() && m_idsProperty.isConstant(); }
+    bool isConstant() const { return m_positionsProperty.isConstant() && m_idsProperty.isConstant(); }
 
     //! Time sampling Information.
     //!
-    AbcA::TimeSamplingPtr getTimeSampling()
+    AbcA::TimeSamplingPtr getTimeSampling() const
     {
         if ( m_positionsProperty.valid() )
         {
@@ -177,7 +173,7 @@ public:
 
     //-*************************************************************************
     void get( Sample &oSample,
-              const Abc::ISampleSelector &iSS = Abc::ISampleSelector() )
+              const Abc::ISampleSelector &iSS = Abc::ISampleSelector() ) const
     {
         ALEMBIC_ABC_SAFE_CALL_BEGIN( "IPointsSchema::get()" );
 
@@ -185,9 +181,6 @@ public:
         m_idsProperty.get( oSample.m_ids, iSS );
 
         m_selfBoundsProperty.get( oSample.m_selfBounds, iSS );
-
-        if ( m_childBoundsProperty && m_childBoundsProperty.getNumSamples() > 0 )
-        { m_childBoundsProperty.get( oSample.m_childBounds, iSS ); }
 
         if ( m_velocitiesProperty && m_velocitiesProperty.getNumSamples() > 0 )
         { m_velocitiesProperty.get( oSample.m_velocities, iSS ); }
@@ -197,29 +190,29 @@ public:
         ALEMBIC_ABC_SAFE_CALL_END();
     }
 
-    Sample getValue( const Abc::ISampleSelector &iSS = Abc::ISampleSelector() )
+    Sample getValue( const Abc::ISampleSelector &iSS = Abc::ISampleSelector() ) const
     {
         Sample smp;
         get( smp, iSS );
         return smp;
     }
 
-    Abc::IP3fArrayProperty getPositionsProperty()
+    Abc::IP3fArrayProperty getPositionsProperty() const
     {
         return m_positionsProperty;
     }
 
-    Abc::IV3fArrayProperty getVelocitiesProperty()
+    Abc::IV3fArrayProperty getVelocitiesProperty() const
     {
         return m_velocitiesProperty;
     }
 
-    Abc::IUInt64ArrayProperty getIdsProperty()
+    Abc::IUInt64ArrayProperty getIdsProperty() const
     {
         return m_idsProperty;
     }
 
-    IFloatGeomParam getWidthsParam()
+    IFloatGeomParam getWidthsParam() const
     {
         return m_widthsParam;
     }
@@ -267,6 +260,8 @@ protected:
 
 //-*****************************************************************************
 typedef Abc::ISchemaObject<IPointsSchema> IPoints;
+
+typedef Util::shared_ptr< IPoints > IPointsPtr;
 
 } // End namespace ALEMBIC_VERSION_NS
 

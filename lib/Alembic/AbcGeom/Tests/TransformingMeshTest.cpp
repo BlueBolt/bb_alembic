@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -42,7 +42,7 @@
 // Other includes
 #include <math.h>
 
-#include "Assert.h"
+#include <Alembic/AbcCoreAbstract/Tests/Assert.h>
 
 #include <Alembic/AbcGeom/Tests/MeshData.h>
 
@@ -59,17 +59,16 @@ static OPolyMeshSchema::Sample g_meshsamp(
     Int32ArraySample( g_counts, g_numCounts ) );
 
 //-*****************************************************************************
-OXform recurseCreateXform( OObject &iParent, size_t children, int32_t level,
+OXform recurseCreateXform( OObject &iParent, size_t children, Alembic::Util::int32_t level,
                            size_t numSamps )
 {
-    std::string levelName = boost::lexical_cast<std::string>( level );
-
     OXform xform;
 
     for ( size_t i = 0; i < children; ++i )
     {
-        std::string xformName = levelName + "_" + \
-            boost::lexical_cast<std::string>( i );
+        std::ostringstream strm;
+        strm << level << "_" << i;
+        std::string xformName = strm.str();
         xform = OXform( iParent, xformName, g_ts );
 
         OPolyMesh opm( xform, "meshy", g_ts );

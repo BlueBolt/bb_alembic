@@ -1,3 +1,7 @@
 *~
 CMakeLists.txt~
+.project
+.pydevproject
+.cproject
+.settings
 *.pyc

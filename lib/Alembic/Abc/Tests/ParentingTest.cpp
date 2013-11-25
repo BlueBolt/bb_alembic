@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -35,9 +35,10 @@
 //-*****************************************************************************
 
 #include <Alembic/Abc/All.h>
+#include <Alembic/AbcCoreFactory/All.h>
 #include <Alembic/AbcCoreHDF5/All.h>
-#include <boost/random.hpp>
-#include "Assert.h"
+#include <Alembic/AbcCoreOgawa/All.h>
+#include <Alembic/AbcCoreAbstract/Tests/Assert.h>
 
 #include <ImathMath.h>
 
@@ -45,6 +46,8 @@
 
 namespace Abc = Alembic::Abc;
 using namespace Abc;
+
+namespace AbcF = Alembic::AbcCoreFactory;
 
 using Alembic::AbcCoreAbstract::chrono_t;
 using Alembic::AbcCoreAbstract::index_t;
@@ -61,10 +64,20 @@ static const chrono_t CHRONO_EPSILON = \
     std::numeric_limits<chrono_t>::epsilon() * 32.0;
 
 //-*****************************************************************************
-void simpleTestOut( const std::string &iArchiveName )
+void simpleTestOut( const std::string &iArchiveName, bool useOgawa )
 {
-    OArchive archive( Alembic::AbcCoreHDF5::WriteArchive(),
-                      iArchiveName );
+
+    OArchive archive;
+    if (useOgawa)
+    {
+        archive = OArchive( Alembic::AbcCoreOgawa::WriteArchive(),
+            iArchiveName, ErrorHandler::kThrowPolicy );
+    }
+    else
+    {
+        archive = OArchive( Alembic::AbcCoreHDF5::WriteArchive(),
+            iArchiveName, ErrorHandler::kThrowPolicy );
+    }
 
     // all child Objects in an Archive are actually children of the single
     // top Object in an Archive
@@ -84,7 +97,7 @@ void simpleTestOut( const std::string &iArchiveName )
     ac0V3fp0.set( scalarV3fval );
 
     TimeSampling ts(dt, startTime);
-    uint32_t tsidx = archive.addTimeSampling(ts);
+    Alembic::Util::uint32_t tsidx = archive.addTimeSampling(ts);
 
     // now some array props
     OV3fArrayProperty acc0V3fap0( acc0Props, "acc0V3fap0", tsidx );
@@ -138,8 +151,10 @@ void simpleTestOut( const std::string &iArchiveName )
 //-*****************************************************************************
 void simpleTestIn( const std::string &iArchiveName )
 {
-    IArchive archive( Alembic::AbcCoreHDF5::ReadArchive(),
-                      iArchiveName, ErrorHandler::kThrowPolicy );
+    AbcF::IFactory factory;
+    factory.setPolicy(  ErrorHandler::kThrowPolicy );
+    AbcF::IFactory::CoreType coreType;
+    IArchive archive = factory.getArchive(iArchiveName, coreType);
 
     // an archive has a single top object which contains all its children
     IObject topObject = archive.getTop();
@@ -218,13 +233,93 @@ void simpleTestIn( const std::string &iArchiveName )
     // if the program exits, it means parenting works
 }
 
+void scopingTest(bool useOgawa)
+{
+    {
+        ODoubleProperty propScalar;
+        ODoubleArrayProperty propArray;
+        {
+
+            OArchive archive;
+            if (useOgawa)
+            {
+                archive = CreateArchiveWithInfo(
+                    Alembic::AbcCoreOgawa::WriteArchive(), "propScopeTest.abc",
+                    "Alembic test", "", MetaData() );
+            }
+            else
+            {
+                archive = CreateArchiveWithInfo(
+                    Alembic::AbcCoreHDF5::WriteArchive(), "propScopeTest.abc",
+                    "Alembic test", "", MetaData() );
+            }
+            OObject childA( archive.getTop(), "a" );
+
+            propScalar = ODoubleProperty(childA.getProperties(), "scalar", 0);
+
+            propArray = ODoubleArrayProperty(childA.getProperties(),
+                "array", 0);
+        }
+
+        std::vector< double > values(3, 2.0);
+        propArray.set( values );
+        propScalar.set( 4.0 );
+        propScalar.set( 5.0 );
+        TESTING_ASSERT(
+            propArray.getParent().getObject().getArchive().getName() ==
+            "propScopeTest.abc");
+        TESTING_ASSERT(
+            propScalar.getParent().getObject().getArchive().getName() ==
+            "propScopeTest.abc");
+    }
+
+    {
+        IDoubleProperty propScalar;
+        IDoubleArrayProperty propArray;
+        {
+            AbcF::IFactory factory;
+            AbcF::IFactory::CoreType coreType;
+            IArchive archive = factory.getArchive("propScopeTest.abc",
+                                                  coreType);
+            IObject top(archive.getTop(), "a");
+            propScalar = IDoubleProperty(top.getProperties(), "scalar");
+            propArray = IDoubleArrayProperty(top.getProperties(), "array");
+        }
+        TESTING_ASSERT(
+            propArray.getParent().getObject().getArchive().getName() ==
+            "propScopeTest.abc");
+        TESTING_ASSERT(
+            propScalar.getParent().getObject().getArchive().getName() ==
+            "propScopeTest.abc");
+
+        DoubleArraySamplePtr samp;
+        size_t sampNum = 0;
+        propArray.get(samp, sampNum);
+        TESTING_ASSERT( samp->size() == 3 );
+        TESTING_ASSERT( (*samp)[0] == 2.0 && (*samp)[1] == 2.0 &&
+                        (*samp)[2] == 2.0 );
+
+        double scalarVal = 0.0;
+        propScalar.get( scalarVal, sampNum );
+        TESTING_ASSERT( scalarVal == 4.0 );
+        sampNum ++;
+        propScalar.get( scalarVal, sampNum );
+        TESTING_ASSERT( scalarVal == 5.0 );
+    }
+}
+
 //-*****************************************************************************
 int main( int argc, char *argv[] )
 {
     const std::string arkive( "parentstest.abc" );
 
-    simpleTestOut( arkive );
+    bool useOgawa = true;
+    simpleTestOut( arkive, useOgawa );
     simpleTestIn( arkive );
-
+    scopingTest(useOgawa);
+    useOgawa = false;
+    simpleTestOut( arkive, useOgawa );
+    simpleTestIn( arkive );
+    scopingTest(useOgawa);
     return 0;
 }

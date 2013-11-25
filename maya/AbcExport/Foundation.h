@@ -50,6 +50,7 @@
 #include <maya/MDagPath.h>
 #include <maya/MDagPathArray.h>
 #include <maya/MDoubleArray.h>
+#include <maya/MEulerRotation.h>
 #include <maya/MFileIO.h>
 #include <maya/MFloatArray.h>
 #include <maya/MFloatPointArray.h>
@@ -106,10 +107,6 @@
 #include <maya/MUintArray.h>
 #include <maya/MVector.h>
 #include <maya/MVectorArray.h>
-
-#include <boost/smart_ptr.hpp>
-#include <boost/format.hpp>
-#include <boost/variant.hpp>
 
 #include <utility>
 #include <limits>

@@ -12,7 +12,7 @@ global proc shelf_Alembic () {
         -manage 1
         -visible 1
         -preventOverride 0
-        -annotation "Create Alembic archive node" 
+        -annotation "Create Alembic Archive Node" 
         -enableBackground 0
         -align "center" 
         -label "abcArch" 
@@ -25,7 +25,7 @@ global proc shelf_Alembic () {
         -style "iconOnly" 
         -marginWidth 1
         -marginHeight 1
-        -command "string $basicFilter = \"Alembic Files (*.abc)\";$file = `fileDialog2 -fm 1 -ff $basicFilter -cap \"Find Alembic File to load\"`;if (size($file)) {$parent = `group -em -name \"alembicArchive1\"`;\n$alembicNode=`createNode -p $parent alembicArchiveNode`;\nconnectAttr time1.outTime ($alembicNode+\".time\");setAttr -type \"string\" ($alembicNode+\".abcFile\") $file;}" 
+        -command "string $basicFilter = \"Alembic Files (*.abc)\";\n\n$file = `fileDialog2 -fm 1 -ff $basicFilter -cap \"Find Alembic File to load\"`;\n$parent = `group -em -name \"alembicArchive1\"`;\n$alembicNode=`createNode -p $parent bb_alembicArchiveShape`;\nconnectAttr time1.outTime ($alembicNode+\".time\");\nsetAttr -type \"string\" ($alembicNode+\".abcFile\") $file;" 
         -sourceType "mel" 
         -commandRepeatable 1
     ;
@@ -110,33 +110,6 @@ global proc shelf_Alembic () {
         -marginHeight 1
         -command "performAlembicExport 0 1" 
         -sourceType "mel" 
-        -commandRepeatable 1
-    ;
-    
-    //Toggle the display state of any archives under your current selection
-    shelfButton
-        -enableCommandRepeat 1
-        -enable 1
-        -width 35
-        -height 35
-        -manage 1
-        -visible 1
-        -preventOverride 0
-        -annotation "Toggle the display state of any archives under your current selection" 
-        -enableBackground 0
-        -align "center" 
-        -label "alembicNodes=ls(sl=True,dag=True,ap=True,type='alembicArchiveNod..." 
-        -labelOffset 0
-        -font "plainLabelFont" 
-        -overlayLabelColor 0.8 0.8 0.8 
-        -overlayLabelBackColor 0 0 0 0.25 
-        -image "pythonFamily.png" 
-        -image1 "pythonFamily.png" 
-        -style "iconOnly" 
-        -marginWidth 1
-        -marginHeight 1
-        -command "alembicNodes=ls(sl=True,dag=True,ap=True,type='alembicArchiveNode')\n\ndoSwitch=False\n\nif len(alembicNodes) > 30:\n    pd=confirmDialog( title='Confirm', message='Are you sure?\\n There are %s nodes that will be switched.' % len(alembicNodes),\n     button=['Yes','No'], defaultButton='Yes', cancelButton='No', dismissString='No' )\n\n    if pd == 'Yes':\n        doSwitch=True\nelse:\n    doSwitch=True\n    \nif doSwitch:\n\n    for n in alembicNodes:\n        n.sgl.set(1-n.sgl.get())" 
-        -sourceType "python" 
         -commandRepeatable 1
     ;
 

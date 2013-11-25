@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -69,7 +69,7 @@
 // to keep this example code clean.
 #include <Alembic/AbcGeom/Tests/MeshData.h>
 
-#include "Assert.h"
+#include <Alembic/AbcCoreAbstract/Tests/Assert.h>
 
 //-*****************************************************************************
 //-*****************************************************************************
@@ -138,12 +138,14 @@ void Example1_MeshOut()
     Box3d cbox;
     cbox.extendBy( V3d( 1.0, -1.0, 0.0 ) );
     cbox.extendBy( V3d( -1.0, 1.0, 3.0 ) );
-    mesh_samp.setChildBounds( cbox );
 
     // Set the sample twice
     mesh.set( mesh_samp );
     mesh.set( mesh_samp );
 
+    // do it twice to make sure getChildBoundsProperty works correctly
+    mesh.getChildBoundsProperty().set( cbox );
+    mesh.getChildBoundsProperty().set( cbox );
 
     // Alembic objects close themselves automatically when they go out
     // of scope. So - we don't have to do anything to finish
@@ -194,7 +196,7 @@ void Example1_MeshIn()
     TESTING_ASSERT( N.isConstant() );
     TESTING_ASSERT( uv.isConstant() );
 
-    TESTING_ASSERT( IsGeomParam( N.getMetaData() ) );
+    TESTING_ASSERT( IsGeomParam( N.getHeader() ) );
 
     N3f n0 = (*nsp)[0];
 
@@ -247,7 +249,7 @@ void meshUnderXformOut( const std::string &iName )
     childBounds.extendBy( V3d( 1.0, 1.0, 1.0 ) );
     childBounds.extendBy( V3d( -1.0, -1.0, -1.0 ) );
 
-    xf_samp.setChildBounds( childBounds );
+    xfobj.getSchema().getChildBoundsProperty().set( childBounds );
 
     double rotation = 0.0;
 
@@ -257,6 +259,85 @@ void meshUnderXformOut( const std::string &iName )
         xfobj.getSchema().set( xf_samp );
         meshobj.getSchema().set( mesh_samp );
         rotation += 30.0;
+    }
+}
+
+//-*****************************************************************************
+void optPropTest()
+{
+    std::string name = "meshOptPropTest.abc";
+    {
+        OArchive archive( Alembic::AbcCoreHDF5::WriteArchive(), name );
+        OPolyMesh meshyObj( OObject( archive, kTop ), "mesh" );
+        OPolyMeshSchema &mesh = meshyObj.getSchema();
+
+        // copy because we'll be changing these values
+        std::vector< V3f > verts( g_numVerts );
+        for ( size_t i = 0; i < g_numVerts; ++i )
+        {
+            verts[i] = V3f( g_verts[3*i], g_verts[3*i+1], g_verts[3*i+2] );
+        }
+
+        OPolyMeshSchema::Sample mesh_samp(
+            V3fArraySample( verts ),
+            Int32ArraySample( g_indices, g_numIndices ),
+            Int32ArraySample( g_counts, g_numCounts ) );
+
+        for ( size_t i = 0; i < 2; ++i )
+        {
+            mesh.set( mesh_samp );
+            for ( size_t j = 0; j < g_numVerts; ++j )
+            {
+                verts[j] *= 2;
+            }
+        }
+
+        ON3fGeomParam::Sample nsamp( N3fArraySample( (const N3f *)g_normals,
+            g_numNormals ), kFacevaryingScope );
+        mesh_samp.setNormals( nsamp );
+
+        OV2fGeomParam::Sample uvsamp( V2fArraySample( (const V2f *)g_uvs,
+                                      g_numUVs ), kFacevaryingScope );
+        mesh_samp.setUVs( uvsamp );
+        mesh_samp.setVelocities( V3fArraySample( ( const V3f * )g_veloc,
+                                               g_numVerts ) );
+        mesh.set( mesh_samp );
+
+        mesh_samp.setNormals( ON3fGeomParam::Sample() );
+        mesh_samp.setUVs( OV2fGeomParam::Sample() );
+        mesh_samp.setVelocities( V3fArraySample() );
+        mesh.set( mesh_samp );
+
+
+        mesh_samp.setVelocities( V3fArraySample( ( const V3f * )g_veloc,
+                                               g_numVerts ) );
+        mesh_samp.setUVs( uvsamp );
+        mesh_samp.setNormals( nsamp );
+
+        for ( size_t i = 0; i < 2; ++i )
+        {
+            mesh.set( mesh_samp );
+            for ( size_t j = 0; j < g_numVerts; ++j )
+            {
+                verts[j] *= 2;
+            }
+        }
+
+        mesh_samp.setUVs( OV2fGeomParam::Sample() );
+        mesh_samp.setNormals( ON3fGeomParam::Sample() );
+        mesh_samp.setVelocities( V3fArraySample() );
+        mesh.set( mesh_samp );
+    }
+
+    {
+        IArchive archive( Alembic::AbcCoreHDF5::ReadArchive(), name );
+
+        IPolyMesh meshyObj( IObject( archive, kTop ), "mesh" );
+        IPolyMeshSchema &mesh = meshyObj.getSchema();
+        TESTING_ASSERT( 7 == mesh.getNumSamples() );
+        TESTING_ASSERT( 7 == mesh.getVelocitiesProperty().getNumSamples() );
+        TESTING_ASSERT( 7 == mesh.getUVsParam().getNumSamples() );
+        TESTING_ASSERT( 7 == mesh.getNormalsParam().getNumSamples() );
     }
 }
 
@@ -278,6 +359,6 @@ int main( int argc, char *argv[] )
 
     meshUnderXformOut( "animatedXformedMesh.abc" );
 
-    //Time_Sampled_Mesh_Test0();
+    optPropTest();
     return 0;
 }

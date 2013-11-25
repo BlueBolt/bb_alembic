@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2013,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -63,14 +63,14 @@ public:
     //! ...
     ICompoundProperty() : IBasePropertyT<AbcA::CompoundPropertyReaderPtr>() {}
 
-    //! This templated, explicit function creates a new scalar property reader.
-    //! The first argument is any Abc (or AbcCoreAbstract) object
+    //! This templated, explicit function creates a new compound property
+    //! reader. The first argument is any Abc (or AbcCoreAbstract) object
     //! which can intrusively be converted to an CompoundPropertyReaderPtr
     //! to use as a parent, from which the error handler policy for
     //! inheritance is also derived.  The remaining optional arguments
     //! can be used to override the ErrorHandlerPolicy
-    template <class OBJECT_PTR>
-    ICompoundProperty( OBJECT_PTR iParentObject,
+    template <class CPROP_PTR>
+    ICompoundProperty( CPROP_PTR iParentProp,
                        const std::string &iName,
                        const Argument &iArg0 = Argument() );
 
@@ -82,7 +82,7 @@ public:
     template <class CPROP_PTR>
     ICompoundProperty(
         CPROP_PTR iThisObject,
-        WrapExistingFlag iWrapFlag,
+        WrapExistingFlag /* iWrapFlag */,
         const Argument &iArg0 = Argument(),
         const Argument &iArg1 = Argument() );
 
@@ -94,7 +94,7 @@ public:
     template <class OBJECT_PTR>
     ICompoundProperty(
         OBJECT_PTR iThisObject,
-        TopFlag iTopFlag,
+        TopFlag /* iTopFlag */,
         const Argument &iArg0 = Argument(),
         const Argument &iArg1 = Argument() );
 
@@ -110,17 +110,17 @@ public:
     //-*************************************************************************
 
     //! Returns the number of properties contained in this ICompoundProperty
-    size_t getNumProperties();
+    size_t getNumProperties() const;
 
     //! Return the header of a child property.
     //! Property is selected by index.
     //! This will throw an exception on out-of-range access.
-    const AbcA::PropertyHeader & getPropertyHeader( size_t i );
+    const AbcA::PropertyHeader & getPropertyHeader( size_t i ) const;
 
     //! Return the header of a property name.
     //! This will return a NULL pointer if no header by that name is found.
     const AbcA::PropertyHeader *
-    getPropertyHeader( const std::string &iName );
+    getPropertyHeader( const std::string &iName ) const;
 
     //! There is no distinction between already added properties
     //! and created properties with an AbcA::CompoundPropertyReader, therefore
@@ -130,7 +130,7 @@ public:
 
     //! Return the parent compound property, handily wrapped in a
     //! ICompoundProperty wrapper.
-    ICompoundProperty getParent();
+    ICompoundProperty getParent() const;
 
 private:
     void init( AbcA::CompoundPropertyReaderPtr iParentObject,
@@ -180,7 +180,7 @@ inline ICompoundProperty::ICompoundProperty( CPROP_PTR iThisObject,
 //-*****************************************************************************
 template <class OBJECT_PTR>
 inline ICompoundProperty::ICompoundProperty( OBJECT_PTR iThisObject,
-                                             TopFlag iTop,
+                                             TopFlag /* iTop */,
                                              const Argument &iArg0,
                                              const Argument &iArg1 )
 {

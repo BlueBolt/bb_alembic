@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -43,25 +43,26 @@ namespace ALEMBIC_VERSION_NS {
 
 //-*****************************************************************************
 void ICameraSchema::init( const Abc::Argument &iArg0,
-                            const Abc::Argument &iArg1 )
+                          const Abc::Argument &iArg1 )
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "ICameraSchema::init()" );
+
+    AbcA::CompoundPropertyReaderPtr _this = this->getPtr();
 
     Abc::Arguments args;
     iArg0.setInto( args );
     iArg1.setInto( args );
 
-    AbcA::CompoundPropertyReaderPtr _this = this->getPtr();
 
     m_coreProperties = Abc::IScalarProperty( _this, ".core",
-        args.getSchemaInterpMatching() );
+        args.getErrorHandlerPolicy() );
 
     // none of the things below here are guaranteed to exist
 
     if ( this->getPropertyHeader( ".childBnds" ) != NULL )
     {
-        m_childBounds = Abc::IBox3dProperty( _this, ".childBnds", iArg0,
-            iArg1 );
+        m_childBoundsProperty = Abc::IBox3dProperty( _this, ".childBnds",
+            iArg0, iArg1 );
     }
 
     if ( this->getPropertyHeader( ".arbGeomParams" ) != NULL )
@@ -77,7 +78,7 @@ void ICameraSchema::init( const Abc::Argument &iArg0,
     }
 
     // read the film back operations
-    const AbcA::PropertyHeader * header = 
+    const AbcA::PropertyHeader * header =
         this->getPropertyHeader(".filmBackOps");
 
     // read it from the scalar property
@@ -133,25 +134,24 @@ void ICameraSchema::init( const Abc::Argument &iArg0,
     ALEMBIC_ABC_SAFE_CALL_END_RESET();
 }
 
+bool ICameraSchema::isConstant() const
+{
+    return ( m_coreProperties.isConstant() &&
+        ( !m_smallFilmBackChannels.valid() ||
+          m_smallFilmBackChannels.isConstant() ) &&
+        ( !m_largeFilmBackChannels.valid() ||
+          m_largeFilmBackChannels.isConstant() ) );
+}
+
 void ICameraSchema::get( CameraSample & oSample,
-    const Abc::ISampleSelector &iSS )
+    const Abc::ISampleSelector &iSS ) const
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "ICameraSchema::get()" );
 
     double sampleData[16];
     m_coreProperties.get( sampleData, iSS );
 
-    Abc::Box3d bounds;
-    bounds.makeEmpty();
-
-    if ( m_childBounds )
-    {
-        m_childBounds.get( bounds, iSS );
-    }
-
     oSample.reset();
-
-    oSample.setChildBounds( bounds );
 
     oSample.setFocalLength( sampleData[0] );
     oSample.setHorizontalAperture( sampleData[1] );
@@ -173,11 +173,16 @@ void ICameraSchema::get( CameraSample & oSample,
     oSample.setNearClippingPlane(sampleData[14]);
     oSample.setFarClippingPlane(sampleData[15]);
 
-    if ( m_smallFilmBackChannels )
+    if ( m_smallFilmBackChannels &&
+         m_smallFilmBackChannels.getNumSamples() > 0 )
     {
+        AbcA::index_t sampIdx = iSS.getIndex(
+            m_coreProperties.getTimeSampling(),
+            m_smallFilmBackChannels.getNumSamples() );
+
         std::vector < double > channels (
             m_smallFilmBackChannels.getDataType().getExtent() );
-        m_smallFilmBackChannels.get( &channels.front(), iSS );
+        m_smallFilmBackChannels.get( &channels.front(), sampIdx );
 
         std::size_t numOps = m_ops.size();
         std::size_t curChan = 0;
@@ -192,10 +197,15 @@ void ICameraSchema::get( CameraSample & oSample,
             }
         }
     }
-    else if ( m_largeFilmBackChannels )
+    else if ( m_largeFilmBackChannels &&
+              m_largeFilmBackChannels.getNumSamples() > 0 )
     {
+        AbcA::index_t sampIdx = iSS.getIndex(
+            m_coreProperties.getTimeSampling(),
+            m_largeFilmBackChannels.getNumSamples() );
+
         Abc::DoubleArraySamplePtr chanSamp;
-        m_largeFilmBackChannels.get( chanSamp, iSS );
+        m_largeFilmBackChannels.get( chanSamp, sampIdx );
 
         std::size_t numOps = m_ops.size();
         std::size_t curChan = 0;

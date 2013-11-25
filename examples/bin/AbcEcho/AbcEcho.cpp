@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2013,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -36,7 +36,9 @@
 
 #include <Alembic/AbcGeom/All.h>
 #include <Alembic/AbcCoreAbstract/All.h>
-#include <Alembic/AbcCoreHDF5/All.h>
+#include <Alembic/AbcCoreFactory/All.h>
+#include <Alembic/Util/All.h>
+#include <Alembic/Abc/TypedPropertyTraits.h>
 
 #include <iostream>
 #include <sstream>
@@ -52,11 +54,18 @@ void visitProperties( ICompoundProperty, std::string & );
 
 //-*****************************************************************************
 template <class PROP>
-void visitSimpleProperty( PROP iProp, const std::string &iIndent )
+void visitSimpleArrayProperty( PROP iProp, const std::string &iIndent )
 {
-    std::string ptype = "ScalarProperty ";
-    if ( iProp.isArray() ) { ptype = "ArrayProperty "; }
+    std::string ptype = "ArrayProperty ";
+    size_t asize = 0;
 
+    AbcA::ArraySamplePtr samp;
+    index_t maxSamples = iProp.getNumSamples();
+    for ( index_t i = 0 ; i < maxSamples; ++i )
+    {
+        iProp.get( samp, ISampleSelector( i ) );
+        asize = samp->size();
+    };
 
     std::string mdstring = "interpretation=";
     mdstring += iProp.getMetaData().get( "interpretation" );
@@ -65,9 +74,57 @@ void visitSimpleProperty( PROP iProp, const std::string &iIndent )
     dtype << "datatype=";
     dtype << iProp.getDataType();
 
+    std::stringstream asizestr;
+    asizestr << ";arraysize=";
+    asizestr << asize;
+
     mdstring += g_sep;
 
     mdstring += dtype.str();
+
+    mdstring += asizestr.str();
+
+    std::cout << iIndent << "  " << ptype << "name=" << iProp.getName()
+              << g_sep << mdstring << g_sep << "numsamps="
+              << iProp.getNumSamples() << std::endl;
+}
+
+//-*****************************************************************************
+template <class PROP>
+void visitSimpleScalarProperty( PROP iProp, const std::string &iIndent )
+{
+    std::string ptype = "ScalarProperty ";
+    size_t asize = 0;
+
+    const AbcA::DataType &dt = iProp.getDataType();
+    const Alembic::Util ::uint8_t extent = dt.getExtent();
+    Alembic::Util::Dimensions dims( extent );
+    AbcA::ArraySamplePtr samp =
+        AbcA::AllocateArraySample( dt, dims );
+    index_t maxSamples = iProp.getNumSamples();
+    for ( index_t i = 0 ; i < maxSamples; ++i )
+    {
+        iProp.get( const_cast<void*>( samp->getData() ),
+                                      ISampleSelector( i ) );
+        asize = samp->size();
+    };
+
+    std::string mdstring = "interpretation=";
+    mdstring += iProp.getMetaData().get( "interpretation" );
+
+    std::stringstream dtype;
+    dtype << "datatype=";
+    dtype << dt;
+
+    std::stringstream asizestr;
+    asizestr << ";arraysize=";
+    asizestr << asize;
+
+    mdstring += g_sep;
+
+    mdstring += dtype.str();
+
+    mdstring += asizestr.str();
 
     std::cout << iIndent << "  " << ptype << "name=" << iProp.getName()
               << g_sep << mdstring << g_sep << "numsamps="
@@ -108,13 +165,15 @@ void visitProperties( ICompoundProperty iParent,
         }
         else if ( header.isScalar() )
         {
-            visitSimpleProperty( IScalarProperty( iParent, header.getName() ),
+            visitSimpleScalarProperty( IScalarProperty( iParent,
+                                                        header.getName() ),
                                  ioIndent );
         }
         else
         {
             assert( header.isArray() );
-            visitSimpleProperty( IArrayProperty( iParent, header.getName() ),
+            visitSimpleArrayProperty( IArrayProperty( iParent,
+                                                      header.getName() ),
                                  ioIndent );
         }
     }
@@ -163,17 +222,19 @@ int main( int argc, char *argv[] )
 
     // Scoped.
     {
-        IArchive archive( Alembic::AbcCoreHDF5::ReadArchive(),
-                          argv[1], ErrorHandler::kQuietNoopPolicy );
+        Alembic::AbcCoreFactory::IFactory factory;
+        factory.setPolicy(ErrorHandler::kQuietNoopPolicy);
+        IArchive archive = factory.getArchive( argv[1] );
+
         if (archive)
         {
-            std::cout  << "AbcEcho for " 
+            std::cout  << "AbcEcho for "
                        << Alembic::AbcCoreAbstract::GetLibraryVersion ()
                        << std::endl;;
-        
+
             std::string appName;
             std::string libraryVersionString;
-            uint32_t libraryVersion;
+            Alembic::Util::uint32_t libraryVersion;
             std::string whenWritten;
             std::string userDescription;
             GetArchiveInfo (archive,
@@ -182,7 +243,7 @@ int main( int argc, char *argv[] )
                             libraryVersion,
                             whenWritten,
                             userDescription);
-        
+
             if (appName != "")
             {
                 std::cout << "  file written by: " << appName << std::endl;
@@ -194,7 +255,7 @@ int main( int argc, char *argv[] )
             else
             {
                 std::cout << argv[1] << std::endl;
-                std::cout << "  (file doesn't have any ArchiveInfo)" 
+                std::cout << "  (file doesn't have any ArchiveInfo)"
                           << std::endl;
                 std::cout << std::endl;
             }

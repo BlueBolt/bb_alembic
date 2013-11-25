@@ -41,7 +41,7 @@ namespace AbcGeom {
 namespace ALEMBIC_VERSION_NS {
 
 //-*****************************************************************************
-MeshTopologyVariance ISubDSchema::getTopologyVariance()
+MeshTopologyVariance ISubDSchema::getTopologyVariance() const
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "ISubDSchema::getTopologyVariance()" );
 
@@ -68,7 +68,7 @@ MeshTopologyVariance ISubDSchema::getTopologyVariance()
 }
 
 //-*****************************************************************************
-size_t ISubDSchema::getNumSamples()
+size_t ISubDSchema::getNumSamples() const
 {
     size_t max = 0;
 
@@ -96,7 +96,7 @@ size_t ISubDSchema::getNumSamples()
 
 //-*****************************************************************************
 void ISubDSchema::get( ISubDSchema::Sample &oSample,
-                       const Abc::ISampleSelector &iSS )
+                       const Abc::ISampleSelector &iSS ) const
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "ISubDSchema::get()" );
 
@@ -104,11 +104,34 @@ void ISubDSchema::get( ISubDSchema::Sample &oSample,
     m_faceIndicesProperty.get( oSample.m_faceIndices, iSS );
     m_faceCountsProperty.get( oSample.m_faceCounts, iSS );
 
-    m_faceVaryingInterpolateBoundaryProperty.get(
-        oSample.m_faceVaryingInterpolateBoundary, iSS );
-    m_faceVaryingPropagateCornersProperty.get(
-        oSample.m_faceVaryingPropagateCorners, iSS );
-    m_interpolateBoundaryProperty.get( oSample.m_interpolateBoundary, iSS );
+    if ( m_faceVaryingInterpolateBoundaryProperty )
+    {
+        m_faceVaryingInterpolateBoundaryProperty.get(
+            oSample.m_faceVaryingInterpolateBoundary, iSS );
+    }
+    else
+    {
+        oSample.m_faceVaryingInterpolateBoundary = 0;
+    }
+
+    if ( m_faceVaryingPropagateCornersProperty )
+    {
+        m_faceVaryingPropagateCornersProperty.get(
+            oSample.m_faceVaryingPropagateCorners, iSS );
+    }
+    else
+    {
+        oSample.m_faceVaryingPropagateCorners = 0;
+    }
+
+    if ( m_interpolateBoundaryProperty )
+    {
+        m_interpolateBoundaryProperty.get( oSample.m_interpolateBoundary, iSS );
+    }
+    else
+    {
+        oSample.m_interpolateBoundary = 0;
+    }
 
     m_selfBoundsProperty.get( oSample.m_selfBounds, iSS );
 
@@ -130,10 +153,14 @@ void ISubDSchema::get( ISubDSchema::Sample &oSample,
     if ( m_holesProperty )
     { m_holesProperty.get( oSample.m_holes, iSS ); }
 
-    m_subdSchemeProperty.get( oSample.m_subdScheme, iSS );
-
-    if ( m_childBoundsProperty && m_childBoundsProperty.getNumSamples() > 0 )
-    { m_childBoundsProperty.get( oSample.m_childBounds, iSS ); }
+    if ( m_subdSchemeProperty )
+    {
+        m_subdSchemeProperty.get( oSample.m_subdScheme, iSS );
+    }
+    else
+    {
+        oSample.m_subdScheme = "catmull-clark";
+    }
 
     if ( m_velocitiesProperty && m_velocitiesProperty.getNumSamples() > 0 )
     { m_velocitiesProperty.get( oSample.m_velocities, iSS ); }
@@ -142,7 +169,7 @@ void ISubDSchema::get( ISubDSchema::Sample &oSample,
 }
 
 //-*****************************************************************************
-const ISubDSchema & 
+const ISubDSchema &
 ISubDSchema::operator=(const ISubDSchema & rhs)
 {
     IGeomBaseSchema<SubDSchemaInfo>::operator=(rhs);
@@ -151,9 +178,9 @@ ISubDSchema::operator=(const ISubDSchema & rhs)
     m_velocitiesProperty = rhs.m_velocitiesProperty;
     m_faceIndicesProperty = rhs.m_faceIndicesProperty;
     m_faceCountsProperty = rhs.m_faceCountsProperty;
-    m_faceVaryingInterpolateBoundaryProperty = 
+    m_faceVaryingInterpolateBoundaryProperty =
         rhs.m_faceVaryingInterpolateBoundaryProperty;
-    m_faceVaryingPropagateCornersProperty = 
+    m_faceVaryingPropagateCornersProperty =
         rhs.m_faceVaryingPropagateCornersProperty;
     m_interpolateBoundaryProperty = rhs.m_interpolateBoundaryProperty;
     m_creaseIndicesProperty = rhs.m_creaseIndicesProperty;
@@ -164,11 +191,11 @@ ISubDSchema::operator=(const ISubDSchema & rhs)
     m_holesProperty = rhs.m_holesProperty;
     m_subdSchemeProperty = rhs.m_subdSchemeProperty;
     m_uvsParam = rhs.m_uvsParam;
-    m_faceVaryingInterpolateBoundaryProperty = 
+    m_faceVaryingInterpolateBoundaryProperty =
         rhs.m_faceVaryingInterpolateBoundaryProperty;
 
     // lock, reset
-    boost::mutex::scoped_lock l(m_faceSetsMutex);
+    Alembic::Util::scoped_lock l(m_faceSetsMutex);
     m_faceSetsLoaded = false;
     m_faceSets.clear();
     return *this;
@@ -180,73 +207,85 @@ void ISubDSchema::init( const Abc::Argument &iArg0,
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "ISubDSchema::init()" );
 
+    AbcA::CompoundPropertyReaderPtr _this = this->getPtr();
+
     Abc::Arguments args;
     iArg0.setInto( args );
     iArg1.setInto( args );
 
-    AbcA::CompoundPropertyReaderPtr _this = this->getPtr();
-
     // no matching so we pick up old assets written as V3f
-    m_positionsProperty = Abc::IP3fArrayProperty( _this, "P", kNoMatching );
-    m_faceIndicesProperty = Abc::IInt32ArrayProperty( _this, ".faceIndices",
-                                            args.getSchemaInterpMatching() );
-    m_faceCountsProperty = Abc::IInt32ArrayProperty( _this, ".faceCounts",
-                                           args.getSchemaInterpMatching() );
+    m_positionsProperty = Abc::IP3fArrayProperty( _this, "P", kNoMatching,
+        args.getErrorHandlerPolicy() );
 
-    m_faceVaryingInterpolateBoundaryProperty =
-        Abc::IInt32Property( _this, ".faceVaryingInterpolateBoundary",
-                           args.getSchemaInterpMatching() );
-    m_faceVaryingPropagateCornersProperty =
-        Abc::IInt32Property( _this, ".faceVaryingPropagateCorners",
-                           args.getSchemaInterpMatching() );
-    m_interpolateBoundaryProperty =
-        Abc::IInt32Property( _this, ".interpolateBoundary",
-                           args.getSchemaInterpMatching() );
+    m_faceIndicesProperty = Abc::IInt32ArrayProperty( _this, ".faceIndices",
+                                                      iArg0, iArg1 );
+    m_faceCountsProperty = Abc::IInt32ArrayProperty( _this, ".faceCounts",
+                                                     iArg0, iArg1 );
+
+    if ( this->getPropertyHeader(".faceVaryingInterpolateBoundary") != NULL )
+    {
+        m_faceVaryingInterpolateBoundaryProperty =
+            Abc::IInt32Property( _this, ".faceVaryingInterpolateBoundary",
+                                 iArg0, iArg1 );
+    }
+
+    if ( this->getPropertyHeader(".faceVaryingPropagateCorners") != NULL )
+    {
+        m_faceVaryingPropagateCornersProperty =
+            Abc::IInt32Property( _this, ".faceVaryingPropagateCorners",
+                                 iArg0, iArg1 );
+    }
+
+    if ( this->getPropertyHeader(".interpolateBoundary") != NULL )
+    {
+        m_interpolateBoundaryProperty =
+            Abc::IInt32Property( _this, ".interpolateBoundary", iArg0, iArg1 );
+    }
 
     // creases, corners, and holes optionally exist
     if ( this->getPropertyHeader(".creaseIndices") != NULL)
     {
-        m_creaseIndicesProperty = Abc::IInt32ArrayProperty( _this, ".creaseIndices",
-                                                    args.getSchemaInterpMatching() );
+        m_creaseIndicesProperty = Abc::IInt32ArrayProperty( _this,
+            ".creaseIndices", iArg0, iArg1 );
     }
 
     if ( this->getPropertyHeader(".creaseLengths") != NULL)
     {
-        m_creaseLengthsProperty = Abc::IInt32ArrayProperty( _this, ".creaseLengths",
-                                                    args.getSchemaInterpMatching() );
+        m_creaseLengthsProperty = Abc::IInt32ArrayProperty( _this,
+            ".creaseLengths", iArg0, iArg1 );
     }
 
     if ( this->getPropertyHeader(".creaseSharpnesses") != NULL)
     {
         m_creaseSharpnessesProperty =
              Abc::IFloatArrayProperty( _this,
-                                       ".creaseSharpnesses",
-                                       args.getSchemaInterpMatching() );
+                                       ".creaseSharpnesses", iArg0, iArg1 );
     }
 
     if ( this->getPropertyHeader(".cornerIndices") != NULL)
     {
         m_cornerIndicesProperty =
-            Abc::IInt32ArrayProperty( _this, ".cornerIndices",
-                                      args.getSchemaInterpMatching() );
+            Abc::IInt32ArrayProperty( _this, ".cornerIndices", iArg0, iArg1 );
     }
 
     if ( this->getPropertyHeader(".cornerSharpnesses") != NULL)
     {
         m_cornerSharpnessesProperty =
             Abc::IFloatArrayProperty( _this, ".cornerSharpnesses",
-                                      args.getSchemaInterpMatching() );
+                                      iArg0, iArg1 );
     }
 
     if ( this->getPropertyHeader(".holes") != NULL)
     {
         m_holesProperty =
-            Abc::IInt32ArrayProperty( _this, ".holes",
-                                      args.getSchemaInterpMatching() );
+            Abc::IInt32ArrayProperty( _this, ".holes", iArg0, iArg1 );
     }
 
-    m_subdSchemeProperty = Abc::IStringProperty( _this, ".scheme",
-                                         args.getSchemaInterpMatching() );
+    if ( this->getPropertyHeader(".scheme") != NULL)
+    {
+        m_subdSchemeProperty = Abc::IStringProperty( _this, ".scheme",
+                                                     iArg0, iArg1 );
+    }
 
     // none of the things below here are guaranteed to exist
     if ( this->getPropertyHeader( "uv" ) != NULL )
@@ -257,7 +296,7 @@ void ISubDSchema::init( const Abc::Argument &iArg0,
     if ( this->getPropertyHeader( ".velocities" ) != NULL )
     {
         m_velocitiesProperty = Abc::IV3fArrayProperty( _this, ".velocities",
-                                               iArg0, iArg1 );
+                                                       iArg0, iArg1 );
     }
 
     m_faceSetsLoaded = false;
@@ -270,7 +309,7 @@ void ISubDSchema::getFaceSetNames (std::vector <std::string> & oFaceSetNames)
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "ISubDSchema::getFaceSetNames()" );
 
-    boost::mutex::scoped_lock l(m_faceSetsMutex);
+    Alembic::Util::scoped_lock l(m_faceSetsMutex);
     loadFaceSetNames();
 
     for (std::map<std::string, IFaceSet>::const_iterator faceSetIter =
@@ -291,9 +330,9 @@ void ISubDSchema::loadFaceSetNames()
 
     if (!m_faceSetsLoaded)
     {
-        // iterate over childHeaders, and if header matches 
+        // iterate over childHeaders, and if header matches
         // FaceSet add to our vec
-        IObject _thisObject = this->getParent().getObject();
+        IObject _thisObject = getObject();
 
         size_t numChildren = _thisObject.getNumChildren();
         for ( size_t childIndex = 0 ; childIndex < numChildren; childIndex++ )
@@ -318,7 +357,7 @@ ISubDSchema::hasFaceSet( const std::string &faceSetName )
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "ISubDSchema::hasFaceSet (faceSetName)" );
 
-    boost::mutex::scoped_lock l(m_faceSetsMutex);
+    Alembic::Util::scoped_lock l(m_faceSetsMutex);
     if (!m_faceSetsLoaded)
     {
         loadFaceSetNames();
@@ -336,7 +375,7 @@ IFaceSet
 ISubDSchema::getFaceSet( const std::string &iFaceSetName )
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "ISubDSchema::getFaceSet()" );
-    boost::mutex::scoped_lock l(m_faceSetsMutex);
+    Alembic::Util::scoped_lock l(m_faceSetsMutex);
     if (!m_faceSetsLoaded)
     {
         loadFaceSetNames();
@@ -348,8 +387,7 @@ ISubDSchema::getFaceSet( const std::string &iFaceSetName )
     if (!m_faceSets [iFaceSetName])
     {
         // We haven't yet loaded the faceSet, so create/load it
-        m_faceSets [iFaceSetName] = IFaceSet ( this->getParent().getObject(),
-                                               iFaceSetName );
+        m_faceSets [iFaceSetName] = IFaceSet ( getObject(), iFaceSetName );
     }
 
     return m_faceSets [iFaceSetName];

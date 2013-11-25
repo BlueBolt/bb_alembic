@@ -1,6 +1,6 @@
 ##-*****************************************************************************
 ##
-## Copyright (c) 2009-2011,
+## Copyright (c) 2009-2012,
 ##  Sony Pictures Imageworks Inc. and
 ##  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 ##
@@ -40,5 +40,12 @@ PROJECT( ALEMBIC_LIBS )
 INCLUDE_DIRECTORIES( ${ALEMBIC_LIBS_SOURCE_DIR} )
 
 # Recurse into all the subdirectories
-ADD_SUBDIRECTORY( Bootstrap )
+IF( NOT ALEMBIC_NO_BOOTSTRAP )
+	ADD_SUBDIRECTORY( Bootstrap )
+ENDIF()
+
 ADD_SUBDIRECTORY( Alembic )
+
+IF( NOT ALEMBIC_NO_OPENGL )
+	ADD_SUBDIRECTORY( AbcOpenGL )
+ENDIF()

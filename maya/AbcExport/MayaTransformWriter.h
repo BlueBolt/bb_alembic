@@ -88,8 +88,18 @@ class MayaTransformWriter
 
     std::vector < AnimChan > mAnimChanList;
     MPlug mInheritsPlug;
+
+    size_t mJointOrientOpIndex[3];
+    size_t mRotateOpIndex[3];
+    size_t mRotateAxisOpIndex[3];
+
+    bool mFilterEulerRotations;
+    MEulerRotation mPrevJointOrientSolution;
+    MEulerRotation mPrevRotateSolution;
+    MEulerRotation mPrevRotateAxisSolution;
 };
 
-typedef boost::shared_ptr < MayaTransformWriter > MayaTransformWriterPtr;
+typedef Alembic::Util::shared_ptr < MayaTransformWriter >
+    MayaTransformWriterPtr;
 
 #endif  // _AlembicExport_MayaTransformWriter_h_

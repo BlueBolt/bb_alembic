@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2013,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -120,7 +120,7 @@ public:
     //! the argument-less static time sampling, and
     //! the argument-less acyclic time sampling.
     enum AcyclicFlag { kAcyclic };
-    explicit TimeSamplingType( AcyclicFlag iAF )
+    explicit TimeSamplingType( AcyclicFlag /*iAF*/ )
     {
         m_numSamplesPerCycle = AcyclicNumSamples();
         m_timePerCycle = AcyclicTimePerCycle();
@@ -129,11 +129,7 @@ public:
     //! Using Default Copy Constructor
     //! Using Default Assignment Operator
 
-    bool operator==( const TimeSamplingType & iRhs ) const
-    {
-        return ( m_numSamplesPerCycle == iRhs.m_numSamplesPerCycle &&
-            m_timePerCycle == iRhs.m_timePerCycle );
-    }
+    bool operator==( const TimeSamplingType & iRhs ) const;
 
     //! Asks if the sampling is:
     //! Uniform (1 sample per cycle)

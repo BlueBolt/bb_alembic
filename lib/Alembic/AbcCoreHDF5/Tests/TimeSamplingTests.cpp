@@ -38,7 +38,7 @@
 #include <Alembic/AbcCoreHDF5/All.h>
 #include <Alembic/Util/All.h>
 
-#include <Alembic/AbcCoreHDF5/Tests/Assert.h>
+#include <Alembic/AbcCoreAbstract/Tests/Assert.h>
 
 #include <iostream>
 #include <vector>
@@ -159,6 +159,8 @@ void testTimeSamplingScalar()
         // Setting more than what we have acyclic samples for
         TESTING_ASSERT_THROW(swp3->setSample(&s),
             Alembic::Util::Exception);
+
+        swp3->setTimeSamplingIndex(tsid);
 
         AbcA::ScalarPropertyWriterPtr swp4 =
             parent->createScalarProperty("identity", AbcA::MetaData(),

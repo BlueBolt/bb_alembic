@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -35,6 +35,7 @@
 //-*****************************************************************************
 
 #include <Alembic/AbcCoreHDF5/All.h>
+#include <Alembic/AbcCoreOgawa/All.h>
 #include <Alembic/Abc/All.h>
 
 using namespace Alembic::Abc;
@@ -56,11 +57,11 @@ typedef ISchemaObject<ITestSchema> ITest;
 void testOSchemaObject( OObject &iParent )
 {
     OTest tst( iParent, "childTestObject" );
-    OTest tst2( tst.getPtr(), kWrapExisting,
+    OTest tst2( tst.getPtr(), "foo",
                 ErrorHandler::kQuietNoopPolicy );
-    OTest tst3( tst2.getPtr(), kWrapExisting,
+    OTest tst3( tst2.getPtr(), "bar",
                 kNoMatching );
-    OTest tst4( tst3, kWrapExisting,
+    OTest tst4( tst3, "baz",
                 ErrorHandler::kNoisyNoopPolicy,
                 kStrictMatching );
 
@@ -71,11 +72,11 @@ void testOSchemaObject( OObject &iParent )
 void testOSchema( OObject & iParent )
 {
     OTestSchema tst( OCompoundProperty( iParent, kTop ) );
-    OTestSchema tst2( tst.getPtr(), kWrapExisting,
+    OTestSchema tst2( tst.getPtr(), "foo",
                       ErrorHandler::kQuietNoopPolicy );
-    OTestSchema tst3( tst2.getPtr(), kWrapExisting,
+    OTestSchema tst3( tst2.getPtr(), "bar",
                       kNoMatching );
-    OTestSchema tst4( tst3, kWrapExisting,
+    OTestSchema tst4( tst3, "baz",
                       ErrorHandler::kNoisyNoopPolicy,
                       kStrictMatching );
 }
@@ -129,7 +130,7 @@ void testOTypedArrayProperty( OObject &iObject )
                                "intPropArray" );
     OInt32ArrayProperty intProp2( intProp.getPtr(), kWrapExisting );
 
-    int32_t i[] = { 1, 2, 3, 4, 5 };
+    Alembic::Util::int32_t i[] = { 1, 2, 3, 4, 5 };
     intProp.set( Int32ArraySample( i, 5 ) );
     intProp2.set( Int32ArraySample( i, 5 ) );
 
@@ -193,6 +194,25 @@ int main( int argc, char *argv[] )
         testITypedScalarProperty( child );
         testITypedArrayProperty( child );
     }
-
+    {
+        OArchive archive( Alembic::AbcCoreOgawa::WriteArchive(),
+                          archiveName, ErrorHandler::kNoisyNoopPolicy );
+        OObject archiveTop = archive.getTop();
+        testOSchemaObject( archiveTop );
+        OObject child( archiveTop, "otherChild" );
+        testOSchema( child );
+        testOTypedScalarProperty( child );
+        testOTypedArrayProperty( child );
+    }
+    {
+        IArchive archive( Alembic::AbcCoreOgawa::ReadArchive(), archiveName,
+            ErrorHandler::kNoisyNoopPolicy );
+        IObject archiveTop = archive.getTop();
+        testISchemaObject( archiveTop );
+        IObject child( archiveTop, "otherChild" );
+        testISchema( child );
+        testITypedScalarProperty( child );
+        testITypedArrayProperty( child );
+    }
     return 0;
 }

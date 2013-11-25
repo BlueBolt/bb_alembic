@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2013,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -83,7 +83,7 @@ protected:
 
         //! The flag indicating that the intention
         //! is to wrap the existing pointer.
-        WrapExistingFlag iWrapFlag,
+        WrapExistingFlag /* iWrapFlag */,
 
         //! The error handling.
         //! ...
@@ -149,7 +149,7 @@ public:
 
     //! This function returns the property's object, handily
     //! wrapped in an OObject wrapper.
-    OObject getObject();
+    OObject getObject() const;
 
     //! Can't wrap
     //! OCompoundProperty getParent();
@@ -163,7 +163,7 @@ public:
     //! getPtr, as usual, returns a shared ptr to the
     //! underlying AbcCoreAbstract object, in this case the
     //! PROP_PTR.
-    PROP_PTR getPtr() { return m_property; }
+    PROP_PTR getPtr() const { return m_property; }
 
     //! Reset returns this function set to an empty, default
     //! state.
@@ -196,7 +196,7 @@ template <class PROP_PTR>
 inline OBasePropertyT<PROP_PTR>::OBasePropertyT
 (
     PROP_PTR iPtr,
-    WrapExistingFlag,
+    WrapExistingFlag /* iFlag */,
     ErrorHandler::Policy iPolicy )
   : m_property( iPtr )
 {
@@ -222,7 +222,7 @@ const AbcA::PropertyHeader &OBasePropertyT<PROP_PTR>::getHeader() const
 
 //-*****************************************************************************
 template <class PROP_PTR>
-OObject OBasePropertyT<PROP_PTR>::getObject()
+OObject OBasePropertyT<PROP_PTR>::getObject() const
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "OBaseProperty::getObject()" );
 

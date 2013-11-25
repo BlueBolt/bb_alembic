@@ -40,8 +40,6 @@
 #include <Alembic/AbcGeom/Foundation.h>
 #include <Alembic/AbcGeom/GeometryScope.h>
 
-#include <boost/lexical_cast.hpp>
-
 namespace Alembic {
 namespace AbcGeom {
 namespace ALEMBIC_VERSION_NS {
@@ -58,15 +56,15 @@ public:
     {
     public:
         typedef Sample this_type;
-        typedef boost::shared_ptr< Abc::TypedArraySample<TRAITS> > samp_ptr_type;
+        typedef Alembic::Util::shared_ptr< Abc::TypedArraySample<TRAITS> > samp_ptr_type;
 
         Sample()
         {}
 
-        Abc::UInt32ArraySamplePtr getIndices() { return m_indices; }
-        samp_ptr_type getVals() { return m_vals; }
-        GeometryScope getScope() { return m_scope; }
-        bool isIndexed() { return m_isIndexed; }
+        Abc::UInt32ArraySamplePtr getIndices() const { return m_indices; }
+        samp_ptr_type getVals() const { return m_vals; }
+        GeometryScope getScope() const { return m_scope; }
+        bool isIndexed() const { return m_isIndexed; }
 
         void reset()
         {
@@ -76,7 +74,7 @@ public:
             m_isIndexed = false;
         }
 
-        bool valid()
+        bool valid() const
         { return m_vals; }
 
         ALEMBIC_OPERATOR_BOOL( valid() );
@@ -99,17 +97,6 @@ public:
         return sInterpretation;
     }
 
-    static bool matches( const AbcA::MetaData &iMetaData,
-                         SchemaInterpMatching iMatching = kStrictMatching )
-    {
-        if ( iMatching == kStrictMatching )
-        {
-            return ( iMetaData.get( "isGeomParam" ) == "true" &&
-                     iMetaData.get( "interpretation" ) == getInterpretation() );
-        }
-        return true;
-    }
-
     static bool matches( const AbcA::PropertyHeader &iHeader,
                          SchemaInterpMatching iMatching = kStrictMatching )
     {
@@ -118,19 +105,14 @@ public:
             return ( iHeader.getMetaData().get( "podName" ) ==
                     Alembic::Util::PODName( TRAITS::dataType().getPod() ) &&
                     ( getInterpretation() == "" ||
-                      boost::lexical_cast<uint32_t>(
-                        iHeader.getMetaData().get( "podExtent" ) ) ==
-                      TRAITS::dataType().getExtent() ) ) &&
-                    matches( iHeader.getMetaData(), iMatching );
+                      atoi(
+                        iHeader.getMetaData().get( "podExtent" ).c_str() ) ==
+                     TRAITS::dataType().getExtent() ) ) &&
+                    prop_type::matches( iHeader.getMetaData(), iMatching );
         }
         else if ( iHeader.isArray() )
         {
-            return ( iHeader.getDataType().getPod() ==
-                     TRAITS::dataType().getPod() &&
-                     ( iHeader.getDataType().getExtent() ==
-                       TRAITS::dataType().getExtent() ||
-                   getInterpretation() == "" ) ) &&
-                   matches( iHeader.getMetaData(), iMatching );
+            return prop_type::matches( iHeader, iMatching );
         }
 
         return false;
@@ -151,13 +133,13 @@ public:
                      const Abc::Argument &iArg1 = Abc::Argument() );
 
     void getIndexed( sample_type &oSamp,
-                     const Abc::ISampleSelector &iSS = Abc::ISampleSelector() );
+                     const Abc::ISampleSelector &iSS = Abc::ISampleSelector() ) const;
 
     void getExpanded( sample_type &oSamp,
-                      const Abc::ISampleSelector &iSS = Abc::ISampleSelector() );
+                      const Abc::ISampleSelector &iSS = Abc::ISampleSelector() ) const;
 
     sample_type getIndexedValue( const Abc::ISampleSelector &iSS = \
-                                 Abc::ISampleSelector() )
+                                 Abc::ISampleSelector() ) const
     {
         sample_type ret;
         getIndexed( ret, iSS );
@@ -165,40 +147,40 @@ public:
     }
 
     sample_type getExpandedValue( const Abc::ISampleSelector &iSS = \
-                                  Abc::ISampleSelector() )
+                                  Abc::ISampleSelector() ) const
     {
         sample_type ret;
         getExpanded( ret, iSS );
         return ret;
     }
 
-    size_t getNumSamples();
+    size_t getNumSamples() const;
 
-    AbcA::DataType getDataType() { return TRAITS::dataType(); }
+    AbcA::DataType getDataType() const { return TRAITS::dataType(); }
 
-    size_t getArrayExtent()
+    size_t getArrayExtent() const
     {
         std::string e = m_valProp.getMetaData().get( "arrayExtent" );
         if ( e == "" ) { return 1; }
-        else { return boost::lexical_cast<size_t>( e ); }
+        else { return atoi( e.c_str() ); }
     }
 
-    bool isIndexed() { return m_isIndexed; }
+    bool isIndexed() const { return m_isIndexed; }
 
-    GeometryScope getScope()
+    GeometryScope getScope() const
     { return GetGeometryScope( m_valProp.getMetaData() ); }
 
-    AbcA::TimeSamplingPtr getTimeSampling();
+    AbcA::TimeSamplingPtr getTimeSampling() const;
 
-    const std::string &getName();
+    const std::string &getName() const;
 
-    Abc::ICompoundProperty getParent();
+    Abc::ICompoundProperty getParent() const;
 
-    const AbcA::PropertyHeader &getHeader();
+    const AbcA::PropertyHeader &getHeader() const;
 
-    const AbcA::MetaData &getMetaData();
+    const AbcA::MetaData &getMetaData() const;
 
-    bool isConstant();
+    bool isConstant() const;
 
     void reset()
     {
@@ -340,7 +322,7 @@ ITypedGeomParam<TRAITS>::ITypedGeomParam( PROP iThis,
 template <class TRAITS>
 void
 ITypedGeomParam<TRAITS>::getIndexed( typename ITypedGeomParam<TRAITS>::Sample &oSamp,
-                                     const Abc::ISampleSelector &iSS )
+                                     const Abc::ISampleSelector &iSS ) const
 {
     m_valProp.get( oSamp.m_vals, iSS );
     if ( m_indicesProperty ) { m_indicesProperty.get( oSamp.m_indices, iSS ); }
@@ -370,10 +352,8 @@ ITypedGeomParam<TRAITS>::getIndexed( typename ITypedGeomParam<TRAITS>::Sample &o
 template <class TRAITS>
 void
 ITypedGeomParam<TRAITS>::getExpanded( typename ITypedGeomParam<TRAITS>::Sample &oSamp,
-                                      const Abc::ISampleSelector &iSS )
+                                      const Abc::ISampleSelector &iSS ) const
 {
-    typedef typename TRAITS::value_type value_type;
-
     oSamp.m_scope = this->getScope();
     oSamp.m_isIndexed = m_isIndexed;
 
@@ -383,13 +363,13 @@ ITypedGeomParam<TRAITS>::getExpanded( typename ITypedGeomParam<TRAITS>::Sample &
     }
     else
     {
-        boost::shared_ptr< Abc::TypedArraySample<TRAITS> > valPtr = \
+        Alembic::Util::shared_ptr< Abc::TypedArraySample<TRAITS> > valPtr = \
             m_valProp.getValue( iSS );
         Abc::UInt32ArraySamplePtr idxPtr = m_indicesProperty.getValue( iSS );
 
         size_t size = idxPtr->size();
 
-        value_type *v = new value_type[size];
+        typename TRAITS::value_type *v = new typename TRAITS::value_type[size];
 
         for ( size_t i = 0 ; i < size ; ++i )
         {
@@ -406,14 +386,14 @@ ITypedGeomParam<TRAITS>::getExpanded( typename ITypedGeomParam<TRAITS>::Sample &
         const Alembic::Util::Dimensions dims( size );
 
         oSamp.m_vals.reset( new Abc::TypedArraySample<TRAITS>( v, dims ),
-                            AbcA::TArrayDeleter<value_type>() );
+                            AbcA::TArrayDeleter<typename TRAITS::value_type>());
     }
 
 }
 
 //-*****************************************************************************
 template <class TRAITS>
-size_t ITypedGeomParam<TRAITS>::getNumSamples()
+size_t ITypedGeomParam<TRAITS>::getNumSamples() const
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "ITypedGeomParam::getNumSamples()" );
 
@@ -435,7 +415,7 @@ size_t ITypedGeomParam<TRAITS>::getNumSamples()
 
 //-*****************************************************************************
 template <class TRAITS>
-bool ITypedGeomParam<TRAITS>::isConstant()
+bool ITypedGeomParam<TRAITS>::isConstant() const
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "ITypedGeomParam::isConstant()" );
 
@@ -455,7 +435,7 @@ bool ITypedGeomParam<TRAITS>::isConstant()
 
 //-*****************************************************************************
 template <class TRAITS>
-const std::string &ITypedGeomParam<TRAITS>::getName()
+const std::string &ITypedGeomParam<TRAITS>::getName() const
 {
     ALEMBIC_ABC_SAFE_CALL_BEGIN( "ITypedGeomParam::getName()" );
 
@@ -470,7 +450,7 @@ const std::string &ITypedGeomParam<TRAITS>::getName()
 
 //-*****************************************************************************
 template <class TRAITS>
-Abc::ICompoundProperty ITypedGeomParam<TRAITS>::getParent()
+Abc::ICompoundProperty ITypedGeomParam<TRAITS>::getParent() const
 {
     if ( m_isIndexed ) { return m_cprop.getParent(); }
     else { return m_valProp.getParent(); }
@@ -478,7 +458,7 @@ Abc::ICompoundProperty ITypedGeomParam<TRAITS>::getParent()
 
 //-*****************************************************************************
 template <class TRAITS>
-const AbcA::PropertyHeader &ITypedGeomParam<TRAITS>::getHeader()
+const AbcA::PropertyHeader &ITypedGeomParam<TRAITS>::getHeader() const
 {
     if ( m_isIndexed ) { return m_cprop.getHeader(); }
     else { return m_valProp.getHeader(); }
@@ -486,7 +466,7 @@ const AbcA::PropertyHeader &ITypedGeomParam<TRAITS>::getHeader()
 
 //-*****************************************************************************
 template <class TRAITS>
-const AbcA::MetaData &ITypedGeomParam<TRAITS>::getMetaData()
+const AbcA::MetaData &ITypedGeomParam<TRAITS>::getMetaData() const
 {
     if ( m_isIndexed ) { return m_cprop.getMetaData(); }
     else { return m_valProp.getMetaData(); }
@@ -494,7 +474,7 @@ const AbcA::MetaData &ITypedGeomParam<TRAITS>::getMetaData()
 
 //-*****************************************************************************
 template <class TRAITS>
-AbcA::TimeSamplingPtr ITypedGeomParam<TRAITS>::getTimeSampling()
+AbcA::TimeSamplingPtr ITypedGeomParam<TRAITS>::getTimeSampling() const
 {
     if ( m_valProp )
     {

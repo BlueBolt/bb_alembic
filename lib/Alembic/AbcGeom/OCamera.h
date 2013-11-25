@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -78,8 +78,9 @@ public:
                      const Abc::Argument &iArg0 = Abc::Argument(),
                      const Abc::Argument &iArg1 = Abc::Argument(),
                      const Abc::Argument &iArg2 = Abc::Argument() )
-      : Abc::OSchema<CameraSchemaInfo>( iParent, iName,
-                                            iArg0, iArg1, iArg2 )
+      : Abc::OSchema<CameraSchemaInfo>(
+                            GetCompoundPropertyWriterPtr( iParent ),
+                            iName, iArg0, iArg1, iArg2 )
     {
 
         AbcA::TimeSamplingPtr tsPtr =
@@ -92,8 +93,8 @@ public:
         // 0 index
         if (tsPtr)
         {
-            tsIndex = iParent->getObject()->getArchive(
-                )->addTimeSampling(*tsPtr);
+            tsIndex = GetCompoundPropertyWriterPtr( iParent )->getObject(
+                )->getArchive()->addTimeSampling(*tsPtr);
         }
 
         // Meta data and error handling are eaten up by
@@ -106,8 +107,9 @@ public:
                               const Abc::Argument &iArg0 = Abc::Argument(),
                               const Abc::Argument &iArg1 = Abc::Argument(),
                               const Abc::Argument &iArg2 = Abc::Argument() )
-      : Abc::OSchema<CameraSchemaInfo>( iParent,
-                                            iArg0, iArg1, iArg2 )
+      : Abc::OSchema<CameraSchemaInfo>(
+                                    GetCompoundPropertyWriterPtr( iParent ),
+                                    iArg0, iArg1, iArg2 )
     {
 
         AbcA::TimeSamplingPtr tsPtr =
@@ -120,8 +122,8 @@ public:
         // 0 index
         if (tsPtr)
         {
-            tsIndex = iParent->getObject()->getArchive(
-                )->addTimeSampling(*tsPtr);
+            tsIndex = GetCompoundPropertyWriterPtr( iParent )->getObject(
+                )->getArchive()->addTimeSampling(*tsPtr);
         }
 
         // Meta data and error handling are eaten up by
@@ -167,9 +169,11 @@ public:
     Abc::OCompoundProperty getUserProperties();
     Abc::OCompoundProperty getArbGeomParams();
 
+    Abc::OBox3dProperty getChildBoundsProperty();
+
     //-*************************************************************************
     // ABC BASE MECHANISMS
-    // These functions are used by Abc to deal with errors, rewrapping,
+    // These functions are used by Abc to deal with errors, validity,
     // and so on.
     //-*************************************************************************
 
@@ -181,7 +185,8 @@ public:
         m_childBoundsProperty.reset();
         m_userProperties.reset();
         m_arbGeomParams.reset();
-
+        m_bigFilmBackChannelsProperty.reset();
+        m_smallFilmBackChannelsProperty.reset();
         Abc::OSchema<CameraSchemaInfo>::reset();
     }
 
@@ -219,6 +224,8 @@ private:
 // SCHEMA OBJECT
 //-*****************************************************************************
 typedef Abc::OSchemaObject<OCameraSchema> OCamera;
+
+typedef Util::shared_ptr< OCamera > OCameraPtr;
 
 } // End namespace ALEMBIC_VERSION_NS
 

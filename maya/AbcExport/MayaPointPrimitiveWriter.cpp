@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -45,21 +45,22 @@ MayaPointPrimitiveWriter::MayaPointPrimitiveWriter(
 {
     MFnParticleSystem particle(mDagPath);
     MString name = particle.name();
-    if (iArgs.stripNamespace)
-    {
-        name = util::stripNamespaces(name);
-    }
+
+    name = util::stripNamespaces(name, iArgs.stripNamespace);
+
     Alembic::AbcGeom::OPoints obj(iParent, name.asChar(),
         iTimeIndex);
     mSchema = obj.getSchema();
 
     Alembic::Abc::OCompoundProperty cp;
+    Alembic::Abc::OCompoundProperty up;
     if (AttributesWriter::hasAnyAttr(particle, iArgs))
     {
         cp = mSchema.getArbGeomParams();
+        up = mSchema.getUserProperties();
     }
 
-    mAttrs = AttributesWriterPtr(new AttributesWriter(cp, obj, particle,
+    mAttrs = AttributesWriterPtr(new AttributesWriter(cp, up, obj, particle,
         iTimeIndex, iArgs));
 
     MObject object = iDag.node();

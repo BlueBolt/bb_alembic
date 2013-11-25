@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2013,
 //  Sony Pictures Imageworks Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -62,6 +62,82 @@ GetArchiveInfo(
 
     oDateWritten = md.get( kDateWrittenKey );
     oUserDescription = md.get( kUserDescriptionKey );
+}
+
+void
+GetArchiveStartAndEndTime(
+    IArchive & iArchive,
+    double & oStartTime,
+    double & oEndTime )
+{
+    double startTime = DBL_MAX;
+    double endTime = -DBL_MAX;
+
+    double startSingleTime = DBL_MAX;
+    double endSingleTime = -DBL_MAX;
+
+    double startDefaultTime = DBL_MAX;
+    double endDefaultTime = -DBL_MAX;
+
+    for ( uint32_t i = 0; i < iArchive.getNumTimeSamplings(); ++i )
+    {
+        index_t idx = iArchive.getMaxNumSamplesForTimeSamplingIndex( i );
+
+        if ( idx == INDEX_UNKNOWN )
+        {
+            continue;
+        }
+
+        AbcA::TimeSamplingPtr ts = iArchive.getTimeSampling( i );
+        if ( !ts )
+        {
+            continue;
+        }
+
+        if ( idx > 1 && i != 0 )
+        {
+            startTime = std::min( ts->getSampleTime( 0 ), startTime );
+            endTime = std::max( ts->getSampleTime( idx - 1 ), endTime );
+        }
+        else if ( idx == 1 && i != 0 )
+        {
+            startSingleTime = std::min( ts->getSampleTime( 0 ),
+                                        startSingleTime );
+            endSingleTime = std::max( ts->getSampleTime( 0 ),
+                                      endSingleTime );
+        }
+        else if ( idx > 0 && i == 0 )
+        {
+            startDefaultTime = ts->getSampleTime( 0 );
+            endDefaultTime = ts->getSampleTime( idx - 1 );
+        }
+    }
+
+    // if we had a valid animated start and end time we will use only that
+    if ( startTime != DBL_MAX && endTime != -DBL_MAX )
+    {
+        oStartTime = startTime;
+        oEndTime = endTime;
+    }
+    // this is for the cases where we have custom time samplings but
+    // they only have 1 sample
+    else if ( startSingleTime != DBL_MAX && endSingleTime != -DBL_MAX )
+    {
+        oStartTime = startSingleTime;
+        oEndTime = endSingleTime;
+    }
+    // no other valid time was yet to be found, but we found a valid
+    // default time with at least one sample, so we will use it.
+    else if ( startDefaultTime != DBL_MAX && endDefaultTime != -DBL_MAX )
+    {
+        oStartTime = startDefaultTime;
+        oEndTime = endDefaultTime;
+    }
+    else
+    {
+        oStartTime = DBL_MAX;
+        oEndTime = -DBL_MAX;
+    }
 }
 
 } // End namespace ALEMBIC_VERSION_NS

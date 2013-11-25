@@ -1,6 +1,6 @@
 ##-*****************************************************************************
 ##
-## Copyright (c) 2009-2011,
+## Copyright (c) 2009-2013,
 ##  Sony Pictures Imageworks Inc. and
 ##  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 ##
@@ -79,8 +79,9 @@ FIND_PATH( ALEMBIC_ARNOLD_INCLUDE_PATH ai.h
            NO_CMAKE_PATH
            NO_SYSTEM_ENVIRONMENT_PATH
            NO_CMAKE_SYSTEM_PATH
-           DOC "The directory where ai.h resides" )
+           DOC "The directory where ri.h resides" )
 
+SET( ALEMBIC_ARNOLD_LIBARNOLD ALEMBIC_ARNOLD_LIBARNOLD-NOTFOUND )
 FIND_LIBRARY( ALEMBIC_ARNOLD_LIBARNOLD ai
               PATHS
               "${ALEMBIC_ARNOLD_ROOT}/lib/"
@@ -143,12 +144,5 @@ MACRO(ADD_ARNOLD_CXX_PLUGIN PluginName SourceFile1 )
                          PREFIX "" )
 
   TARGET_LINK_LIBRARIES ( ${PluginName} ${ALEMBIC_ARNOLD_LIBARNOLD} )
-#  TARGET_LINK_LIBRARIES( ${PluginName}
-#                         AlembicTraitsGeom AlembicTraits 
-#                         AlembicAsset MD5Hash AlembicHDF5
-#                         ${ALEMBIC_HDF5_LIBS} AlembicUtil AlembicExc
-#                         ${Boost_REGEX_LIBRARY} ${Boost_FILESYSTEM_LIBRARY}
-#                        ${Boost_SYSTEM_LIBRARY}
-#                         -lpthread -lz -lm )
 
 ENDMACRO(ADD_ARNOLD_CXX_PLUGIN)
