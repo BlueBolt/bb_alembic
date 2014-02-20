@@ -141,10 +141,10 @@ IF ( NOT WINDOWS )
   IF ( NOT DARWIN )
     SET ( MAYA_EXTENSION ".so" )
     SET( MAYA_COMPILE_FLAGS
-      "-m64 -g -pthread -pipe -D_BOOL -DLINUX -DLINUX_64 -DREQUIRE_IOSTREAM -fPIC -Wno-deprecated -fno-gnu-keywords" )
+      "-m64 -g -pthread -pipe -D_BOOL -DLINUX -D_LINUX -DLINUX_64 -DREQUIRE_IOSTREAM -fPIC -Wno-deprecated -fno-gnu-keywords" )
 
     SET( MAYA_LINK_FLAGS
-      "-shared -m64 -g -pthread -pipe -D_BOOL -DLINUX -DLINUX_64 -DREQUIRE_IOSTREAM -fPIC -Wno-deprecated -fno-gnu-keywords -Wl,-Bsymbolic" )
+      "-shared -m64 -g -pthread -pipe -D_BOOL -DLINUX -D_LINUX -DLINUX_64 -DREQUIRE_IOSTREAM -fPIC -Wno-deprecated -fno-gnu-keywords -Wl,-Bsymbolic" )
   ELSE()
     #SET( MAYA_COMPILE_FLAGS
     #  "-DAW_NEW_IOSTREAMS -DCC_GNU_ -DOSMac_ -DOSMacOSX_ -DBits32_ \

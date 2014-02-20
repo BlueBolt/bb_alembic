@@ -43,12 +43,16 @@
 
 #include <Alembic/AbcGeom/All.h>
 #include <Alembic/AbcCoreHDF5/All.h>
+#include <Alembic/AbcCoreOgawa/All.h>
+#include <Alembic/AbcCoreFactory/All.h>
 
 
 namespace
 {
 
+using namespace Alembic::Abc;
 using namespace Alembic::AbcGeom;
+using namespace Alembic::AbcCoreFactory;
 
 
 
@@ -259,8 +263,11 @@ int ProcInit( struct AtNode *node, void **user_ptr )
         return 1;
     }
 
-    IArchive archive( ::Alembic::AbcCoreHDF5::ReadArchive(),
-                      args->filename );
+    IFactory factory;
+    factory.setPolicy(ErrorHandler::kQuietNoopPolicy);
+    // AiMsgInfo("[bb_AlembicArnoldProcedural] Loading archive : %s", args->filename);
+
+    IArchive archive( factory.getArchive(args->filename) );
 
     IObject root = archive.getTop();
 
@@ -341,7 +348,7 @@ struct AtNode* ProcGetNode(void *user_ptr, int i)
     return NULL;
 }
 
-} //end of anonymous namespace
+} //end of namespace
 
 
 

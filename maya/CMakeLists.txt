@@ -38,6 +38,7 @@ IF( ${MAYA_FOUND} )
 
 ADD_SUBDIRECTORY( AbcExport )
 ADD_SUBDIRECTORY( AbcImport )
+ADD_SUBDIRECTORY( alembicArchiveNode )
 ADD_SUBDIRECTORY( icons )
 ADD_SUBDIRECTORY( scripts )
 ADD_SUBDIRECTORY( shelves )

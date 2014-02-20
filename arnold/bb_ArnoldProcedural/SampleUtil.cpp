@@ -46,6 +46,7 @@ void GetRelevantSampleTimes( ProcArgs &args, TimeSamplingPtr timeSampling,
                             size_t numSamples, SampleTimeSet &output,
                             MatrixSampleMap * inheritedSamples)
 {
+    
     if ( numSamples < 2 )
     {
         output.insert( 0.0 );

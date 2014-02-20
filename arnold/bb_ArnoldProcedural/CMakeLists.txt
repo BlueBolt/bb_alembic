@@ -58,7 +58,10 @@ SET( CORE_LIBS
   AlembicAbcGeom
   AlembicAbc
   AlembicAbcCoreHDF5
+  AlembicAbcCoreOgawa
+  AlembicAbcCoreFactory
   AlembicAbcCoreAbstract
+  AlembicOgawa
   AlembicUtil )
 
 ADD_ARNOLD_CXX_PLUGIN( bb_AlembicArnoldProcedural ProcMain.cpp ${H_FILES} ${CXX_FILES} )

@@ -52,7 +52,7 @@ ENDIF()
 # Declare the version
 SET( PROJECT_VERSION_MAJOR  1 )
 SET( PROJECT_VERSION_MINOR  5 )
-SET( PROJECT_VERSION_PATCH  0.1 )
+SET( PROJECT_VERSION_PATCH  0.2 )
 SET( PROJECT_VERSION
      ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH} )
 SET( VERSION ${PROJECT_VERSION} )
@@ -307,6 +307,21 @@ ELSE()
     ENDIF()
 ENDIF()
 
+
+# Include MtoA stuff
+IF(DEFINED USE_MTOA AND NOT USE_MTOA)
+    MESSAGE(STATUS "Skipping MtoA Extensions")
+ELSE()
+    MESSAGE( STATUS "About to include AlembicMtoA.cmake" )
+    INCLUDE( "./build/AlembicMtoA.cmake" )
+    IF( ALEMBIC_MTOA_FOUND )
+        MESSAGE(STATUS "Building MtoA plugins" )
+    ELSE()
+        MESSAGE(STATUS "For some reason, ALEMBIC_MTOA_FOUND is False?")
+    ENDIF()
+ENDIF()
+
+
 # Include PyAlembic stuff
 IF(DEFINED USE_PYALEMBIC AND NOT USE_PYALEMBIC)
     MESSAGE(STATUS "Skipping Alembic Python bindings")
@@ -314,6 +329,7 @@ ELSE()
     MESSAGE(STATUS "About to include Python cmake files")
     ADD_SUBDIRECTORY( python )
 ENDIF()
+
 
 # Example code not supported
 ADD_SUBDIRECTORY( examples )

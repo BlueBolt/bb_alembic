@@ -41,14 +41,19 @@
 #include "SampleUtil.h"
 #include "WriteGeo.h"
 
-#include <Alembic/AbcGeom/All.h>
-#include <Alembic/AbcCoreHDF5/All.h>
 
+#include <Alembic/AbcGeom/All.h>
+#include <Alembic/AbcCoreHDF5/ReadWrite.h>
+#include <Alembic/AbcCoreOgawa/ReadWrite.h>
+#include <Alembic/AbcCoreFactory/IFactory.h>
+#include <ai.h>
 
 namespace
 {
 
 using namespace Alembic::AbcGeom;
+
+
 
 
 
@@ -271,9 +276,23 @@ int ProcInit( struct AtNode *node, void **user_ptr )
         args->usage();
         return 1;
     }
+    // AiMsgInfo("[bb_AlembicArnoldProcedural] Loading archive ");
 
-    IArchive archive( ::Alembic::AbcCoreHDF5::ReadArchive(),
-                      args->filename );
+    Alembic::AbcCoreFactory::IFactory factory;
+    factory.setPolicy(Alembic::Abc::ErrorHandler::kQuietNoopPolicy);
+    // AiMsgInfo("[bb_AlembicArnoldProcedural] Loading archive : %s", args->filename);
+
+    IArchive archive( factory.getArchive(args->filename) );
+
+
+    if (!archive.valid())
+    {
+        std::cout << "Can not load archive : "
+                  << args->filename
+                  << std::endl;
+        args->usage();
+        return 1;
+    }
 
     IObject root = archive.getTop();
 
