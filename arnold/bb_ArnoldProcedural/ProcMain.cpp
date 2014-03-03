@@ -40,6 +40,7 @@
 #include "PathUtil.h"
 #include "SampleUtil.h"
 #include "WriteGeo.h"
+#include "Overrides.h"
 
 #include <Alembic/AbcGeom/All.h>
 #include <Alembic/AbcCoreHDF5/All.h>
@@ -54,14 +55,12 @@ using namespace Alembic::Abc;
 using namespace Alembic::AbcGeom;
 using namespace Alembic::AbcCoreFactory;
 
-
-
 void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
              PathList::const_iterator I, PathList::const_iterator E,
                     MatrixSampleMap * xformSamples)
 {
-    //Accumulate transformation samples and pass along as an argument
-    //to WalkObject
+    /* accumulate transformation samples and pass along as an argument */
+    /* to WalkObject */
     
     IObject nextParentObject;
     
@@ -206,7 +205,7 @@ void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
     }
     else if ( IFaceSet::matches( ohead ) )
     {
-        //don't complain about discovering a faceset upon traversal
+        // don't complain about discovering a faceset upon traversal
     }
     else
     {
@@ -263,12 +262,31 @@ int ProcInit( struct AtNode *node, void **user_ptr )
         return 1;
     }
 
+    /* load any Overrides */
+
+    std::vector<Overrides> * ol_list;
+
+    if (AiNodeLookUpUserParameter(node, "overrides") !=NULL) {
+        AtArray *overrides = AiNodeGetArray( node, "overrides" );          
+    }
+
+    // append the overrides to the 
+
+    /* load any Assignments */
+
+    AtArray *shaderAssignmets = AiNodeGetArray( node, "shaderAssignmets" );    
+
+    /* load/create any Shaders */
+
+    // AtArray *newShaders = AiNodeGetArray( node, "newShaders" );    
+
+    /* Load the archove using ABCFactory */
     IFactory factory;
     factory.setPolicy(ErrorHandler::kQuietNoopPolicy);
-    // AiMsgInfo("[bb_AlembicArnoldProcedural] Loading archive : %s", args->filename);
 
     IArchive archive( factory.getArchive(args->filename) );
 
+    /* get the top node */
     IObject root = archive.getTop();
 
     PathList path;
@@ -326,7 +344,7 @@ int ProcNumNodes( void *user_ptr )
 {
     ProcArgs * args = reinterpret_cast<ProcArgs*>( user_ptr );
     const char* nodeName = AiNodeGetName(args->proceduralNode);
-    AiMsgInfo("[bb_AlembicArnoldProcedural] number of nodes in %s: %d", nodeName,args->createdNodes.size());
+    // AiMsgInfo("[bb_AlembicArnoldProcedural] number of nodes in %s: %d", nodeName,args->createdNodes.size());
 
     return (int) args->createdNodes.size();
 }
@@ -340,7 +358,7 @@ struct AtNode* ProcGetNode(void *user_ptr, int i)
     if ( i >= 0 && i < (int) args->createdNodes.size() )
     {
         const char* nodeName = AiNodeGetName(args->createdNodes[i]);
-        AiMsgInfo("[bb_AlembicArnoldProcedural] rendering internal node : %s", nodeName);
+        // AiMsgInfo("[bb_AlembicArnoldProcedural] rendering internal node : %s", nodeName);
 
         return args->createdNodes[i];
     }

@@ -34,16 +34,38 @@
 ##
 ##-*****************************************************************************
 
-IF( ${MAYA_FOUND} )
+PROJECT( ALEMBIC_ARCHIVE_NODE_MAYA_MODULE )
 
-ADD_SUBDIRECTORY( AbcExport )
-ADD_SUBDIRECTORY( AbcImport )
-ADD_SUBDIRECTORY( alembicArchiveNode )
-ADD_SUBDIRECTORY( bb_alembicArchiveTranslator )
-ADD_SUBDIRECTORY( icons )
-ADD_SUBDIRECTORY( scripts )
-ADD_SUBDIRECTORY( shelves )
+SET( H_FILES
+)
+
+SET( CXX_FILES
+	BB_AlembicArchiveTranslator.cpp
+)
+
+SET( SOURCE_FILES ${CXX_FILES} ${H_FILES} )
+
+SET( CORE_LIBS )
+
+INCLUDE_DIRECTORIES( ".." )
+INCLUDE_DIRECTORIES( "../lib" )
+INCLUDE_DIRECTORIES( ${ALEMBIC_ARNOLD_INCLUDE_PATH} )
+INCLUDE_DIRECTORIES( ${ALEMBIC_MAYA_INCLUDE_PATH} ) 
+INCLUDE_DIRECTORIES( ${ALEMBIC_MTOA_INCLUDE_PATH} ) # Lets hard codee this path for now, later we will add a cmake file
+INCLUDE_DIRECTORIES( "/development/playground/maya/include" )
 
 
-ENDIF()
+ADD_MAYA_CXX_PLUGIN( bb_alembicTranslator ${SOURCE_FILES} )
+TARGET_LINK_LIBRARIES( bb_alembicTranslator
+  ${MAYA_LIBRARIES}
+  ${CORE_LIBS}
+  ${ALEMBIC_MTOA_LIBMTOA}
+  ${ALEMBIC_ARNOLD_LIBARNOLD}
+  ${CMAKE_THREAD_LIBS_INIT}
+  ${ZLIB_LIBRARIES} ${EXTERNAL_MATH_LIBS} )
+
+INSTALL( TARGETS bb_alembicTranslator
+         DESTINATION mtoa/$ENV{MAYA_VERSION}/translator )
+
+
 

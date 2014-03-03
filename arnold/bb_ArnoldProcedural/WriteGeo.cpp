@@ -611,6 +611,7 @@ AtNode * ProcessPolyMeshBase(
           ICompoundProperty arbGeomParams = ps.getArbGeomParams();
           ISampleSelector frameSelector( *singleSampleTimes.begin() );
 
+          /* add user attributs to the current object */
           AddArbitraryGeomParams( arbGeomParams, frameSelector, meshNode );
       }
 
@@ -728,7 +729,30 @@ void ProcessSubD( ISubD &subd, ProcArgs &args,
     {
         return;
     }
+}
+
+
+void ProcessPoints( IPoints &points, ProcArgs &args)
+{
+    SampleTimeSet sampleTimes;
+    std::vector<AtUInt32> pts;
+        
+    // This is a valid condition for the second instance onward and just
+    // means that we don't need to do anything further.
     
+    return
+}
+
+
+
+void ProcessCurves( IPoints &points, ProcArgs &args)
+{
+    SampleTimeSet sampleTimes;
+    std::vector<AtUInt32> pts;
+        
+    // This is a valid condition for the second instance onward and just
+    // means that we don't need to do anything further.
     
+    return
 }
 
