@@ -1,0 +1,385 @@
+// Copyright 2013 Autodesk, Inc. All rights reserved. 
+//
+// Use of this software is subject to the terms of the Autodesk 
+// license agreement provided at the time of installation or download, 
+// or which otherwise accompanies this software in either electronic 
+// or hard copy form.
+
+//
+//  Description:
+//      This script exports selected objects or the current scene
+//      to an Alembic file by gpuCache command.
+//
+
+// Global Variables
+string $gGpuCacheExportLastDirectory;
+string $gGpuCacheExportLastWorkspace;
+
+//
+//  Procedure Name:
+//      syncOptionVars
+//
+//  Description:
+//      Synchronize option values with the argument list.
+//
+//  Input Arguments:
+//      version - The version of the argument list.
+//
+//      args    - A list of arguments to invoke AbcExport.
+//
+//  Return Value:
+//      None.
+//
+proc syncOptionVars(string $version, string $args[])
+{
+    int    $versionNum                = $version;    // $version not used yet
+    int    $cacheTimeRange            = $args[1];
+    float  $start                     = $args[2];
+    float  $end                       = $args[3];
+    float  $evaluateEvery             = $args[4];
+    int    $saveEvery                 = $args[5];
+    string $fileNamePrefix            = $args[6];
+    int    $optimizeHierarchy         = $args[7];
+    int    $optimizeThreshold         = $args[8];
+
+    optionVar -intValue    gpuCache_exportCacheTimeRange    $cacheTimeRange;
+    optionVar -floatValue  gpuCache_exportStart             $start;
+    optionVar -floatValue  gpuCache_exportEnd               $end;
+    optionVar -floatValue  gpuCache_exportEvaluateEvery     $evaluateEvery;
+    optionVar -intValue    gpuCache_exportSaveEvery         $saveEvery;
+    optionVar -stringValue gpuCache_exportFileNamePrefix    $fileNamePrefix;
+    optionVar -intValue    gpuCache_exportOptimizeHierarchy $optimizeHierarchy;
+    optionVar -intValue    gpuCache_exportOptimizeThreshold $optimizeThreshold;
+
+    if ($versionNum >= 2) {
+        int $writeMaterials                  = $args[9];
+        int $optimizeAnimationsForMotionBlur = $args[10];
+
+        optionVar -intValue gpuCache_exportWriteMaterials                  $writeMaterials;
+        optionVar -intValue gpuCache_exportOptimizeAnimationsForMotionBlur $optimizeAnimationsForMotionBlur;
+    }
+
+    if ($versionNum >= 4) {
+        int $dataFormat = $args[14];
+
+        optionVar -intValue gpuCache_exportDataFormat $dataFormat;
+    }
+}
+
+//
+//  Procedure Name:
+//      buildGpuCacheExportConfirmDialogUI
+//
+//  Description:
+//      Build the UI for export confirm dialog.
+//
+//  Input Arguments:
+//      None
+//
+//  Return Value:
+//      None.
+//
+global proc buildGpuCacheExportConfirmDialogUI(string $file)
+{
+    string $form = `setParent -q`;
+    formLayout -e -width 300 $form;
+
+    string $textLabelFmt    = (uiRes("m_doGpuCacheExportArgList.kConfirmOverwriteMsg"));
+    string $textLabel       = `format -stringArg (basename($file,"")) $textLabelFmt`;
+    string $yesBtnLabel     = (uiRes("m_doGpuCacheExportArgList.kYes"));
+    string $noBtnLabel      = (uiRes("m_doGpuCacheExportArgList.kNo"));
+    string $applyToAllLabel = (uiRes("m_doGpuCacheExportArgList.kApplyToAll"));
+
+    string $text       = `text -label $textLabel`;
+    string $yesBtn     = `button -label $yesBtnLabel`;
+    string $noBtn      = `button -label $noBtnLabel`;
+    string $applyToAll = `checkBox -label $applyToAllLabel`;
+
+    string $yesBtnCmd = "setParent " + $form + ";layoutDialog -dismiss (`checkBox -q -value " + $applyToAll + "` ? \"yesAll\" : \"yes\")";
+    string $noBtnCmd  = "setParent " + $form + ";layoutDialog -dismiss (`checkBox -q -value " + $applyToAll + "` ? \"noAll\" : \"no\")";
+    button -e -command $yesBtnCmd $yesBtn;
+    button -e -command $noBtnCmd  $noBtn;
+
+    int $spacer = 10;
+    int $top = 10;
+    int $edge = 10;
+    formLayout -edit
+                -attachForm     $text   "top"   $top
+                -attachForm     $text   "left"  $edge
+                -attachNone     $text   "bottom"
+                -attachForm     $text   "right" $edge
+                -attachControl  $yesBtn "top"   $spacer $text
+                -attachForm     $yesBtn "left"  $edge
+                -attachNone     $yesBtn "bottom"
+                -attachPosition $yesBtn "right" $spacer 50
+                -attachControl  $noBtn  "top"   $spacer $text
+                -attachPosition $noBtn  "left"  $spacer 50
+                -attachNone     $noBtn  "bottom"
+                -attachForm     $noBtn  "right" $edge
+                -attachControl  $applyToAll "top"    $spacer $yesBtn
+                -attachForm     $applyToAll "left"   $edge
+                -attachForm     $applyToAll "bottom" $spacer
+                -attachNone     $applyToAll "right"
+                $form;
+}
+
+//
+//  Procedure Name:
+//      doGpuCacheExportArgList
+//
+//  Description:
+//      Execute gpuCache command based on the argument list.
+//
+//  Input Arguments:
+//      version - The version of the argument list.
+//
+//      args    - A list of arguments to invoke gpuCache.
+//
+//  Return Value:
+//      None.
+//
+global proc doGpuCacheExportArgList(string $version, string $args[])
+{
+    if (!(`exists captureGpuCacheExportOptionVars` &&
+            `exists getGpuCacheExportNodeList` &&
+            `exists gpuCache_exportOptionsUI` &&
+            `exists gpuCache_exportSetup` &&
+            `exists gpuCache_exportCallback`)) {
+        eval("source \"performGpuCacheExport.mel\"");
+    }
+
+    // Backup the current option values so that we can restore
+    // them later if the dialog is cancelled
+    int $exportAll = $args[0];
+    string $optionVarsBackup[] = captureGpuCacheExportOptionVars($version, $exportAll);
+
+    // Synchronize the option values with the argument list
+    syncOptionVars($version, $args);
+
+    // Prepare filter and starting dir for file dialog
+    string $filter = (uiRes("m_doGpuCacheExportArgList.kAlembic")) + " (*.abc);;"
+                        + (uiRes("m_doGpuCacheExportArgList.kAllFiles")) + " (*.*)";
+    if (size(`workspace -fileRuleEntry alembicCache`) == 0) {
+        workspace -fileRule "alembicCache" "cache/alembic";
+        workspace -saveWorkspace;
+    }
+    string $workspace = `workspace -fileRuleEntry alembicCache`;
+    $workspace = `workspace -expandName $workspace`;
+    sysFile -makeDir $workspace;
+
+    global string $gGpuCacheExportLastDirectory;
+    global string $gGpuCacheExportLastWorkspace;
+    string $startingDir = $gGpuCacheExportLastDirectory;
+    if (size($startingDir) == 0 || $gGpuCacheExportLastWorkspace != `workspace -q -rootDirectory`) {
+        $startingDir = $workspace;
+    }
+
+    // Determine which nodes to export
+    string $nodes[];
+    int $multiHierarchy = 0;
+    if (!$exportAll) {
+        $nodes = `getGpuCacheExportNodeList`;
+        $multiHierarchy = (size($nodes) > 1);
+    }
+
+    // Choose a file to export
+    string $fileDialogCmd = "fileDialog2 ";
+    $fileDialogCmd += "-returnFilter 1 ";
+    $fileDialogCmd += ("-caption \"" + encodeString((uiRes("m_doGpuCacheExportArgList.kGpuCacheExport"))) + "\" ");
+    $fileDialogCmd += ("-startingDirectory \"" + encodeString($startingDir) + "\" ");
+    $fileDialogCmd += ("-okCaption \"" + encodeString((uiRes("m_doGpuCacheExportArgList.kExport2"))) + "\" ");
+    if (!$multiHierarchy) {
+        $fileDialogCmd += ("-fileFilter \"" + encodeString($filter) + "\" ");
+        $fileDialogCmd += "-fileMode 0 ";
+    }
+    else {
+        $fileDialogCmd += "-fileMode 3 ";
+    }
+    $fileDialogCmd += "-optionsUICreate \"gpuCache_exportOptionsUI " + $multiHierarchy + "\" ";
+    $fileDialogCmd += "-optionsUIInit \"gpuCache_exportSetup " + $multiHierarchy + " 0\" ";
+    $fileDialogCmd += "-optionsUICommit \"gpuCache_exportCallback " + $exportAll + " " + $multiHierarchy + " 0\" ";
+
+    string $result[] = eval($fileDialogCmd);
+
+    if (size($result) == 0 || size($result[0]) == 0) {
+        // Cancelled
+        // Restore optionVars to the state before this procedure is called
+        //
+        syncOptionVars($version, $optionVarsBackup);
+
+        // Remove file name prefix option var, it shouldn't be saved.
+        optionVar -remove gpuCache_exportFileNamePrefix;
+
+        return;
+    }
+
+    // Save the last directory
+    $gGpuCacheExportLastDirectory = dirname($result[0]);
+    $gGpuCacheExportLastWorkspace = `workspace -q -rootDirectory`;
+
+    // parameters
+    int    $cacheTimeRange        = `optionVar -q gpuCache_exportCacheTimeRange`;
+    float  $start                 = `optionVar -q gpuCache_exportStart`;
+    float  $end                   = `optionVar -q gpuCache_exportEnd`;
+    float  $evaluateEvery         = `optionVar -q gpuCache_exportEvaluateEvery`;
+    int    $saveEvery             = `optionVar -q gpuCache_exportSaveEvery`;
+    string $fileNamePrefix        = `optionVar -q gpuCache_exportFileNamePrefix`;
+    int    $optimizeHierarchy     = `optionVar -q gpuCache_exportOptimizeHierarchy`;
+    int    $optimizeThreshold     = `optionVar -q gpuCache_exportOptimizeThreshold`;
+    int    $writeMaterials        = `optionVar -q gpuCache_exportWriteMaterials`;
+    int    $optimizeAnimationsForMotionBlur = `optionVar -q gpuCache_exportOptimizeAnimationsForMotionBlur`;
+    int    $dataFormat            = `optionVar -q gpuCache_exportDataFormat`;
+
+    // Remove file name prefix option var, it shouldn't be saved.
+    optionVar -remove gpuCache_exportFileNamePrefix;
+
+    // Build gpuCache command
+    string $command = "gpuCache ";
+
+    float $startFrame = 1;
+    float $endFrame   = 1;
+    if ($cacheTimeRange == 1) {
+        $startFrame = `getAttr defaultRenderGlobals.startFrame`;
+        $endFrame   = `getAttr defaultRenderGlobals.endFrame`;
+    }
+    else if ($cacheTimeRange == 2) {
+        $startFrame = `playbackOptions -q -min`;
+        $endFrame   = `playbackOptions -q -max`;
+    }
+    else if ($cacheTimeRange == 3) {
+        $startFrame = $start;
+        $endFrame   = $end;
+    }
+    $command += ("-startTime " + $startFrame + " ");
+    $command += ("-endTime "   + $endFrame   + " ");
+
+    if ($evaluateEvery != 1) {
+        $command += ("-simulationRate " + $evaluateEvery + " ");
+    }
+
+    if ($saveEvery != 1) {
+        $command += ("-sampleMultiplier " + $saveEvery + " ");
+    }
+
+    if ($optimizeHierarchy) {
+        $command += "-optimize ";
+        $command += ("-optimizationThreshold " + $optimizeThreshold + " ");
+        if ($optimizeAnimationsForMotionBlur) {
+            $command += "-optimizeAnimationsForMotionBlur ";
+        }
+    }
+
+    if ($writeMaterials) {
+        $command += "-writeMaterials ";
+    }
+
+    if ($dataFormat == 2) {
+        $command += "-dataFormat ogawa ";
+    }
+
+    if ($multiHierarchy) {
+        // Export Selection / Multi Hierarchy
+        string $directory = $result[0];
+
+        $command += ("-directory \""  + encodeString($directory) + "\" ");
+        $gGpuCacheExportLastDirectory = $directory;
+
+        if (size($fileNamePrefix) > 0) {
+            $command += ("-filePrefix \"" + encodeString($fileNamePrefix) + "\" ");
+        }
+
+        // Show confirm dialog for Multi Hierarchy files
+        int $i;
+        string $longNames[] = $nodes;
+        string $shortNames[];
+        string $tokens[];
+        for ($i = 0; $i < size($longNames); $i++) {
+            int $numTokens = `tokenize $longNames[$i] "|" $tokens`;
+            $shortNames[$i] = $tokens[$numTokens - 1];
+        }
+
+        string $applyToAll;
+        for ($i = 0; $i < size($longNames); $i++) {
+            string $longName  = $longNames[$i];
+            string $shortName = $shortNames[$i];
+            string $uniqueName = $shortName;
+            if (stringArrayCount($shortName, $shortNames) > 1) {
+                // Replace "|" with "_"
+                $uniqueName = substituteAllString($longName, "|", "_");
+
+                // Drop the leading "|"
+                $uniqueName = substring($uniqueName, 2, size($uniqueName));
+            }
+
+            // Replace ":" with "_"
+            $uniqueName = substituteAllString($uniqueName, ":", "_");
+
+            // Actual file name
+            string $file = ($directory + "/" + $fileNamePrefix + $uniqueName + ".abc");
+            if (`filetest -f $file`) {
+                // Check if the user has chosen "Apply to all"
+                if ($applyToAll == "yes") {
+                    // Overwrite, just skip the confirm dialog
+                    continue;
+                }
+                else if ($applyToAll == "no") {
+                    // Do not overwrite, remove the node from export array
+                    stringArrayRemoveAtIndex(stringArrayFind($longName, 0, $nodes), $nodes);
+                    continue;
+                }
+
+                // File already exists, pop up a confirm dialog
+                string $dialogTitle = (uiRes("m_doGpuCacheExportArgList.kConfirmOverwrite"));
+                string $dialogUI    = ("buildGpuCacheExportConfirmDialogUI \"" + encodeString($file) + "\"");
+                string $dismiss = `layoutDialog -title $dialogTitle -ui $dialogUI`;
+
+                if ($dismiss == "dismiss") {
+                    // Abort
+                    return;
+                }
+                else if ($dismiss == "yesAll") {
+                    // Overwrite (apply to all)
+                    $applyToAll = "yes";
+                }
+                else if ($dismiss == "noAll") {
+                    // Do not overwrite (apply to all)
+                    $applyToAll = "no";
+                    stringArrayRemoveAtIndex(stringArrayFind($longName, 0, $nodes), $nodes);
+                }
+                else if ($dismiss == "no") {
+                    // Do not overwrite
+                    stringArrayRemoveAtIndex(stringArrayFind($longName, 0, $nodes), $nodes);
+                }
+            }
+        }
+    }
+    else {
+        // Export All
+        // Export Selection / Single Hierarchy
+        string $fileFullName  = $result[0];
+        string $fileNameNoExt = basenameEx($fileFullName);
+        string $filePath      = dirname($fileFullName);
+
+        $command += ("-directory \"" + encodeString($filePath)      + "\" ");
+        $command += ("-fileName \""  + encodeString($fileNameNoExt) + "\" ");
+
+        if ($exportAll) {
+            $command += "-allDagObjects ";
+        }
+    }
+
+    // Check we have something to export
+    if (!$exportAll && size($nodes) == 0) {
+        error (uiRes("m_doGpuCacheExportArgList.kNothingToExport"));
+        return;
+    }
+
+    // Execute command
+    if (!`pluginInfo -q -loaded gpuCache`) {
+        error (uiRes("m_doGpuCacheExportArgList.kGpuCachePluginNotLoaded"));
+        return;
+    }
+    string $names = stringArrayToString(`ls $nodes`, " ");
+    evalEcho($command + $names);
+}
+

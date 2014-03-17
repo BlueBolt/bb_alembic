@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-struct Override
+struct Overrides
 {
     /* new constructor */
     Overrides( const char node, const std::vector<char> * overrides );

@@ -54,6 +54,11 @@ ProcArgs::ProcArgs( const char * paramStr )
   , pattern("*")
   , disp_padding(-AI_BIG)
   , proceduralNode(0)
+  , flipv(false)
+  , invertNormals(false)  
+  , linkShader(false)
+  , linkDisplacement(false)
+  , linkOverride(false)
 {
     // TODO, grab the shutter a camera attached to AiUniverse if present
     
@@ -182,6 +187,14 @@ ProcArgs::ProcArgs( const char * paramStr )
         {
             makeInstance = true;
         }
+        else if ( token == "-flipv" )
+        {
+            flipv = true;
+        }
+        else if ( token == "-invertNormals" )
+        {
+            invertNormals = true;
+        }
         
     }
 }
@@ -280,6 +293,13 @@ void ProcArgs::usage()
     std::cerr << std::endl;
     std::cerr << std::endl;
     
+    std::cerr << "-flipv" << std::endl;
+    std::cerr << std::endl;
+    
+    std::cerr << "Flip the uvs of any polymesh/subd in v direction";
+    
+    std::cerr << std::endl;
+
     std::cerr << "-makeinstance" << std::endl;
     std::cerr << std::endl;
     

@@ -35,7 +35,7 @@
 //-*****************************************************************************
 #include "PathUtil.h"
 
-#include <boost/tokenizer.hpp>
+#include <boost/tokenizer.hpp> // TODO replace with pystring method
 
 //-*****************************************************************************
 void TokenizePath( const std::string &path, std::vector<std::string> &result )

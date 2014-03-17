@@ -41,12 +41,18 @@
 #include "SampleUtil.h"
 #include "WriteGeo.h"
 #include "Overrides.h"
+#include "json/json.h"
+#include "pystring.h"
 
 #include <Alembic/AbcGeom/All.h>
 #include <Alembic/AbcCoreHDF5/All.h>
 #include <Alembic/AbcCoreOgawa/All.h>
 #include <Alembic/AbcCoreFactory/All.h>
 
+#include <vector>
+#include <iostream>
+#include <fstream>
+#include <algorithm> 
 
 namespace
 {
@@ -54,6 +60,12 @@ namespace
 using namespace Alembic::Abc;
 using namespace Alembic::AbcGeom;
 using namespace Alembic::AbcCoreFactory;
+
+typedef std::map<std::string, IObject> FileCache;
+FileCache g_fileCache;
+
+typedef std::vector<std::string> LoadedAss;
+LoadedAss g_loadedAss;
 
 void WalkObject( IObject parent, const ObjectHeader &ohead, ProcArgs &args,
              PathList::const_iterator I, PathList::const_iterator E,
@@ -262,33 +274,360 @@ int ProcInit( struct AtNode *node, void **user_ptr )
         return 1;
     }
 
-    /* load any Overrides */
+    #if (AI_VERSION_ARCH_NUM == 3 && AI_VERSION_MAJOR_NUM < 3) || AI_VERSION_ARCH_NUM < 3
+        #error Arnold version 3.3+ required for AlembicArnoldProcedural
+    #endif
+    
+    if (!AiCheckAPIVersion(AI_VERSION_ARCH, AI_VERSION_MAJOR, AI_VERSION_MINOR))
+    {
+        std::cout << "AlembicArnoldProcedural compiled with arnold-"
+                  << AI_VERSION
+                  << " but is running with incompatible arnold-"
+                  << AiGetVersion(NULL, NULL, NULL, NULL) << std::endl;
+        return 1;
+    } 
 
-    std::vector<Overrides> * ol_list;
+    /* Load shaders file*/
+    if (AiNodeLookUpUserParameter(node, "assShaders") !=NULL )
+    {
+        const char* assfile = AiNodeGetStr(node, "assShaders");
+        if(*assfile != 0)
+        {
+            // if we don't find the ass file, we can load it. This avoid multiple load of the same file.
+            if(std::find(g_loadedAss.begin(), g_loadedAss.end(), std::string(assfile)) == g_loadedAss.end())
+            {
+                if(AiASSLoad(assfile, AI_NODE_SHADER) == 0)
+                    g_loadedAss.push_back(std::string(assfile));
 
-    if (AiNodeLookUpUserParameter(node, "overrides") !=NULL) {
-        AtArray *overrides = AiNodeGetArray( node, "overrides" );          
+            }
+            
+        }
     }
 
-    // append the overrides to the 
+    bool skipJson = false;
+    bool skipShaders = false;
+    bool skipOverrides = false;
+    bool skipDisplacement = false;
+    if (AiNodeLookUpUserParameter(node, "skipJson") !=NULL )
+        skipJson = AiNodeGetBool(node, "skipJson");
+    if (AiNodeLookUpUserParameter(node, "skipShaders") !=NULL )
+        skipShaders = AiNodeGetBool(node, "skipShaders");
+    if (AiNodeLookUpUserParameter(node, "skipOverrides") !=NULL )
+        skipOverrides = AiNodeGetBool(node, "skipOverrides");
+    if (AiNodeLookUpUserParameter(node, "skipDisplacements") !=NULL )
+        skipDisplacement = AiNodeGetBool(node, "skipDisplacements");
+    
 
-    /* load any Assignments */
+    Json::Value jrootShaders;
+    Json::Value jrootOverrides;
+    Json::Value jrootDisplacements;
+    bool parsingSuccessful = false;
 
-    AtArray *shaderAssignmets = AiNodeGetArray( node, "shaderAssignmets" );    
+    // Load attribute overides if there is a attribute present pointing to an overrides file
+    if (AiNodeLookUpUserParameter(node, "overridefile") !=NULL && skipJson == false)
+    {
+        Json::Value jroot;
+        Json::Reader reader;
+        std::ifstream test(AiNodeGetStr(node, "shaderAssignmentfile"), std::ifstream::binary);
+        parsingSuccessful = reader.parse( test, jroot, false );
+        if ( parsingSuccessful )
+        {
+            /* OVERRIDES */
+            if(skipOverrides == false)
+            {
+                jrootOverrides = jroot["overrides"];
+                if (AiNodeLookUpUserParameter(node, "overrides") !=NULL)
+                {
+                    Json::Reader readerOverride;
+                    Json::Value jrootOverridesOverrides;
 
-    /* load/create any Shaders */
+                    if(readerOverride.parse( AiNodeGetStr(node, "overrides"), jrootOverridesOverrides))
+                    {
+                        for( Json::ValueIterator itr = jrootOverridesOverrides.begin() ; itr != jrootOverridesOverrides.end() ; itr++ ) 
+                        {
+                            const Json::Value paths = jrootOverridesOverrides[itr.key().asString()];
+                            for( Json::ValueIterator overPath = paths.begin() ; overPath != paths.end() ; overPath++ ) 
+                            {
+                                Json::Value attr = paths[overPath.key().asString()];
+                                jrootOverrides[itr.key().asString()][overPath.key().asString()] = attr;
 
-    // AtArray *newShaders = AiNodeGetArray( node, "newShaders" );    
+                            }
 
-    /* Load the archove using ABCFactory */
-    IFactory factory;
-    factory.setPolicy(ErrorHandler::kQuietNoopPolicy);
+                        }
+                    }
 
-    IArchive archive( factory.getArchive(args->filename) );
+                }
+            }
+        }
+    }
 
-    /* get the top node */
-    IObject root = archive.getTop();
+    // Load shader assignments if there is a attribute present pointing to an shader assignments file
+    if (AiNodeLookUpUserParameter(node, "shaderAssignmentfile") !=NULL && skipJson == false)
+    {
+        Json::Value jroot;
+        Json::Reader reader;
+        std::ifstream test(AiNodeGetStr(node, "shaderAssignmentfile"), std::ifstream::binary);
+        parsingSuccessful = reader.parse( test, jroot, false );
+        if ( parsingSuccessful )
+        {
 
+            /* SHADERS */
+            if(skipShaders == false)
+            {
+                jrootShaders = jroot["shaders"];
+                if (AiNodeLookUpUserParameter(node, "shaderAssignation") !=NULL)
+                {
+                    Json::Reader readerOverride;
+                    Json::Value jrootShadersOverrides;
+                    if(readerOverride.parse( AiNodeGetStr(node, "shaderAssignation"), jrootShadersOverrides ))
+                    {
+                        if(jrootShadersOverrides.size() > 0)
+                        {
+                            Json::Value newJrootShaders;
+                            // concatenate both json string.
+                            for( Json::ValueIterator itr = jrootShadersOverrides.begin() ; itr != jrootShadersOverrides.end() ; itr++ ) 
+                            {
+                                Json::Value tmp = jrootShaders[itr.key().asString()];
+                                const Json::Value paths = jrootShadersOverrides[itr.key().asString()];
+                                for( Json::ValueIterator shaderPath = paths.begin() ; shaderPath != paths.end() ; shaderPath++ ) 
+                                {
+                                    Json::Value val = paths[shaderPath.key().asUInt()];
+                                    // now, create the new paths
+                                    for( Json::ValueIterator itr2 = jrootShaders.begin() ; itr2 != jrootShaders.end() ; itr2++ ) 
+                                    {
+                                        const Json::Value pathsShader = jrootShaders[itr2.key().asString()];
+                                        for( Json::ValueIterator shaderPathOrig = pathsShader.begin() ; shaderPathOrig != pathsShader.end() ; shaderPathOrig++ ) 
+                                        {
+                                            Json::Value val2 = pathsShader[shaderPathOrig.key().asUInt()];                                  
+                                            if(val2.asString() != val.asString())
+                                            {
+                                                newJrootShaders[itr2.key().asString()].append(val2.asString());
+                                            }
+
+                                        }
+                                    }
+                                }
+                                if(tmp.size() == 0)
+                                {
+                                    newJrootShaders[itr.key().asString()] = jrootShadersOverrides[itr.key().asString()];
+                                }
+                                else
+                                {
+                                    const Json::Value shaderPaths = jrootShadersOverrides[itr.key().asString()];
+                                    for( Json::ValueIterator itr2 = shaderPaths.begin() ; itr2 != shaderPaths.end() ; itr2++ ) 
+                                    {
+                                        newJrootShaders[itr.key().asString()].append(jrootShadersOverrides[itr.key().asString()][itr2.key().asUInt()]);
+                                    }
+                                }
+
+                            }
+                            jrootShaders = newJrootShaders;
+                        }
+                    }
+                    
+                }
+            }
+
+            /* DISPLACEMENTS */
+            if(skipDisplacement == false)
+            {
+                jrootDisplacements = jroot["displacement"];
+                if (AiNodeLookUpUserParameter(node, "displacementAssignation") !=NULL)
+                {
+                    Json::Reader readerOverride;
+                    Json::Value jrootDisplacementsOverrides;
+                    if(readerOverride.parse( AiNodeGetStr(node, "displacementAssignation"), jrootDisplacementsOverrides ))
+                    {
+                        if(jrootDisplacementsOverrides.size() > 0)
+                        {
+                            Json::Value newJrootDisplacements;
+                            // concatenate both json string.
+                            for( Json::ValueIterator itr = jrootDisplacementsOverrides.begin() ; itr != jrootDisplacementsOverrides.end() ; itr++ ) 
+                            {
+                                Json::Value tmp = jrootDisplacements[itr.key().asString()];
+                                const Json::Value paths = jrootDisplacementsOverrides[itr.key().asString()];
+                                for( Json::ValueIterator shaderPath = paths.begin() ; shaderPath != paths.end() ; shaderPath++ ) 
+                                {
+                                    Json::Value val = paths[shaderPath.key().asUInt()];
+                                    // now, create the new paths
+                                    for( Json::ValueIterator itr2 = jrootDisplacements.begin() ; itr2 != jrootDisplacements.end() ; itr2++ ) 
+                                    {
+                                        const Json::Value pathsShader = jrootDisplacements[itr2.key().asString()];
+                                        for( Json::ValueIterator shaderPathOrig = pathsShader.begin() ; shaderPathOrig != pathsShader.end() ; shaderPathOrig++ ) 
+                                        {
+                                            Json::Value val2 = pathsShader[shaderPathOrig.key().asUInt()];                                  
+                                            if(val2.asString() != val.asString())
+                                            {
+                                                newJrootDisplacements[itr2.key().asString()].append(val2.asString());
+                                            }
+                                        }
+                                    }
+                                }
+                                if(tmp.size() == 0)
+                                {
+                                    newJrootDisplacements[itr.key().asString()] = jrootDisplacementsOverrides[itr.key().asString()];
+                                }
+                                else
+                                {
+                                    const Json::Value shaderPaths = jrootDisplacementsOverrides[itr.key().asString()];
+                                    for( Json::ValueIterator itr = shaderPaths.begin() ; itr != shaderPaths.end() ; itr++ ) 
+                                        newJrootDisplacements[itr.key().asString()].append(jrootDisplacementsOverrides[itr.key().asString()][itr.key().asUInt()]);
+
+                                }
+
+                            }
+                            jrootDisplacements = newJrootDisplacements;
+                        }
+                    }
+                    
+                }
+            }
+        }
+    }
+    
+    // Catch if the json data is in the optional attributes shaderAssignation,overrides,displacementAssignation
+    // instead of parsing the two json files
+    if(!parsingSuccessful)
+    {
+        if (AiNodeLookUpUserParameter(node, "overrides") !=NULL  && skipOverrides == false)
+        {
+            Json::Reader reader;
+            bool parsingSuccessful = reader.parse( AiNodeGetStr(node, "overrides"), jrootOverrides );
+        }
+        if (AiNodeLookUpUserParameter(node, "shaderAssignation") !=NULL && skipShaders == false)
+        {
+            Json::Reader reader;
+            bool parsingSuccessful = reader.parse( AiNodeGetStr(node, "shaderAssignation"), jrootShaders );
+        }
+        if (AiNodeLookUpUserParameter(node, "displacementAssignation") !=NULL  && skipDisplacement == false)
+        {
+            Json::Reader reader;
+            bool parsingSuccessful = reader.parse( AiNodeGetStr(node, "displacementAssignation"), jrootDisplacements );
+        }
+    }
+
+
+    //Check displacements
+
+    if( jrootDisplacements.size() > 0 )
+    {
+        args->linkDisplacement = true;
+        for( Json::ValueIterator itr = jrootDisplacements.begin() ; itr != jrootDisplacements.end() ; itr++ ) 
+        {
+            AiMsgDebug( "[ABC] Parsing displacement shader %s", itr.key().asCString()); 
+            AtNode* shaderNode = AiNodeLookUpByName(itr.key().asCString());
+            if(shaderNode == NULL)
+            {
+                AiMsgDebug( "[ABC] Searching displacement shader %s deeper underground...", itr.key().asCString()); 
+                // look for the same namespace for shaders...
+                std::vector<std::string> strs;
+                // boost::split(strs,args->nameprefix,boost::is_any_of(":"));
+                // do split based on ':'
+
+                // if(strs.size() > 1)
+                // {
+                //     strs.pop_back();
+                //     strs.push_back(itr.key().asString());
+                        
+                //     shaderNode = AiNodeLookUpByName(boost::algorithm::join(strs, ":").c_str());
+                // }
+            }
+
+            if(shaderNode != NULL)
+            {
+                const Json::Value paths = jrootDisplacements[itr.key().asString()];
+                AiMsgDebug("[ABC] displacement Shader exists, checking paths. size = %d", paths.size());
+                for( Json::ValueIterator itr2 = paths.begin() ; itr2 != paths.end() ; itr2++ ) 
+                {
+                    Json::Value val = paths[itr2.key().asUInt()];
+                    AiMsgDebug("[ABC] Adding path %s", val.asCString());
+                    args->displacements[val.asString().c_str()] = shaderNode;
+                }
+            }
+            else
+            {
+                AiMsgWarning("[ABC] Can't find displacement shader %s", itr.key().asCString());
+            }
+        }
+    }
+
+
+    // Check if we can link shaders or not.
+    if( jrootShaders.size() > 0 )
+    {
+        args->linkShader = true;
+        for( Json::ValueIterator itr = jrootShaders.begin() ; itr != jrootShaders.end() ; itr++ ) 
+        {
+            AiMsgDebug( "[ABC] Parsing shader %s", itr.key().asCString()); 
+            AtNode* shaderNode = AiNodeLookUpByName(itr.key().asCString());
+            if(shaderNode == NULL)
+            {
+                AiMsgDebug( "[ABC] Searching shader %s deeper underground...", itr.key().asCString()); 
+                // look for the same namespace for shaders...
+                std::vector<std::string> strs;
+                // boost::split(strs,args->nameprefix,boost::is_any_of(":"));
+                // if(strs.size() > 1)
+                // {
+                //     strs.pop_back();
+                //     strs.push_back(itr.key().asString());
+                        
+                //     shaderNode = AiNodeLookUpByName(boost::algorithm::join(strs, ":").c_str());
+                // }
+            }
+            if(shaderNode != NULL)
+            {
+                const Json::Value paths = jrootShaders[itr.key().asString()];
+                AiMsgDebug("[ABC] Shader exists, checking paths. size = %d", paths.size());
+                for( Json::ValueIterator itr2 = paths.begin() ; itr2 != paths.end() ; itr2++ ) 
+                {
+                    Json::Value val = paths[itr2.key().asUInt()];
+                    AiMsgDebug("[ABC] Adding path %s", val.asCString());
+                    args->shaders[val.asString().c_str()] = shaderNode;
+                }
+            }
+            else
+            {
+                AiMsgWarning("[ABC] Can't find shader %s", itr.key().asCString());
+            }
+        }
+    }
+
+            
+    if( jrootOverrides.size() > 0 )
+    {
+        args->linkOverride = true;
+        args->overrideRoot = jrootOverrides;
+        for( Json::ValueIterator itr = jrootOverrides.begin() ; itr != jrootOverrides.end() ; itr++ ) 
+        {
+            std::string path = itr.key().asString();
+            args->overrides.push_back(path);
+
+        }
+        std::sort(args->overrides.begin(), args->overrides.end());
+    }
+    IObject root;
+    
+    FileCache::iterator I = g_fileCache.find(args->filename);
+    if (I != g_fileCache.end())
+        root = (*I).second;
+
+    else
+    {
+        IFactory factory; 
+        IArchive archive = factory.getArchive(args->filename); 
+        if (!archive.valid())
+        {
+            AiMsgError ( "Cannot read file %s", args->filename.c_str());
+        }
+        else 
+        {
+            AiMsgDebug ( "reading file %s", args->filename.c_str());
+            g_fileCache[args->filename] = archive.getTop();
+            root = archive.getTop();
+        }
+        
+    }
+    
     PathList path;
     TokenizePath( args->objectpath, path );
 
@@ -317,16 +656,12 @@ int ProcInit( struct AtNode *node, void **user_ptr )
     }
     catch ( const std::exception &e )
     {
-        std::cerr << "exception thrown during ProcInit: "
-              << e.what() << std::endl;
+        AiMsgError("exception thrown during ProcInit: %s", e.what());
     }
     catch (...)
     {
-        std::cerr << "exception thrown\n";
+        AiMsgError("exception thrown");
     }
-
-    //AiMsgInfo("[bb_AlembicArnoldProcedural] object search pattern: %s", args->pattern.c_str());
-    
     return 1;
 }
 

@@ -43,6 +43,8 @@ SET( H_FILES
   ProcArgs.h
   SampleUtil.h
   WriteGeo.h
+  json/json.h
+  pystring.h
   )
 
 SET( CXX_FILES
@@ -52,6 +54,8 @@ SET( CXX_FILES
   ProcMain.cpp
   SampleUtil.cpp
   WriteGeo.cpp
+  jsoncpp.cpp
+  pystring.cpp
 )
 
 SET( CORE_LIBS
@@ -63,6 +67,8 @@ SET( CORE_LIBS
   AlembicAbcCoreAbstract
   AlembicOgawa
   AlembicUtil )
+
+SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -DJSON_IS_AMALGAMATION" ) # for the json lib to compile
 
 ADD_ARNOLD_CXX_PLUGIN( bb_AlembicArnoldProcedural ProcMain.cpp ${H_FILES} ${CXX_FILES} )
 TARGET_LINK_LIBRARIES( bb_AlembicArnoldProcedural

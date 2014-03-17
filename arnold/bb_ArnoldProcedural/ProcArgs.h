@@ -40,7 +40,9 @@
 #include <ai.h>
 #include <string>
 #include <vector>
+#include <map>
 
+#include "json/json.h"
 
 //-*****************************************************************************
 struct ProcArgs
@@ -58,6 +60,8 @@ struct ProcArgs
     , shutterOpen( rhs.shutterOpen )
     , shutterClose( rhs.shutterClose )
     , excludeXform( rhs.excludeXform )
+    , flipv( rhs.flipv)
+    , invertNormals( rhs.invertNormals )
     , makeInstance( rhs.makeInstance )
     , subdIterations ( rhs.subdIterations )
     , subdUVSmoothing ( rhs.subdUVSmoothing )
@@ -82,14 +86,26 @@ struct ProcArgs
     
     bool makeInstance;
     int subdIterations;
+
+    AtNode * proceduralNode;
+    
+    std::vector<struct AtNode *> createdNodes;
+
+    bool flipv;
+    bool invertNormals;
+
+    bool linkShader;
+    bool linkDisplacement;
+    bool linkOverride;
     
     std::string subdUVSmoothing;
     std::string disp_map;
     double disp_padding;
 
-    AtNode * proceduralNode;
-    
-    std::vector<struct AtNode *> createdNodes;
+    std::map<std::string, AtNode*> shaders;
+    std::map<std::string, AtNode*> displacements;
+    std::vector<std::string> overrides;
+    Json::Value overrideRoot;
     
     
     void usage();
