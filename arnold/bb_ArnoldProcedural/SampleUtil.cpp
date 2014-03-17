@@ -47,11 +47,11 @@ void GetRelevantSampleTimes( ProcArgs &args, TimeSamplingPtr timeSampling,
                             MatrixSampleMap * inheritedSamples)
 {
     
-    if ( numSamples < 2 )
+    /*if ( numSamples < 2 )
     {
         output.insert( 0.0 );
         return;
-    }
+    }*/
 
     chrono_t frameTime = args.frame / args.fps;
 

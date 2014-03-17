@@ -50,20 +50,20 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                      ExportProcedural(node);
                   }
                 }
-/*
-                void Update(AtNode* node)
-                {
-                   const char* nodeType = AiNodeEntryGetName(AiNodeGetNodeEntry(node));
-                   if (strcmp(nodeType, "ginstance") == 0)
-                   {
-                      ExportInstance(node, m_masterDag);
-                   }
-                   else
-                   {
-                      ExportProcedural(node);
-                   }
-                }
-*/
+
+                // void Update(AtNode* node)
+                // {
+                //    const char* nodeType = AiNodeEntryGetName(AiNodeGetNodeEntry(node));
+                //    if (strcmp(nodeType, "ginstance") == 0)
+                //    {
+                //       ExportInstance(node, m_masterDag);
+                //    }
+                //    else
+                //    {
+                //       ExportProcedural(node);
+                //    }
+                // }
+
                 virtual AtNode* ExportInstance(AtNode *instance, const MDagPath& masterInstance)
                 {
                    AtNode* masterNode = AiNodeLookUpByName(masterInstance.partialPathName().asChar());
@@ -98,7 +98,8 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                         // do basic node export
                         ExportMatrix( node, 0 );
 
-                        AiNodeSetPtr( node, "shader", arnoldShader(node) );
+                        // AiNodeSetPtr( node, "shader", arnoldShader(node) );
+
 
                         AiNodeSetInt( node, "visibility", ComputeVisibility() );
 
@@ -121,6 +122,8 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                         }
 
                         // now set the procedural-specific parameters
+
+                        AiNodeSetBool( node, "load_at_init", true ); // just for now so that it can load the shaders at the right time
 
                         MFnDagNode fnDagNode( m_dagPath );
                         MBoundingBox bound = fnDagNode.boundingBox();
@@ -152,16 +155,50 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                         {
                                 shutterClose = plug.asFloat();
                         }
-                        int subDIterations = 1;
+
+                        float timeOffset = 0.0;
+                        plug = FindMayaObjectPlug( "timeOffset" );
+                        if (!plug.isNull() )
+                        {
+                                timeOffset = plug.asFloat();
+                        }
+
+                        int subDIterations = 0;
                         plug = FindMayaObjectPlug( "ai_subDIterations" );
                         if (!plug.isNull() )
                         {
                                 subDIterations = plug.asInt();
                         }
 
+                        MString nameprefix = "";
+                        plug = FindMayaObjectPlug( "namePrefix" );
+                        if (!plug.isNull() )
+                        {
+                                nameprefix = plug.asString();
+                        }
+
                         // bool exportFaceIds = fnDagNode.findPlug("exportFaceIds").asBool();
 
-                        // bool makeInstance = fnDagNode.findPlug("makeInstance").asBool();
+                        bool makeInstance = true; // always on for now
+                        plug = FindMayaObjectPlug( "makeInstance" );
+                        if (!plug.isNull() )
+                        {
+                                makeInstance = plug.asBool();
+                        }
+                        
+                        bool flipv = false; 
+                        plug = FindMayaObjectPlug( "flipv" );
+                        if (!plug.isNull() )
+                        {
+                                flipv = plug.asBool();
+                        }
+
+                        bool invertNormals = false; 
+                        plug = FindMayaObjectPlug( "invertNormals" );
+                        if (!plug.isNull() )
+                        {
+                                invertNormals = plug.asBool();
+                        }
                         
                         short i_subDUVSmoothing = 1;
                         plug = FindMayaObjectPlug( "ai_subDUVSmoothing" );
@@ -197,7 +234,7 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                         // MTime frameOffset;
                         // fnDagNode.findPlug("timeOffset").getValue( frameOffset );
 
-                        float time = curTime.as(MTime::kFilm);
+                        float time = curTime.as(MTime::kFilm)+timeOffset;
 
                         MString argsString;
                         if (objectPath != "|"){
@@ -216,9 +253,19 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                                 argsString += " -subditerations ";
                                 argsString += subDIterations;
                         }
-                        // if (makeInstance){
-                        //         argsString += " -makeinstance ";
-                        // }
+                        if (makeInstance){
+                                argsString += " -makeinstance ";
+                        }
+                        if (nameprefix != ""){
+                                argsString += " -nameprefix ";
+                                argsString += nameprefix;
+                        }
+                        if (flipv){
+                                argsString += " -flipv ";
+                        }
+                        if (invertNormals){
+                                argsString += " -invertNormals ";
+                        }
                         argsString += " -subduvsmoothing ";
                         argsString += subDUVSmoothing;
                         argsString += " -filename ";

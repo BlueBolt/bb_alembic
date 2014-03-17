@@ -74,7 +74,7 @@ int main(int argc, char **argv)
     AiNodeSetStr(procedural, "name", "testbed");
     AiNodeSetStr(procedural, "dso", argv[1]);
     AiNodeSetStr(procedural, "data", buffer.str().c_str());
-    AiNodeSetInt(procedural, "visibility", AI_RAY_CAMERA);
+    AiNodeSetByte(procedural, "visibility", AI_RAY_CAMERA);
     
     AiASSWrite("/dev/stdout", AI_NODE_ALL, true);
     
