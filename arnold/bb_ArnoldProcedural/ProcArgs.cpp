@@ -59,9 +59,13 @@ ProcArgs::ProcArgs( const char * paramStr )
   , linkShader(false)
   , linkDisplacement(false)
   , linkOverride(false)
-{
-    // TODO, grab the shutter a camera attached to AiUniverse if present
-    
+{    
+    // Grab the shutter a camera attached to AiUniverse if present
+
+    AtNode* camera = AiUniverseGetCamera();
+    shutterOpen = AiNodeGetFlt(camera, "shutter_start");
+    shutterClose = AiNodeGetFlt(camera, "shutter_end");
+
     typedef boost::char_separator<char> Separator;
     typedef boost::tokenizer<Separator> Tokenizer;
     

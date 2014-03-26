@@ -319,21 +319,46 @@ void ConcatenateXformSamples( ProcArgs &args,
 
 //-*****************************************************************************
 
+// Abc::chrono_t GetRelativeSampleTime( ProcArgs &args, Abc::chrono_t sampleTime)
+// {
+//     const chrono_t epsilon = 1.0 / 10000.0;
+    
+    
+//     chrono_t frameTime = args.frame / args.fps;
+    
+//     Abc::chrono_t result = ( sampleTime - frameTime ) * args.fps;
+    
+//     if ( fabs( result ) < epsilon )
+//     {
+//         result = 0.0;
+//     }
+    
+//     return result;
+// }
+
+
+
 Abc::chrono_t GetRelativeSampleTime( ProcArgs &args, Abc::chrono_t sampleTime)
 {
     const chrono_t epsilon = 1.0 / 10000.0;
-    
-    
+
+    float length = (args.shutterClose - args.shutterOpen) / 2;
+    if( length < epsilon )
+    {
+        return 0.0;
+    }
+
     chrono_t frameTime = args.frame / args.fps;
-    
-    Abc::chrono_t result = ( sampleTime - frameTime ) * args.fps;
-    
+    // Arnold consider that shutterOpen is 0.0 and shutterClose is 1.0
+    // so we remap our "absolute" value to this range to match regular objects
+    // not generated from this dso
+    Abc::chrono_t result = ((( sampleTime - frameTime ) * args.fps - args.shutterOpen ) / length );
+
+
     if ( fabs( result ) < epsilon )
     {
         result = 0.0;
     }
-    
+
     return result;
 }
-
-
