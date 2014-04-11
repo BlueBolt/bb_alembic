@@ -3,5 +3,6 @@ CMakeLists.txt~
 .project
 .pydevproject
 .cproject
+.directory
 .settings
 *.pyc
