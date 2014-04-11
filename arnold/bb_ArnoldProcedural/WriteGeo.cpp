@@ -168,7 +168,6 @@ void ApplyTransformation( struct AtNode * node,
         return;
     }
     
-    
     std::vector<float> sampleTimes;
     sampleTimes.reserve(xformSamples->size());
     
@@ -192,8 +191,7 @@ void ApplyTransformation( struct AtNode * node,
     AiNodeSetArray(node, "matrix",
                 ArrayConvert(1, xformSamples->size(),
                         AI_TYPE_MATRIX, &mlist[0]));
-    
-    
+        
     if ( sampleTimes.size() > 1 )
     {
         // persp_camera calls it time_samples while the primitives call it
@@ -338,7 +336,7 @@ AtNode * ProcessPolyMeshBase(
     }
     else
     {
-        sampleTimes.insert( args.frame / args.fps );
+        sampleTimes.insert( ( args.frame + args.frameOffset ) / args.fps );
     }
     
     std::string name = args.nameprefix + prim.getFullName();
@@ -355,7 +353,7 @@ AtNode * ProcessPolyMeshBase(
     std::string cacheId;
     
     SampleTimeSet singleSampleTimes;
-    singleSampleTimes.insert( args.frame / args.fps );
+    singleSampleTimes.insert( ( args.frame + args.frameOffset ) / args.fps );
 
     ICompoundProperty arbGeomParams = ps.getArbGeomParams();
     ISampleSelector frameSelector( *singleSampleTimes.begin() );
@@ -581,7 +579,7 @@ AtNode * ProcessPolyMeshBase(
           bool foundInPath = false;
           for(std::vector<std::string>::iterator it=args.overrides.begin(); it!=args.overrides.end(); ++it)
           {
-            Json::Value overrides;
+            Json::Value overrides;            
             if(it->find("/") != string::npos)
             {
               if(name.find(*it) != string::npos)
@@ -597,6 +595,7 @@ AtNode * ProcessPolyMeshBase(
                 overrides = args.overrideRoot[*it];
               }
             }
+
             if(overrides.size() > 0)
             {
               for( Json::ValueIterator itr = overrides.begin() ; itr != overrides.end() ; itr++ ) 
@@ -736,9 +735,6 @@ AtNode * ProcessPolyMeshBase(
 
       } // end makeinstance
     
-      // SampleTimeSet singleSampleTimes;
-      // singleSampleTimes.insert( args.frame / args.fps );
-
       std::vector<AtByte> nsides;
       std::vector<float> vlist;
 

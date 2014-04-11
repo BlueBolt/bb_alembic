@@ -6,16 +6,15 @@
  *      Author: ashley-r
  */
 
-#include "maya/MFnDagNode.h"
-#include "maya/MBoundingBox.h"
-#include "maya/MPlugArray.h"
+#include <maya/MFnDagNode.h>
+#include <maya/MBoundingBox.h>
+#include <maya/MPlugArray.h>
 
-#include "extension/Extension.h"
-#include "translators/shape/ShapeTranslator.h"
+#include <extension/Extension.h>
+#include <translators/shape/ShapeTranslator.h>
 
 // #include "bb_alembicArchiveShape.h"
 
-// TODO: detect instance
 
 class BB_AlembicArchiveTranslator : public CShapeTranslator
 {
@@ -38,31 +37,23 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
 
 
 
-                void Export( AtNode *node )
+                virtual void Export( AtNode* instance )
                 {
-                  const char* nodeType = AiNodeEntryGetName(AiNodeGetNodeEntry(node));
-                  if (strcmp(nodeType, "ginstance") == 0)
-                  {
-                     ExportInstance(node, m_masterDag);
-                  }
-                  else
-                  {
-                     ExportProcedural(node);
-                  }
+                  Update(instance);
                 }
 
-                // void Update(AtNode* node)
-                // {
-                //    const char* nodeType = AiNodeEntryGetName(AiNodeGetNodeEntry(node));
-                //    if (strcmp(nodeType, "ginstance") == 0)
-                //    {
-                //       ExportInstance(node, m_masterDag);
-                //    }
-                //    else
-                //    {
-                //       ExportProcedural(node);
-                //    }
-                // }
+                virtual void Update(AtNode* node)
+                {
+                   const char* nodeType = AiNodeEntryGetName(AiNodeGetNodeEntry(node));
+                   if (strcmp(nodeType, "ginstance") == 0)
+                   {
+                      ExportInstance(node, m_masterDag);
+                   }
+                   else
+                   {
+                      ExportProcedural(node);
+                   }
+                }
 
                 virtual AtNode* ExportInstance(AtNode *instance, const MDagPath& masterInstance)
                 {
@@ -252,6 +243,8 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                         if (subDIterations != 0){
                                 argsString += " -subditerations ";
                                 argsString += subDIterations;
+                                argsString += " -subduvsmoothing ";
+                                argsString += subDUVSmoothing;
                         }
                         if (makeInstance){
                                 argsString += " -makeinstance ";
@@ -266,8 +259,6 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                         if (invertNormals){
                                 argsString += " -invertNormals ";
                         }
-                        argsString += " -subduvsmoothing ";
-                        argsString += subDUVSmoothing;
                         argsString += " -filename ";
                         argsString += abcFile;
                         argsString += " -frame ";

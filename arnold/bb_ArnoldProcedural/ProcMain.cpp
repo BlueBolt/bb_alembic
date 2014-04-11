@@ -328,7 +328,7 @@ int ProcInit( struct AtNode *node, void **user_ptr )
     {
         Json::Value jroot;
         Json::Reader reader;
-        std::ifstream test(AiNodeGetStr(node, "shaderAssignmentfile"), std::ifstream::binary);
+        std::ifstream test(AiNodeGetStr(node, "overridefile"), std::ifstream::binary);
         parsingSuccessful = reader.parse( test, jroot, false );
         if ( parsingSuccessful )
         {
