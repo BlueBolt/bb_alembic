@@ -328,7 +328,7 @@ int ProcInit( struct AtNode *node, void **user_ptr )
     {
         Json::Value jroot;
         Json::Reader reader;
-        std::ifstream test(AiNodeGetStr(node, "shaderAssignmentfile"), std::ifstream::binary);
+        std::ifstream test(AiNodeGetStr(node, "overridefile"), std::ifstream::binary);
         parsingSuccessful = reader.parse( test, jroot, false );
         if ( parsingSuccessful )
         {
@@ -607,6 +607,8 @@ int ProcInit( struct AtNode *node, void **user_ptr )
     }
     IObject root;
     
+    // Load the alembic file
+
     FileCache::iterator I = g_fileCache.find(args->filename);
     if (I != g_fileCache.end())
         root = (*I).second;

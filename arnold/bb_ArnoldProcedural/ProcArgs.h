@@ -56,6 +56,7 @@ struct ProcArgs
     , nameprefix( rhs.nameprefix )
     , objectpath( rhs.objectpath )
     , frame( rhs.frame )
+    , frameOffset( rhs.frameOffset )
     , fps( rhs.fps )
     , shutterOpen( rhs.shutterOpen )
     , shutterClose( rhs.shutterClose )
@@ -78,6 +79,7 @@ struct ProcArgs
     std::string pattern;
 
     double frame;
+    double frameOffset;
     double fps;
     double shutterOpen;
     double shutterClose;

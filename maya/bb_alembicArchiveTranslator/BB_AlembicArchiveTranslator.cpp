@@ -6,16 +6,31 @@
  *      Author: ashley-r
  */
 
-#include "maya/MFnDagNode.h"
-#include "maya/MBoundingBox.h"
-#include "maya/MPlugArray.h"
+#include <maya/MFnDagNode.h>
+#include <maya/MBoundingBox.h>
+#include <maya/MPlugArray.h>
 
-#include "extension/Extension.h"
-#include "translators/shape/ShapeTranslator.h"
+#include <extension/Extension.h>
+#include <translators/shape/ShapeTranslator.h>
 
 // #include "bb_alembicArchiveShape.h"
 
-// TODO: detect instance
+/*
+ * Return a new string with all occurrences of 'from' replaced with 'to'
+ */
+std::string replace_all(const MString &str, const char *from, const char *to)
+{
+    std::string result(str.asChar());
+    std::string::size_type
+        index = 0,
+        from_len = strlen(from),
+        to_len = strlen(to);
+    while ((index = result.find(from, index)) != std::string::npos) {
+        result.replace(index, from_len, to);
+        index += to_len;
+    }
+    return result;
+}
 
 class BB_AlembicArchiveTranslator : public CShapeTranslator
 {
@@ -38,31 +53,23 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
 
 
 
-                void Export( AtNode *node )
+                virtual void Export( AtNode* instance )
                 {
-                  const char* nodeType = AiNodeEntryGetName(AiNodeGetNodeEntry(node));
-                  if (strcmp(nodeType, "ginstance") == 0)
-                  {
-                     ExportInstance(node, m_masterDag);
-                  }
-                  else
-                  {
-                     ExportProcedural(node);
-                  }
+                  Update(instance);
                 }
 
-                // void Update(AtNode* node)
-                // {
-                //    const char* nodeType = AiNodeEntryGetName(AiNodeGetNodeEntry(node));
-                //    if (strcmp(nodeType, "ginstance") == 0)
-                //    {
-                //       ExportInstance(node, m_masterDag);
-                //    }
-                //    else
-                //    {
-                //       ExportProcedural(node);
-                //    }
-                // }
+                virtual void Update(AtNode* node)
+                {
+                   const char* nodeType = AiNodeEntryGetName(AiNodeGetNodeEntry(node));
+                   if (strcmp(nodeType, "ginstance") == 0)
+                   {
+                      ExportInstance(node, m_masterDag);
+                   }
+                   else
+                   {
+                      ExportProcedural(node);
+                   }
+                }
 
                 virtual AtNode* ExportInstance(AtNode *instance, const MDagPath& masterInstance)
                 {
@@ -141,6 +148,18 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
 
                         //object path
                         MString objectPath = fnDagNode.findPlug("cacheGeomPath").asString();
+
+                        //object pattern
+                        MString objectPattern = "*";
+
+                        plug = FindMayaObjectPlug( "objectPattern" );
+                        if (!plug.isNull() )
+                        {
+                              if (plug.asString() != "")
+                              {
+                                objectPattern = plug.asString();
+                              }
+                        }
 
                         float shutterOpen = 0.0;
                         plug = FindMayaObjectPlug( "shutterOpen" );
@@ -239,7 +258,13 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                         MString argsString;
                         if (objectPath != "|"){
                                 argsString += "-objectpath ";
-                                argsString += objectPath;
+                                // convert "|" to "/"
+
+                                argsString += MString(replace_all(objectPath,"|","/").c_str());
+                        }
+                        if (objectPattern != "*"){
+                                argsString += "-pattern ";
+                                argsString += objectPattern;
                         }
                         if (shutterOpen != 0.0){
                                 argsString += " -shutteropen ";
@@ -252,6 +277,8 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                         if (subDIterations != 0){
                                 argsString += " -subditerations ";
                                 argsString += subDIterations;
+                                argsString += " -subduvsmoothing ";
+                                argsString += subDUVSmoothing;
                         }
                         if (makeInstance){
                                 argsString += " -makeinstance ";
@@ -266,8 +293,6 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                         if (invertNormals){
                                 argsString += " -invertNormals ";
                         }
-                        argsString += " -subduvsmoothing ";
-                        argsString += subDUVSmoothing;
                         argsString += " -filename ";
                         argsString += abcFile;
                         argsString += " -frame ";
@@ -282,10 +307,97 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
 
                         AiNodeSetStr(node, "data", argsString.asChar());
 
+                        ExportUserAttrs(node);
+
                         // Export light linking per instance
                         ExportLightLinking(node);
 
                 }
+
+                virtual void ExportUserAttrs( AtNode *node )
+                {
+                        // Get the optional attributes and export them as user vars
+
+                        MPlug plug = FindMayaObjectPlug( "shaderAssignation" );
+                        if( !plug.isNull() )
+                        {
+                                AiNodeDeclare( node, "shaderAssignation", "constant STRING" );
+                                AiNodeSetStr( node, "shaderAssignation", plug.asString().asChar() );
+                        }
+
+                        plug = FindMayaObjectPlug( "displacementAssignation" );
+                        if( !plug.isNull() )
+                        {
+                                AiNodeDeclare( node, "displacementAssignation", "constant STRING" );
+                                AiNodeSetStr( node, "displacementAssignation", plug.asString().asChar() );
+                        }
+
+                        plug = FindMayaObjectPlug( "shaderAssignmentfile" );
+                        if( !plug.isNull() )
+                        {
+                                AiNodeDeclare( node, "shaderAssignmentfile", "constant STRING" );
+                                AiNodeSetStr( node, "shaderAssignmentfile", plug.asString().asChar() );
+                        }
+
+                        plug = FindMayaObjectPlug( "overrides" );
+                        if( !plug.isNull() )
+                        {
+                                AiNodeDeclare( node, "overrides", "constant STRING" );
+                                AiNodeSetStr( node, "overrides", plug.asString().asChar() );
+                        }
+
+                        plug = FindMayaObjectPlug( "overridefile" );
+                        if( !plug.isNull() )
+                        {
+                                AiNodeDeclare( node, "overridefile", "constant STRING" );
+                                AiNodeSetStr( node, "overridefile", plug.asString().asChar() );
+                        }
+
+                        plug = FindMayaObjectPlug( "skipJson" );
+                        if( !plug.isNull() )
+                        {
+                                AiNodeDeclare( node, "skipJson", "constant BOOL" );   
+                                AiNodeSetBool( node, "skipJson", plug.asBool() );
+                        }
+
+                        plug = FindMayaObjectPlug( "skipShaders" );
+                        if( !plug.isNull() )
+                        {
+                                AiNodeDeclare( node, "skipShaders", "constant BOOL" );   
+                                AiNodeSetBool( node, "skipShaders", plug.asBool() );
+                        }
+
+                        plug = FindMayaObjectPlug( "skipOverrides" );
+                        if( !plug.isNull() )
+                        {
+                                AiNodeDeclare( node, "skipOverrides", "constant BOOL" );   
+                                AiNodeSetBool( node, "skipOverrides", plug.asBool() );
+                        }
+
+                        plug = FindMayaObjectPlug( "skipDisplacements" );
+                        if( !plug.isNull() )
+                        {
+                                AiNodeDeclare( node, "skipDisplacements", "constant BOOL" );                          
+                                AiNodeSetBool( node, "skipDisplacements", plug.asBool() );
+                        }
+
+                        plug = FindMayaObjectPlug( "objectPattern" );
+                        if( !plug.isNull() )
+                        {
+                                AiNodeDeclare( node, "objectPattern", "constant STRING" );
+                                AiNodeSetStr( node, "objectPattern", plug.asString().asChar() );
+                        }
+                       
+                        
+                        plug = FindMayaObjectPlug( "assShaders" );
+                        if( !plug.isNull() )
+                        {
+                                AiNodeDeclare( node, "assShaders", "constant STRING" );
+                                AiNodeSetStr( node, "assShaders", plug.asString().asChar() );
+                        }
+
+                }
+
 
                 virtual bool RequiresMotionData()
                 {

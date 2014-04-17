@@ -68,7 +68,8 @@ SET( CORE_LIBS
   AlembicOgawa
   AlembicUtil )
 
-SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -DJSON_IS_AMALGAMATION" ) # for the json lib to compile
+SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -DJSON_IS_AMALGAMATION " ) # for the json lib to compile
+#SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -DJSON_IS_AMALGAMATION -std=c++0x" ) # added for c++11 stad lib access
 
 ADD_ARNOLD_CXX_PLUGIN( bb_AlembicArnoldProcedural ProcMain.cpp ${H_FILES} ${CXX_FILES} )
 TARGET_LINK_LIBRARIES( bb_AlembicArnoldProcedural
