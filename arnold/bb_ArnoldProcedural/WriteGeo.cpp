@@ -43,9 +43,11 @@
 #include <ai.h>
 #include <sstream>
 #include <algorithm> 
+
+#include <boost/regex.hpp>
 //-*****************************************************************************
 
-const size_t hash( std::string const& s )
+const size_t hashStr( std::string const& s )
 {
     size_t result = 2166136261U ;
     std::string::const_iterator end = s.end() ;
@@ -72,16 +74,102 @@ bool nodeHasParameter( struct AtNode * node, const std::string & paramName)
             paramName.c_str() ) != NULL;
 }
 
+/*
+ * Return a new string with all occurrences of 'from' replaced with 'to'
+ */
+std::string replace_all(const std::string &str, const char *from, const char *to)
+{
+    std::string result(str);
+    std::string::size_type
+        index = 0,
+        from_len = strlen(from),
+        to_len = strlen(to);
+    while ((index = result.find(from, index)) != std::string::npos) {
+        result.replace(index, from_len, to);
+        index += to_len;
+    }
+    return result;
+}
+
+/*
+ * Translate a shell pattern into a regular expression
+ * This is a direct translation of the algorithm defined in fnmatch.py.
+ */
+static std::string translate(const char *pattern)
+{
+    int i = 0, n = strlen(pattern);
+    std::string result;
+ 
+    while (i < n) {
+        char c = pattern[i];
+        ++i;
+ 
+        if (c == '*') {
+            result += ".*";
+        } else if (c == '?') {
+            result += '.';
+        } else if (c == '[') {
+            int j = i;
+            /*
+             * The following two statements check if the sequence we stumbled
+             * upon is '[]' or '[!]' because those are not valid character
+             * classes.
+             */
+            if (j < n && pattern[j] == '!')
+                ++j;
+            if (j < n && pattern[j] == ']')
+                ++j;
+            /*
+             * Look for the closing ']' right off the bat. If one is not found,
+             * escape the opening '[' and continue.  If it is found, process
+             * the contents of '[...]'.
+             */
+            while (j < n && pattern[j] != ']')
+                ++j;
+            if (j >= n) {
+                result += "\\[";
+            } else {
+                std::string stuff = replace_all(std::string(&pattern[i], j - i), "\\", "\\\\");
+                char first_char = pattern[i];
+                i = j + 1;
+                result += "[";
+                if (first_char == '!') {
+                    result += "^" + stuff.substr(1);
+                } else if (first_char == '^') {
+                    result += "\\" + stuff;
+                } else {
+                    result += stuff;
+                }
+                result += "]";
+            }
+        } else {
+            if (isalnum(c)) {
+                result += c;
+            } else {
+                result += "\\";
+                result += c;
+            }
+        }
+    }
+    /*
+     * Make the expression multi-line and make the dot match any character at all.
+     */
+    return result + "\\Z(?ms)";
+}
+ 
+
+
 bool matchPattern(std::string str, std::string pat)
 {
-    // given a path name and a pattern see if the path string mtches the pattern
+    // given a path name and a pattern see if the path string matches the pattern
     bool found = false;
     std::vector<std::string> parts;
     std::string temp;
-    if (pat == "*")
+    if (pat == "*") // pattern is * 
         return true;
-    if (pat.size() - 1 > str.size())
+    if (pat.size() - 1 > str.size()) // pattern string is bigger then input string
         return false;
+
     std::string::const_iterator it = pat.begin(), end = pat.end();
     size_t counter = 0;
     while (it != end)
@@ -129,6 +217,13 @@ bool matchPattern(std::string str, std::string pat)
         vecIt++;
     }
     return true;
+}
+
+bool matchPattern2(std::string str, std::string pat)
+{
+    boost::regex rx (translate(pat.c_str()).c_str());
+    bool result = boost::regex_search(str,rx);
+    return result;
 }
 
 void getInstanceName(char *buf, size_t bufsize, const char* name)
@@ -343,7 +438,7 @@ AtNode * ProcessPolyMeshBase(
     
     // check if this meshes name matches the search pattern in the arguments
 
-    if ( !matchPattern(name,args.pattern) && args.pattern != "*" )
+    if ( !matchPattern2(name,args.pattern) && args.pattern != "*" && args.pattern != "" )
     {
         return NULL;
     }
@@ -405,6 +500,11 @@ AtNode * ProcessPolyMeshBase(
           }
 
         }
+        else if(matchPattern2(name,it->first)) // based on wildcard expression
+        {
+            appliedDisplacement = it->second;
+            foundInPath = true;
+        }
         else if(foundInPath == false)
         {
           if (std::find(tags.begin(), tags.end(), it->first) != tags.end())
@@ -435,6 +535,10 @@ AtNode * ProcessPolyMeshBase(
           }
 
         }
+        else if(matchPattern2(name,*it)) // based on wildcard expression
+        {
+            overrides = args.overrideRoot[*it];
+        }
         else
         {
           if (std::find(tags.begin(), tags.end(), *it) != tags.end())
@@ -442,6 +546,8 @@ AtNode * ProcessPolyMeshBase(
             overrides = args.overrideRoot[*it];
           }
         }
+
+
         if(overrides.size() > 0)
         {
           for( Json::ValueIterator itr = overrides.begin() ; itr != overrides.end() ; itr++ ) 
@@ -541,7 +647,7 @@ AtNode * ProcessPolyMeshBase(
             buffer << ":";
         }
         
-        buffer << "@" << hash(hashAttributes);
+        buffer << "@" << hashStr(hashAttributes);
         buffer << "@" << facesetName;
         
         cacheId = buffer.str();
@@ -579,14 +685,19 @@ AtNode * ProcessPolyMeshBase(
           bool foundInPath = false;
           for(std::vector<std::string>::iterator it=args.overrides.begin(); it!=args.overrides.end(); ++it)
           {
-            Json::Value overrides;            
-            if(it->find("/") != string::npos)
+            Json::Value overrides;                        
+            if(it->find("/") != string::npos) // Based on path
             {
               if(name.find(*it) != string::npos)
               {
                 overrides = args.overrideRoot[*it];
                 foundInPath = true;
               }
+            } 
+            else if(matchPattern2(name,*it)) // based on wildcard expression
+            {
+                overrides = args.overrideRoot[*it];
+                foundInPath = true;
             }
             else if(foundInPath == false)
             {
@@ -685,6 +796,7 @@ AtNode * ProcessPolyMeshBase(
             AtNode* appliedShader = NULL;
             for(std::map<std::string, AtNode*>::iterator it = args.shaders.begin(); it != args.shaders.end(); ++it) 
             {
+
               //check both path & tag
               if(it->first.find("/") != string::npos)
               {
@@ -693,6 +805,13 @@ AtNode * ProcessPolyMeshBase(
                   appliedShader = it->second;
                   foundInPath = true;
                 }
+              }
+              else if(matchPattern2(name,it->first)) // based on wildcard expression
+              {
+
+                 AiMsgDebug("[ABC] Shader pattern '%s' matched %s",it->first.c_str(), name.c_str());
+                 appliedShader = it->second;
+                 foundInPath = true;
               }
               else if(foundInPath == false)
               {
