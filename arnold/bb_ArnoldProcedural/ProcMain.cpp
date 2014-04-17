@@ -607,6 +607,8 @@ int ProcInit( struct AtNode *node, void **user_ptr )
     }
     IObject root;
     
+    // Load the alembic file
+
     FileCache::iterator I = g_fileCache.find(args->filename);
     if (I != g_fileCache.end())
         root = (*I).second;
