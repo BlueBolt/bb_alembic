@@ -1,6 +1,6 @@
 /* (c)2012 BlueBolt Ltd. All rights reserved.
  *
- * BB_AlembicArchiveTranslator.cpp
+ * BB_gpuCacheTranslator.cpp
  *
  *  Created on: 20 Jul 2012
  *      Author: ashley-r
@@ -32,7 +32,7 @@ std::string replace_all(const MString &str, const char *from, const char *to)
     return result;
 }
 
-class BB_AlembicArchiveTranslator : public CShapeTranslator
+class BB_gpuCacheTranslator : public CShapeTranslator
 {
 
         public :
@@ -427,7 +427,7 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
 
                 static void *creator()
                 {
-                        return new BB_AlembicArchiveTranslator();
+                        return new BB_gpuCacheTranslator();
                 }
 
         protected :
@@ -512,8 +512,8 @@ DLLEXPORT void initializeExtension( CExtension &extension )
         extension.RegisterTranslator(
                 "gpuCache",
                 "",
-                BB_AlembicArchiveTranslator::creator,
-                BB_AlembicArchiveTranslator::nodeInitialiser
+                BB_gpuCacheTranslator::creator,
+                BB_gpuCacheTranslator::nodeInitialiser
         );
 }
 
