@@ -244,6 +244,7 @@ def configureCMakeBoost(srcdir,
                         boost_include_dir=None, 
                         thread_libpath=None, 
                         python_libpath=None, 
+                        regex_libpath=None, 
                         generator=None
                         ):
     
@@ -266,6 +267,12 @@ def configureCMakeBoost(srcdir,
         python_libpath = Path(python_libpath)
         libdir, python_lib = python_libpath.split()
         cmake_extra_args += " -D BOOST_PYTHON_LIBRARY:FILEPATH=%s" % python_libpath
+
+    # boost regex lib path
+    if regex_libpath is not None:
+        regex_libpath = Path(regex_libpath)
+        libdir, regex_lib = regex_libpath.split()
+        cmake_extra_args += " -D BOOST_REGEX_LIBRARY:FILEPATH=%s" % regex_libpath
 
     # boost library root
     if libdir is not None:
@@ -562,6 +569,35 @@ def find_boost_thread_lib( cmakecache = None ):
     print "Using Boost libraries from %s" % libdir
     return boost_lib
 
+##-*****************************************************************************
+def find_boost_python_lib( cmakecache = None ):
+    print "Please enter the full path to the ",
+    print "Boost Python static library"
+    if os.name == "posix":
+        print '(eg, "/usr/local/lib/libboost_python-gcc41-mt-1_42.a")'
+    elif os.name == "mac":
+        print '(eg, "/usr/local/lib/libboost_python-gcc41-mt-1_42.a")'
+    elif os.name == "nt":
+        print '(eg, "C:\Program Files\\Boost\\boost_1_42\\lib\\libboost_python-vc80-mt-s-1_42.lib")'
+    else:
+        # unknown OS - good luck!
+        print '(eg, "/usr/local/lib/libboost_python-gcc41-mt-1_42.a")'
+    print
+
+    mf = "libboost_python"
+    cmakevar = "BOOST_PYTHON_LIBRARY"
+
+    cmakedefault, defaults = get_defaults( mf, cmakevar, cmakecache )
+
+    default = None
+    if len( defaults ) > 0 or cmakedefault:
+        default = choose_defaults( defaults, cmakedefault )
+
+    boost_lib = find_path( mf, default )
+    libdir, lib = boost_lib.split()
+    print "Using Boost libraries from %s" % libdir
+    return boost_lib
+    
 ##-*****************************************************************************
 def find_boost_python_lib( cmakecache = None ):
     print "Please enter the full path to the ",
@@ -961,6 +997,11 @@ Boost with STATIC, VERSIONED, and MULTITHREADED options turned on.
     elif options.enable_pyalembic:
         boost_python_library = str(find_boost_python_lib(cmakecache))
 
+    if options.boost_python_library:
+        boost_python_library = options.boost_python_library
+    elif options.enable_pyalembic:
+        boost_python_library = str(find_boost_python_lib(cmakecache))
+
     if options.generator:
         print "Makesystem generator %s: " % (options.generator)
 
@@ -969,6 +1010,7 @@ Boost with STATIC, VERSIONED, and MULTITHREADED options turned on.
                                boost_include_dir=boost_include_dir,
                                thread_libpath=boost_thread_library,
                                python_libpath=boost_python_library,
+                               regex_libpath=boost_regex_library,
                                generator=options.generator
                             )
 
