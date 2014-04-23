@@ -34,13 +34,13 @@
 ##
 ##-*****************************************************************************
 
-PROJECT( ALEMBIC_ARCHIVE_NODE_MAYA_MODULE )
+PROJECT( MAYA_GPU_CACHE_TRANSALTOR )
 
 SET( H_FILES
 )
 
 SET( CXX_FILES
-	BB_AlembicArchiveTranslator.cpp
+	BB_gpuCacheTranslator.cpp
 )
 
 SET( SOURCE_FILES ${CXX_FILES} ${H_FILES} )
@@ -55,8 +55,8 @@ INCLUDE_DIRECTORIES( ${ALEMBIC_MTOA_INCLUDE_PATH} ) # Lets hard codee this path 
 INCLUDE_DIRECTORIES( "/development/playground/maya/include" )
 
 
-ADD_MAYA_CXX_PLUGIN( bb_alembicTranslator ${SOURCE_FILES} )
-TARGET_LINK_LIBRARIES( bb_alembicTranslator
+ADD_MAYA_CXX_PLUGIN( bb_gpuCacheTranslator ${SOURCE_FILES} )
+TARGET_LINK_LIBRARIES( bb_gpuCacheTranslator
   ${MAYA_LIBRARIES}
   ${CORE_LIBS}
   ${ALEMBIC_MTOA_LIBMTOA}
@@ -64,7 +64,7 @@ TARGET_LINK_LIBRARIES( bb_alembicTranslator
   ${CMAKE_THREAD_LIBS_INIT}
   ${ZLIB_LIBRARIES} ${EXTERNAL_MATH_LIBS} )
 
-INSTALL( TARGETS bb_alembicTranslator
+INSTALL( TARGETS bb_gpuCacheTranslator
          DESTINATION mtoa/$ENV{MAYA_VERSION}/translator )
 
 
