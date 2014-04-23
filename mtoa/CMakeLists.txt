@@ -36,6 +36,6 @@
 
 IF( ${ALEMBIC_MTOA_FOUND} )
 
-ADD_SUBDIRECTORY( bb_alembicArchiveTranslator )
+ADD_SUBDIRECTORY( bb_gpuCacheTranslator )
 
 ENDIF()

@@ -34,7 +34,7 @@
 ##
 ##-*****************************************************************************
 
-PROJECT( ALEMBIC_ARCHIVE_NODE_MAYA_MODULE )
+PROJECT( MAYA_GPU_CACHE_TRANSALTOR )
 
 SET( H_FILES
 )
