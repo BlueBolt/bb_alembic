@@ -1,3 +1,9 @@
 [submodule "maya/alembicArchiveNode"]
 	path = maya/alembicArchiveNode
 	url = /git/maya_alembicArchiveNode.git
+[submodule "mtoa/bb_gpuCacheTranslator"]
+	path = mtoa/bb_gpuCacheTranslator
+	url = /git/bb_gpuCacheTranslator.git
+[submodule "arnold/bb_ArnoldProcedural"]
+	path = arnold/bb_ArnoldProcedural
+	url = /git/bb_ArnoldProcedural.git
