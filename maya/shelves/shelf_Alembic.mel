@@ -30,6 +30,55 @@ global proc shelf_Alembic () {
         -commandRepeatable 1
     ;
 
+    //Create GPUCache
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Create GpuCache Node with BlueBolt Attributes" 
+        -enableBackground 0
+        -align "center" 
+        -label "abcArch" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.2 
+        -image "abcArchive.png" 
+        -image1 "abcArchive.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "string $basicFilter = \"Alembic Files (*.abc)\";\
+$file = `fileDialog2 -fm 1 -ff $basicFilter -cap \"Find Alembic File to load\"`;\
+string $parentName = basename($file[0], \".abc\" );\
+$parent = `group -em -name $parentName`;\
+$alembicNode=`createNode -p $parent -name ($parentName+\"Shape\") gpuCache`;\
+\
+setAttr -type \"string\" ($alembicNode+\".cacheFileName\") $file[0];\
+addAttr -longName shaderAssignation -dt \"string\" $alembicNode;\
+addAttr -longName displacementAssignation -dt \"string\" $alembicNode;\
+addAttr -longName shaderAssignmentfile -dt \"string\" $alembicNode;\
+addAttr -longName overrides -dt \"string\" $alembicNode;\
+addAttr -longName overridefile -dt \"string\" $alembicNode;\
+addAttr -longName objectPattern -dt \"string\" $alembicNode;\
+addAttr -longName assShaders -dt \"string\" $alembicNode;\
+\
+addAttr -longName skipJson -at bool $alembicNode;\
+addAttr -longName skipShaders -at bool $alembicNode;\
+addAttr -longName skipDisplacements -at bool $alembicNode;\
+addAttr -longName skipOverrides -at bool $alembicNode;\
+\
+addAttr -longName makeInstance -at bool -dv 1 $alembicNode;\
+addAttr -longName flipv -at bool $alembicNode;\
+" 
+        -sourceType "mel" 
+        -commandRepeatable 1
+    ;
+
     //Import Geo into Maya
     shelfButton
         -enableCommandRepeat 1
