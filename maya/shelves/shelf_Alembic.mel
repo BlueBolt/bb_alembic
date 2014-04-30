@@ -66,6 +66,7 @@ addAttr -longName overrides -dt \"string\" $alembicNode;\
 addAttr -longName overridefile -dt \"string\" $alembicNode;\
 addAttr -longName objectPattern -dt \"string\" $alembicNode;\
 addAttr -longName assShaders -dt \"string\" $alembicNode;\
+addAttr -longName namePrefix -dt \"string\" $alembicNode;\
 \
 addAttr -longName skipJson -at bool $alembicNode;\
 addAttr -longName skipShaders -at bool $alembicNode;\
