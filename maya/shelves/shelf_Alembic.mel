@@ -53,27 +53,32 @@ global proc shelf_Alembic () {
         -marginWidth 1
         -marginHeight 1
         -command "string $basicFilter = \"Alembic Files (*.abc)\";\
-$file = `fileDialog2 -fm 1 -ff $basicFilter -cap \"Find Alembic File to load\"`;\
-string $parentName = basename($file[0], \".abc\" );\
-$parent = `group -em -name $parentName`;\
-$alembicNode=`createNode -p $parent -name ($parentName+\"Shape\") gpuCache`;\
-\
-setAttr -type \"string\" ($alembicNode+\".cacheFileName\") $file[0];\
-addAttr -longName shaderAssignation -dt \"string\" $alembicNode;\
-addAttr -longName displacementAssignation -dt \"string\" $alembicNode;\
-addAttr -longName shaderAssignmentfile -dt \"string\" $alembicNode;\
-addAttr -longName overrides -dt \"string\" $alembicNode;\
-addAttr -longName overridefile -dt \"string\" $alembicNode;\
-addAttr -longName objectPattern -dt \"string\" $alembicNode;\
-addAttr -longName assShaders -dt \"string\" $alembicNode;\
-addAttr -longName namePrefix -dt \"string\" $alembicNode;\
-\
-addAttr -longName skipJson -at bool $alembicNode;\
-addAttr -longName skipShaders -at bool $alembicNode;\
-addAttr -longName skipDisplacements -at bool $alembicNode;\
-addAttr -longName skipOverrides -at bool $alembicNode;\
-\
-addAttr -longName makeInstance -at bool -dv 1 $alembicNode;\
+$file = `fileDialog2 -fm 1 -ff $basicFilter -cap \"Find Alembic File to load\"`;\n\
+string $parentName = basename($file[0], \".abc\" );\n\
+$parent = `group -em -name $parentName`;\n\
+$alembicNode=`createNode -p $parent -name ($parentName+\"Shape\") gpuCache`;\n\
+\n\
+setAttr -type \"string\" ($alembicNode+\".cacheFileName\") $file[0];\n\
+addAttr -longName shaderAssignation -dt \"string\" $alembicNode;\n\
+addAttr -longName displacementAssignation -dt \"string\" $alembicNode;\n\
+addAttr -longName shaderAssignmentfile -dt \"string\" $alembicNode;\n\
+addAttr -longName overrides -dt \"string\" $alembicNode;\n\
+addAttr -longName overridefile -dt \"string\" $alembicNode;\n\
+addAttr -longName userAttributes -dt \"string\" $alembicNode;\n\
+addAttr -longName userAttributesfile -dt \"string\" $alembicNode;\n\
+addAttr -longName objectPattern -dt \"string\" $alembicNode;\n\
+addAttr -longName assShaders -dt \"string\" $alembicNode;\n\
+addAttr -longName namePrefix -dt \"string\" $alembicNode;\n\
+\n\
+addAttr -longName skipJson -at bool $alembicNode;\n\
+addAttr -longName skipShaders -at bool $alembicNode;\n\
+addAttr -longName skipDisplacements -at bool $alembicNode;\n\
+addAttr -longName skipOverrides -at bool $alembicNode;\n\
+\n\
+addAttr -longName radiusPoint -at \"float\" -dv 0.1 $alembicNode;\n\
+addAttr -longName scaleVelocity -at \"float\" -dv 1.0 $alembicNode;\n\
+\n\
+addAttr -longName makeInstance -at bool -dv 1 $alembicNode;\n\
 addAttr -longName flipv -at bool $alembicNode;\
 " 
         -sourceType "mel" 
