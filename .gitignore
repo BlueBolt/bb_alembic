@@ -6,3 +6,4 @@ CMakeLists.txt~
 .directory
 .settings
 *.pyc
+doc/html
