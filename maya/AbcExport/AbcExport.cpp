@@ -918,6 +918,8 @@ MStatus initializePlugin(MObject obj)
         status.perror("registerCommand");
     }
 
+    MGlobal::executeCommandOnIdle("AlembicCreateUI");
+
     MString info = "AbcExport v";
     info += ABCEXPORT_VERSION;
     info += " using ";
@@ -937,6 +939,8 @@ MStatus uninitializePlugin(MObject obj)
     {
         status.perror("deregisterCommand");
     }
+
+    MGlobal::executeCommandOnIdle("AlembicDeleteUI");
 
     return status;
 }
