@@ -81,6 +81,8 @@ MStatus initializePlugin(MObject obj)
         status.perror("registerFileTranslator");
     }
 
+    MGlobal::executeCommandOnIdle("AlembicCreateUI");
+
     MString info = "AbcImport v";
     info += pluginVersion;
     info += " using ";
@@ -113,6 +115,8 @@ MStatus uninitializePlugin(MObject obj)
     {
         status.perror("deregisterCommand");
     }
+
+    MGlobal::executeCommandOnIdle("AlembicDeleteUI");
 
     return status;
 }
