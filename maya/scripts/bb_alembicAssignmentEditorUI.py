@@ -1096,7 +1096,7 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
 
       self.centralwidget = QtGui.QWidget(self)
       self.setCentralWidget(self.centralwidget)
-      self.mainLayout = QtGui.QHBoxLayout(self.centralwidget)   
+      self.mainLayout = QtGui.QHBoxLayout(self.centralwidget)  
       self.setAttribute(Qt.WA_DeleteOnClose,True)
 
       polymesh_dict = getArnoldNodeParams('polymesh')
@@ -1206,7 +1206,7 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
          if startpoint not in ['/','']:
             a = self.getObject(a,startpoint)
 
-         abc_item = self.walktree(a,node) # walk the graph         
+         abc_item = self.walktree(a,node) # walk the graph    
          AbcIcon = QtGui.QIcon()
          AbcIcon.addPixmap(QtGui.QPixmap( os.path.join(os.path.dirname(__file__),"../icons/abcLogo.png")) )
          abc_item.setIcon(0,AbcIcon)
@@ -1597,7 +1597,6 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
             d_dict.pop(disp)
       node.displacementAssignation.set(json.dumps(d_dict))
 
-
       root = this_expr.parent()
       this_expr_idx = root.indexOfChild(this_expr)
       root.takeChild(this_expr_idx)
@@ -1651,9 +1650,10 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
       return None
 
    def populateOverridesPanel(self,treeItem):
-      clearWidget(self.overridesPanelContents)      
+      clearWidget(self.overridesPanelContents) 
       if not treeItem:
          return
+
       self.n_pathBox = QtGui.QLineEdit(treeItem.fullPath)
 
       if treeItem.type == 'expression':
@@ -1661,7 +1661,6 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
          self.n_pathBox.setStyleSheet("QLineEdit {background-color:srgb(20,20,20)}")
       else:         
          self.n_pathBox.setReadOnly(True)       
-
 
       self.overridesPanelContents.layout().addWidget(self.n_pathBox)
       # get the current overrides for the selected object.
@@ -1920,7 +1919,7 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
 
       ua_dict[pattern][newname] = ua_dict[pattern].pop(oldname)
 
-      node.userAttributes.set(json.dumps(ua_dict))     
+      node.userAttributes.set(json.dumps(ua_dict))    
 
    # Signals
 
