@@ -34,3 +34,10 @@
 ##-*****************************************************************************
 
 ADD_SUBDIRECTORY( AbcView )
+
+
+INSTALL( DIRECTORY cask AbcView
+         DESTINATION python_examples )
+
+
+
