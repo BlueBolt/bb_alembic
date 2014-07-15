@@ -168,4 +168,32 @@ addAttr -longName flipv -at bool $alembicNode;\
         -commandRepeatable 1
     ;
 
+    //Open the editor dialog
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Open the Alembic Node editor tool" 
+        -enableBackground 0
+        -align "center" 
+        -label "abcEdit" 
+        -imageOverlayLabel "" 
+        -labelOffset 0
+        -font "plainLabelFont" 
+        -overlayLabelColor 1 1 1
+        -overlayLabelBackColor 0 0 0 0 
+        -image "abcEdit.png" 
+        -image1 "abcEdit.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "import bb_alembicAssignmentEditorUI as abcEd;w = abcEd.AlembicEditorWindow();w.show()" 
+        -sourceType "python" 
+        -commandRepeatable 1
+    ;
+
 } 

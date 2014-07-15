@@ -34,5 +34,5 @@
 ##-*****************************************************************************
 
 
-INSTALL( FILES abcArchive.png abcExport.png abcImport.png abcLogo.png out_bb_alembicArchiveShape.png
+INSTALL( FILES abcArchive.png abcExport.png abcImport.png abcLogo.png out_bb_alembicArchiveShape.png abcEdit.png
          DESTINATION maya/$ENV{MAYA_VERSION}/icons )
