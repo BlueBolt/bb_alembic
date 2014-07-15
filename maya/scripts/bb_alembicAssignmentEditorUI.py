@@ -1513,7 +1513,7 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
          treeItem = self.treeWidget.currentItem()
 
       new_expression = QtGui.QTreeWidgetItem()
-      new_expression.setFlags(editable|enabled)
+      # new_expression.setFlags(editable|enabled)
       new_expression.fullPath = "#"
       new_expression.setText(0,new_expression.fullPath)
       new_expression.type = 'expression'     
@@ -1601,8 +1601,9 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
       this_expr_idx = root.indexOfChild(this_expr)
       root.takeChild(this_expr_idx)
 
-   def setPattern(self,text):
+   def setPattern(self):
       """Set the expression pattern to text"""
+      text = self.n_pathBox.text()
       this_expr = self.treeWidget.currentItem()
       this_expr.setText(0,text)
 
@@ -1657,7 +1658,7 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
       self.n_pathBox = QtGui.QLineEdit(treeItem.fullPath)
 
       if treeItem.type == 'expression':
-         self.n_pathBox.textChanged.connect(self.setPattern)
+         self.n_pathBox.editingFinished.connect(self.setPattern)
          self.n_pathBox.setStyleSheet("QLineEdit {background-color:srgb(20,20,20)}")
       else:         
          self.n_pathBox.setReadOnly(True)       
