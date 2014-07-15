@@ -34,5 +34,5 @@
 ##-*****************************************************************************
 
 
-INSTALL( FILES AEbb_alembicArchiveShapeTemplate.mel
+INSTALL( FILES AEbb_alembicArchiveShapeTemplate.mel bb_alembicAssignmentEditorUI.py
          DESTINATION maya/$ENV{MAYA_VERSION}/scripts )
