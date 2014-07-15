@@ -1123,6 +1123,7 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
       # ---------------------------------------
       self.treeWidget = QtGui.QTreeWidget(self.centralwidget)
       self.treeWidget.headerItem().setText(0, QtGui.QApplication.translate("MainWindow", "Object", None, QtGui.QApplication.UnicodeUTF8))
+      self.treeWidget.setColumnWidth(0,200)
       self.treeWidget.headerItem().setText(1, QtGui.QApplication.translate("MainWindow", "Shaders", None, QtGui.QApplication.UnicodeUTF8))
       self.treeWidget.headerItem().setText(2, QtGui.QApplication.translate("MainWindow", "Displacements", None, QtGui.QApplication.UnicodeUTF8))
       # self.treeWidget.headerItem().setText(3, QtGui.QApplication.translate("MainWindow", "Overrides", None, QtGui.QApplication.UnicodeUTF8))
@@ -1601,10 +1602,13 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
       this_expr_idx = root.indexOfChild(this_expr)
       root.takeChild(this_expr_idx)
 
+   def setPattern(self,text):
+      """Set the expression pattern to text"""
+      this_expr = self.treeWidget.currentItem()
+      this_expr.setText(0,text)
+
    def walktree(self,iobject,node):
-      """
-      Walk the tree of nodes in the alembic file
-      """
+      """Walk the tree of nodes in the alembic file"""
 
       item =  QtGui.QTreeWidgetItem()
       item.setText(0,str(iobject.name))
@@ -1651,7 +1655,14 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
       if not treeItem:
          return
       self.n_pathBox = QtGui.QLineEdit(treeItem.fullPath)
-      self.n_pathBox.setReadOnly(True)
+
+      if treeItem.type == 'expression':
+         self.n_pathBox.textChanged.connect(self.setPattern)
+         self.n_pathBox.setStyleSheet("QLineEdit {background-color:srgb(20,20,20)}")
+      else:         
+         self.n_pathBox.setReadOnly(True)       
+
+
       self.overridesPanelContents.layout().addWidget(self.n_pathBox)
       # get the current overrides for the selected object.
 
@@ -1898,6 +1909,7 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
       ua_dict[pattern][attr]=value
 
       node.userAttributes.set(json.dumps(ua_dict))     
+
 
    def setUserAttrName(self,node,pattern,oldname,newname):
 
