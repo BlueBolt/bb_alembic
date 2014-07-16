@@ -1085,7 +1085,7 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
    nodes = ['ieProceduralHolder','bb_alembicArchiveNode','gpuCache']   
 
    # Signals
-   selectedNode=QtCore.Signal(list,list,list)
+   selectedNode=QtCore.Signal(list)
 
    def __init__(self,parent=None,style=None,title='Alembic Editor (%s)'%cask.Archive().using_version()):
       super(AlembicEditorWindow, self).__init__(parent=parent,title=title,style=style)
@@ -1096,7 +1096,7 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
 
       self.centralwidget = QtGui.QWidget(self)
       self.setCentralWidget(self.centralwidget)
-      self.mainLayout = QtGui.QHBoxLayout(self.centralwidget)  
+      self.mainLayout = QtGui.QVBoxLayout(self.centralwidget)  
       self.setAttribute(Qt.WA_DeleteOnClose,True)
 
       polymesh_dict = getArnoldNodeParams('polymesh')
@@ -1107,15 +1107,21 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
 
       self.setupUI()
 
-      self.coreIds=OpenMaya.MCallbackIdArray()
-      CBid = OpenMaya.MEventMessage.addEventCallback( 'SelectionChanged',self.selectionChanged)
-      self.coreIds.append(CBid)     
-
       self.setupActions()
       self.setupConnections()
-      self.refreshUI(self.getSelected(),[],[])
+      self.refreshUI(self.getSelected())
 
    def setupUI(self):
+
+      # Top bar
+      self.topBar = QtGui.QFrame()
+      self.topBar.setLayout(QtGui.QHBoxLayout())
+      self.refreshSelectionButton = QtGui.QPushButton("Refresh")
+      self.topBar.layout().addWidget(self.refreshSelectionButton)
+      self.topBar.layout().insertStretch(-1)      
+
+      self.mainLayout.addWidget(self.topBar)
+
 
       # treeview
       # ---------------------------------------
@@ -1174,23 +1180,28 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
       self.treeWidget.itemChanged.connect(self.setTreeItemValues)
       self.treeWidget.setContextMenuPolicy(Qt.ActionsContextMenu)
 
-      self.selectedNode.connect(self.refreshUI)
+      self.refreshSelectionButton.clicked.connect(self.refreshUI)
 
-   def refreshUI(self,selection,added,removed):
+   def refreshUI(self,selection=[]):
+
+      if not len(selection):
+         selection = self.getSelected()
 
       self.treeWidget.clear()
+
+      clearWidget(self.overridesPanelContents)
 
       if len(selection):
          usableNodes = []
          for n in _mc.ls(selection,dag=True,ap=True,shapes=True):
-            if _pc.PyNode(n).nodeType() in self.nodes:
+            if _mc.nodeType(n) in self.nodes:
                usableNodes.append(n)
          self.currentSelection = usableNodes
          self.populateGraph()
 
    def populateGraph(self):
       for node in self.currentSelection:
-         if _pc.PyNode(node).nodeType() in self.nodes:
+         if _mc.nodeType(node) in self.nodes:
             self.addNodeToGraph( _pc.PyNode(node) )
 
    def addNodeToGraph(self,node):
@@ -1651,9 +1662,9 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
       return None
 
    def populateOverridesPanel(self,treeItem):
-      clearWidget(self.overridesPanelContents) 
       if not treeItem:
          return
+      clearWidget(self.overridesPanelContents) 
 
       self.n_pathBox = QtGui.QLineEdit(treeItem.fullPath)
 
@@ -1819,7 +1830,7 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
       if not ua_dict.has_key(treeItem.fullPath):
          ua_dict[treeItem.fullPath]={}
 
-      prefix = 'userAttr'
+      prefix = 'user%sAttr' % userAttrType.title()
       n = 1
       thisAttrName = prefix+str(n)
       while thisAttrName in ua_dict[treeItem.fullPath]:
@@ -1943,7 +1954,6 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
       self.selectedNode.emit(self.currentSelection,added,removed)        
 
    def closeEvent(self,e):
-      OpenMaya.MEventMessage.removeCallbacks(self.coreIds)
       e.accept()
 
 if __name__ == '__main__':
