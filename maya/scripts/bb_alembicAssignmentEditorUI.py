@@ -758,6 +758,97 @@ class UserStringAttrBox(QtGui.QFrame):
    def emitDelete(self,*args):
       self.deleteAttr.emit(self.node,self.pattern,self.attr)
 
+class UserStringArrayAttrBox(QtGui.QFrame):
+   """docstring for UserStringArrayAttrBox"""
+   valueChanged = Signal(str,str,str,list)
+   attrChanged = Signal(str,str,str,str)
+   deleteAttr = Signal(str,str,str)
+   def __init__(self,parent=None):
+      QtGui.QFrame.__init__(self)
+      self.setLayout(QtGui.QHBoxLayout())
+
+      # v Box for adding / removing items from list
+
+      self.label_button_box = QtGui.QWidget(self)
+      self.label_button_box.setLayout(QtGui.QVBoxLayout())
+
+      self.attrNameWidget = QtGui.QLineEdit()
+      self.label_button_box.layout().addWidget(self.attrNameWidget)
+
+      self.addItemButton = QtGui.QPushButton("Add String")
+      self.addItemButton.setToolTip("Add new item to the string list")      
+      self.label_button_box.layout().addWidget(self.addItemButton)
+      self.removeItemButton = QtGui.QPushButton("Remove String")
+      self.removeItemButton.setToolTip("Remove the currently selected Item from the string list")  
+      self.label_button_box.layout().addWidget(self.removeItemButton)
+
+      self.label_button_box.layout().insertStretch(-1)
+
+      self.layout().addWidget(self.label_button_box)
+
+      self.valueWidget = QtGui.QListWidget(self)
+      self.layout().addWidget(self.valueWidget)
+
+      self.removeWidget = QtGui.QPushButton()
+      BBWidget.setStaticSize(self.removeWidget,15,15)
+      self.removeWidget.setFlat(True)
+      self.removeWidget.setStyleSheet("QPushButton:flat {border: 0px solid rgb(0,0,0,0);background-color: rgba(0,0,0,0);}")
+      self.removeWidget.setIcon(QtGui.QIcon(self.style().standardPixmap(QtGui.QStyle.SP_DockWidgetCloseButton)))
+      self.removeWidget.setToolTip("Remove attribute from item")
+      self.removeWidget.clicked.connect(self.emitDelete)
+      self.layout().addWidget(self.removeWidget)
+
+
+      self.node=None
+      self.pattern=None
+      self.attr=None
+
+      self.valueWidget.itemChanged.connect(self.emitValue)
+      self.attrNameWidget.textChanged.connect(self.emitAttrNameChange)
+
+      self.addItemButton.clicked.connect(self.addString)
+      self.removeItemButton.clicked.connect(self.removeString)
+
+   def addString(self):
+      label = '#'+str(self.valueWidget.count()+1)
+      self.valueWidget.addItem(label)
+      i = self.valueWidget.item(self.valueWidget.count()-1)
+      i.setFlags(editable|enabled)
+      self.emitValue()
+
+   def removeString(self):
+      self.valueWidget.takeItem(self.valueWidget.currentRow())
+      self.emitValue()
+
+   def getValue(self):
+      return self.valueWidget.text()
+
+   def setValue(self,value):
+      self.valueWidget.addItems(value)
+      for i in range(self.valueWidget.count()):
+         self.valueWidget.item(i).setFlags(editable|enabled)
+
+   def getAttrName(self):
+      return self.attrNameWidget.text()
+
+   def setAttrName(self,value):
+      self.attrNameWidget.setText(value)
+      self.attr=value
+
+   def emitValue(self,value=None):
+      # get the current string list  
+      string_list = []
+      for i in range(self.valueWidget.count()):
+         string_list.append(self.valueWidget.item(i).text())
+      self.valueChanged.emit(self.node,self.pattern,self.attr,string_list)
+
+   def emitAttrNameChange(self,value):
+      self.attrChanged.emit(self.node,self.pattern,self.attr,value)
+      self.attr=value  # set the attr varibale to the new name
+
+   def emitDelete(self,*args):
+      self.deleteAttr.emit(self.node,self.pattern,self.attr)
+
 ## Misc Widgets
 
 class AttrCollapseFrame(QtGui.QFrame):
@@ -919,7 +1010,7 @@ class UserAttrChooser(BBWidget.BBDialog):
 
       self.attrListBox = QtGui.QListWidget()
       # loop over them and add them to the list box
-      for attr_type in sorted(['INT','FLOAT','BOOL','STRING']):
+      for attr_type in sorted(['INT','FLOAT','BOOL','STRING','STRING ARRAY']):
          this_itm = self.attrListBox.addItem(attr_type)
 
       self.layout().addWidget(self.attrListBox)
@@ -1022,7 +1113,8 @@ class ExpressionCheckerDialog(BBWidget.BBDialog):
       self.setupUI()
 
    def setupUI(self):
-      self.treeWidget = QtGui.QTreeWidget()      
+      self.treeWidget = QtGui.QTreeWidget()  
+      self.treeWidget.setItemHidden(self.treeWidget.headerItem(),True)    
 
       a = cask.Archive(self.abcfile).top
       # get to the start point
@@ -1049,7 +1141,7 @@ class ExpressionCheckerDialog(BBWidget.BBDialog):
                return out_obj
       
       return None
-      
+         
    def walktree(self,iobject):
       """
       Walk the tree of nodes in the alembic file
@@ -1058,20 +1150,23 @@ class ExpressionCheckerDialog(BBWidget.BBDialog):
       item =  QtGui.QTreeWidgetItem()
       item.setText(0,str(iobject.name))
       item.match = False
+      item.childmatch = False
       fullpath = str(iobject.path())
       # check if the path matches the pattern, if so set the background colour
       if fnmatch.fnmatch(fullpath,self.expression):
-         # col = QtGui.QColor.fromRgbF(0.8, 1.0, 0.8, 1.0)
-         item.setForeground(0,QtGui.QBrush( QtGui.QColor(119,225,119) ))
+         item.setForeground(0,QtGui.QBrush( QtGui.QColor(119,119,225) ))
          item.match = True
-         # set all parent items to be a darker version of this color if they don't match
 
 
       item.fullPath = fullpath
       item.type = 'iobject'
       for child in iobject.children.values():         
-         this_treeItem = self.walktree(child)
-         item.addChild(this_treeItem)
+         childItem = self.walktree(child)
+         item.addChild(childItem)
+         if not item.match and (childItem.match == True or childItem.childmatch == True):
+            item.childmatch=True
+            item.setForeground(0,QtGui.QBrush( QtGui.QColor(180,180,225) ))
+            item.setBackground(0,QtGui.QBrush( QtGui.QColor(80,80,80) ))
 
       return item
 
@@ -1132,8 +1227,8 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
       self.treeWidget.setColumnWidth(0,200)
       self.treeWidget.headerItem().setText(1, QtGui.QApplication.translate("MainWindow", "Shaders", None, QtGui.QApplication.UnicodeUTF8))
       self.treeWidget.headerItem().setText(2, QtGui.QApplication.translate("MainWindow", "Displacements", None, QtGui.QApplication.UnicodeUTF8))
-      # self.treeWidget.headerItem().setText(3, QtGui.QApplication.translate("MainWindow", "Overrides", None, QtGui.QApplication.UnicodeUTF8))
-      # self.treeWidget.headerItem().setText(4, QtGui.QApplication.translate("MainWindow", "User Attributes", None, QtGui.QApplication.UnicodeUTF8))
+      self.treeWidget.headerItem().setText(3, QtGui.QApplication.translate("MainWindow", "Overrides", None, QtGui.QApplication.UnicodeUTF8))
+      self.treeWidget.headerItem().setText(4, QtGui.QApplication.translate("MainWindow", "User Attributes", None, QtGui.QApplication.UnicodeUTF8))
 
       self.mainLayout.addWidget(self.treeWidget)
 
@@ -1256,36 +1351,37 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
       patterns_list = {}
       # gather the patterns that are being used
       for key,values in o_dict.items():
-         if key not in patterns_list and key.find('*') != -1:
+         if key not in patterns_list and ( key.find('/') == -1 or key.find('*') != -1 ):
             patterns_list[key]={}
             patterns_list[key]['overrides']=values
-         elif key.find('*') != -1:
+         elif key.find('/') == -1 or key.find('*') != -1:
             patterns_list[key]['overrides']=values
 
       for key,values in ua_dict.items():
-         if key not in patterns_list and key.find('*') != -1:
+         if key not in patterns_list and ( key.find('/') == -1 or key.find('*') != -1 ):
             patterns_list[key]={}
             patterns_list[key]['userAttributes']=values
-         elif key.find('*') != -1:
+         elif key.find('/') == -1 or key.find('*') != -1:
             patterns_list[key]['userAttributes']=values
 
       for shdr,value in s_dict.items():
          for key in value:
-            if key not in patterns_list and key.find('*') != -1:
+            if key not in patterns_list and ( key.find('/') == -1 or key.find('*') != -1 ):
                patterns_list[key] = {}
                patterns_list[key]['shader']=shdr
-            elif key.find('*') != -1:
+            elif key.find('/') == -1 or key.find('*') != -1:
                patterns_list[key]['shader']=shdr
 
       for disp,value in d_dict.items():
          for key in value:
-            if key not in patterns_list and key.find('*') != -1:
+            if key not in patterns_list and ( key.find('/') == -1 or key.find('*') != -1 ):
                patterns_list[key] = {}
                patterns_list[key]['displacement']=disp
-            elif key.find('*') != -1:
+            elif key.find('/') == -1 or key.find('*') != -1:
                patterns_list[key]['displacement']=disp
 
       # now add the expressions to the expression tree
+      old_children = expressionRoot.takeChildren()
       for expr in patterns_list:
          this_expr = self.addExpression(expressionRoot)
          this_expr.setText(0,expr)
@@ -1298,11 +1394,11 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
          if patterns_list[expr].has_key('displacement'):
             this_expr.setText(2,patterns_list[expr]['displacement'])
 
-         # if patterns_list[expr].has_key('overrides'):
-         #    this_expr.setText(3, ','.join(patterns_list[expr]['overrides'].keys()) )
+         if patterns_list[expr].has_key('overrides'):
+            this_expr.setText(3, ','.join(patterns_list[expr]['overrides'].keys()) )
 
-         # if patterns_list[expr].has_key('userAttributes'):
-         #    this_expr.setText(4, ','.join(patterns_list[expr]['userAttributes'].keys()) )
+         if patterns_list[expr].has_key('userAttributes'):
+            this_expr.setText(4, ','.join(patterns_list[expr]['userAttributes'].keys()) )
 
     
    def getJSONData(self,node):
@@ -1501,6 +1597,10 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
             o_dict.pop(path, None)
 
       node.overrides.set(json.dumps(o_dict))
+      if o_dict.has_key(path):
+         treeItem.setText(3,','.join(o_dict[path].keys()))
+      else:
+         treeItem.setText(3,'')
       attrBox.deleteLater()
 
    def removeUserAttr(self,attrBox,*args,**argv):
@@ -1516,6 +1616,11 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
             ua_dict.pop(path, None)
 
       node.userAttributes.set(json.dumps(ua_dict))
+      if ua_dict.has_key(path):
+         treeItem.setText(4,','.join(ua_dict[path].keys()))
+      else:
+         treeItem.setText(4,'')
+
       attrBox.deleteLater()
 
    def addExpression(self,treeItem=None,*args,**argv):
@@ -1552,30 +1657,76 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
    def setTreeItemValues(self,item,col):
       if item.type == 'expression':
          if col==0:
+            this_item = item
+            item_parent = item.parent()
             newpath = str(item.text(col))
             oldpath = item.fullPath
-            # find and change the expression value in node attributes
-            node = self.getRootItem(item).node
+
+            # Find and change the expression value in node attributes
+            node = self.getRootItem(this_item).node
             if isinstance(node,str) or isinstance(node,unicode):
                node = _pc.PyNode(node)
 
             o_dict,s_dict,d_dict,ua_dict = self.getJSONData(node)
 
             if oldpath in o_dict:
-               o_dict[newpath] = o_dict.pop(oldpath)
-            node.overrides.set(json.dumps(o_dict))     
+               if not o_dict.has_key(newpath):
+                  o_dict[newpath] = {}
+               o_dict[newpath] = dict(o_dict[newpath].items() + o_dict.pop(oldpath).items())
+
+               this_item.setText(3, ','.join(o_dict[newpath].keys()) )
+               
+            node.overrides.set(json.dumps(o_dict))   
+
             if oldpath in ua_dict:
-               ua_dict[newpath] = ua_dict.pop(oldpath)
-            node.userAttributes.set(json.dumps(ua_dict))     
+               if not ua_dict.has_key(newpath):
+                  ua_dict[newpath] = {}
+               ua_dict[newpath] = dict(ua_dict[newpath].items() + ua_dict.pop(oldpath).items())
+
+               this_item.setText(4, ','.join(ua_dict[newpath].keys()) )
+
+            node.userAttributes.set(json.dumps(ua_dict))   
+
             for shdr in s_dict.keys():
-               s_dict[shdr] = [newpath if x==oldpath else x for x in s_dict[shdr]]
+               if newpath not in s_dict[shdr]:
+                  s_dict[shdr] = [newpath if x==oldpath else x for x in s_dict[shdr]]
+               
+               if oldpath in s_dict[shdr]:
+                  s_dict[shdr].pop(oldpath)
+               
+               # set the field in the tree
+               if newpath in s_dict[shdr]:
+                  this_item.setText(1,shdr)
+
             node.shaderAssignation.set(json.dumps(s_dict))  
             for disp in d_dict.keys():
-               d_dict[disp] = [newpath if x==oldpath else x for x in d_dict[disp]]
+               if newpath not in d_dict[disp]:
+                  d_dict[disp] = [newpath if x==oldpath else x for x in d_dict[disp]]
+               if oldpath in d_dict[disp]:
+                  d_dict[disp].pop(oldpath)
+
+               # set the field in the tree
+               if newpath in d_dict[disp]:
+                  this_item.setText(2,disp)
+
             node.displacementAssignation.set(json.dumps(d_dict))  
 
-            item.fullPath = newpath
-            self.n_pathBox.setText(newpath)
+            # Check if this pattern already exists in the expression tree
+            # we need to combine the items together
+            matchItems = []
+            for i in range(item_parent.childCount()):
+               this_child = item_parent.child(i)
+               if i != item_parent.indexOfChild(this_item) and this_child.text(0) == newpath:
+                  matchItems.append(this_child)
+
+            for mi in matchItems:
+               item_parent.removeChild(mi)
+
+            this_item.fullPath = newpath
+            # self.n_pathBox.setText(newpath)
+            self.populateOverridesPanel(this_item)
+
+
 
    def removeExpression(self,*args,**argv):
 
@@ -1616,7 +1767,9 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
       """Set the expression pattern to text"""
       text = self.n_pathBox.text()
       this_expr = self.treeWidget.currentItem()
-      this_expr.setText(0,text)
+      this_expr.setText(0,text) # FIXME check if pattern exists already/redraw the tree
+      # self.updateExpressionTree(self.getRootItem(this_expr).node,this_expr.parent())
+      # self.refreshUI()
 
    def walktree(self,iobject,node):
       """Walk the tree of nodes in the alembic file"""
@@ -1632,10 +1785,10 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
       for s,v in d_dict.items():
          if fullpath in v:
             item.setText(2,s)
-      # if fullpath in o_dict.keys():
-      #       item.setText(3,','.join(o_dict[fullpath].keys()))
-      # if fullpath in ua_dict.keys():
-      #       item.setText(4,','.join(ua_dict[fullpath].keys()))
+      if fullpath in o_dict.keys():
+            item.setText(3,','.join(o_dict[fullpath].keys()))
+      if fullpath in ua_dict.keys():
+            item.setText(4,','.join(ua_dict[fullpath].keys()))
 
 
       item.node = node
@@ -1670,7 +1823,7 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
 
       if treeItem.type == 'expression':
          self.n_pathBox.editingFinished.connect(self.setPattern)
-         self.n_pathBox.setStyleSheet("QLineEdit {background-color:srgb(20,20,20)}")
+         # self.n_pathBox.setStyleSheet("QLineEdit {background-color:srgb(20,20,20)}")
       else:         
          self.n_pathBox.setReadOnly(True)       
 
@@ -1743,6 +1896,11 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
       # update the overrides panel for this item
 
       self.updateOverrides(treeItem)
+
+      # update the overrides colum in the tree view
+      treeItem.setText(3, ','.join(o_dict[treeItem.fullPath].keys()) )
+
+
 
    def updateOverrides(self,treeItem):
       node = self.getRootItem(treeItem).node
@@ -1830,7 +1988,7 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
       if not ua_dict.has_key(treeItem.fullPath):
          ua_dict[treeItem.fullPath]={}
 
-      prefix = 'user%sAttr' % userAttrType.title()
+      prefix = 'user%sAttr' % ''.join(t.title() for t in userAttrType.split())
       n = 1
       thisAttrName = prefix+str(n)
       while thisAttrName in ua_dict[treeItem.fullPath]:
@@ -1846,12 +2004,17 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
          ua_dict[treeItem.fullPath][thisAttrName]=False
       if userAttrType == 'STRING':
          ua_dict[treeItem.fullPath][thisAttrName]=''
+      if userAttrType == 'STRING ARRAY':
+         ua_dict[treeItem.fullPath][thisAttrName]=['']
 
       node.userAttributes.set(json.dumps(ua_dict))
 
       # update the overrides panel for this item
 
       self.updateUserAttributes(treeItem)
+
+      # update the overrides colum in the tree view
+      treeItem.setText(4, ','.join(ua_dict[treeItem.fullPath].keys()) )
 
    def updateUserAttributes(self,treeItem):
       node = self.getRootItem(treeItem).node
@@ -1901,6 +2064,17 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
                self.userAttributes_box.centreLayout.insertWidget(-2,thisAttrBox)                              
             elif type(value) in [str,unicode]:
                thisAttrBox = UserStringAttrBox(attr)
+               thisAttrBox.setAttrName(attr)
+               thisAttrBox.setValue(value)
+               thisAttrBox.node = node.fullPath()
+               thisAttrBox.attr = attr
+               thisAttrBox.pattern = pattern
+               thisAttrBox.valueChanged.connect(self.setUserAttrValue)
+               thisAttrBox.attrChanged.connect(self.setUserAttrName)
+               thisAttrBox.deleteAttr.connect(functools.partial(self.removeUserAttr,thisAttrBox))               
+               self.userAttributes_box.centreLayout.insertWidget(-2,thisAttrBox)                                 
+            elif type(value) in [list,tuple]:
+               thisAttrBox = UserStringArrayAttrBox(attr)
                thisAttrBox.setAttrName(attr)
                thisAttrBox.setValue(value)
                thisAttrBox.node = node.fullPath()
