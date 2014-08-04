@@ -26,6 +26,8 @@ try:
 except AttributeError:
     _fromUtf8 = lambda s: s
 
+ABC_EDITOR_VERSION = "1.0.3"
+
 import cask # alembic cask helper module
 import json # for deling with the dictionary attributes
 import maya.cmds as _mc
@@ -43,7 +45,7 @@ checkable   = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsUserCheckable
 
 # need for parsing the ass file, and getting available attributes
 from arnold import *
-    
+
 def getArnoldShaders(assFile):
 
    shaders = []
@@ -1182,7 +1184,7 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
    # Signals
    selectedNode=QtCore.Signal(list)
 
-   def __init__(self,parent=None,style=None,title='Alembic Editor (%s)'%cask.Archive().using_version()):
+   def __init__(self,parent=None,style=None,title='Alembic Editor %s ( using alembic %s)'%(ABC_EDITOR_VERSION,cask.Archive().using_version()) ):
       super(AlembicEditorWindow, self).__init__(parent=parent,title=title,style=style)
    
       self.currentSelection = []
@@ -2105,7 +2107,10 @@ class AlembicEditorWindow(BBMainWindow.BlueBoltWindow):
 
       ua_dict[pattern][newname] = ua_dict[pattern].pop(oldname)
 
-      node.userAttributes.set(json.dumps(ua_dict))    
+      node.userAttributes.set(json.dumps(ua_dict)) 
+         
+      treeItem = self.treeWidget.currentItem()
+      treeItem.setText(4, ','.join(ua_dict[pattern].keys()) )
 
    # Signals
 
